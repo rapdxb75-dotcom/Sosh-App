@@ -1,3 +1,16 @@
+import { Dimensions, PixelRatio } from 'react-native';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const scale = SCREEN_WIDTH / 375;
+
+export function normalize(size: number) {
+    const newSize = size * scale;
+    if (newSize < 1) {
+        return Math.round(PixelRatio.roundToNearestPixel(1));
+    }
+    return Math.round(PixelRatio.roundToNearestPixel(newSize));
+}
+
 export const FontFamily = {
     questrial: 'Questrial_400Regular',
     inter: 'Inter_600SemiBold',
@@ -5,8 +18,8 @@ export const FontFamily = {
 };
 
 export const FontSize = {
-    heading: 56,
-    body: 14,
-    small: 12,
-    button: 18, // lg
+    heading: normalize(56),
+    body: normalize(14),
+    small: normalize(12),
+    button: normalize(18), // lg
 };

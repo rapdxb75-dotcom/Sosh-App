@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import {
+    Image,
     ImageBackground,
     StyleSheet,
     Text,
@@ -10,8 +11,9 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import Toast from "react-native-toast-message";
-import { FontFamily, FontSize } from "../../constants/Fonts";
+import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
 
 export default function LoginForm() {
     const router = useRouter();
@@ -48,6 +50,16 @@ export default function LoginForm() {
 
     return (
         <View className="flex-1 justify-center gap-5 mb-5">
+
+            {/* Logo between text - matching user's requested size (54) */}
+            <View style={{ width: normalize(54), height: normalize(54), marginVertical: 4 }} className="items-center justify-center self-center">
+                <Image
+                    source={require("../../assets/images/logo.png")}
+                    style={{ width: normalize(54), height: normalize(54) }}
+                    resizeMode="contain"
+                />
+            </View>
+
             {/* Welcome Text */}
             <View className="items-center">
                 <Text
@@ -84,6 +96,29 @@ export default function LoginForm() {
                     tint="light"
                     className="p-6 gap-4"
                 >
+                    {/* Gradient Border SVG Overlay (Taller to hide bottom stroke) */}
+                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                        <Svg height="120%" width="100%">
+                            <Defs>
+                                <SvgLinearGradient id="loginBorderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.7)" stopOpacity="1" />
+                                    <Stop offset="100%" stopColor="rgba(0, 0, 0, 0.7)" stopOpacity="1" />
+                                </SvgLinearGradient>
+                            </Defs>
+                            <Rect
+                                x="0.5"
+                                y="0.5"
+                                width="99.7%"
+                                height="85%"
+                                rx="20"
+                                ry="20"
+                                stroke="url(#loginBorderGrad)"
+                                strokeWidth="1"
+                                fill="transparent"
+                            />
+                        </Svg>
+                    </View>
+
                     <View>
                         <Text className="text-white font-semibold mb-4 ml-1 px-1 text-sm leading-7">
                             Email
@@ -145,12 +180,12 @@ export default function LoginForm() {
                             </Text>
                         ) : null}
                     </View>
+
                     <TouchableOpacity className="w-full items-start">
                         <Text className="text-white text-xs underline mx-2 px-1">
                             Forgot password?
                         </Text>
                     </TouchableOpacity>
-
                 </BlurView>
             </View>
 

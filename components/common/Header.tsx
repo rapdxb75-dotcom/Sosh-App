@@ -1,11 +1,12 @@
 import { BlurView } from "expo-blur";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
-    const size = 33;
+    const size = normalize(38);
     const strokeWidth = 1;
     const radius = (size - strokeWidth) / 2;
     const center = size / 2;
@@ -43,9 +44,9 @@ const ringStyles = StyleSheet.create({
         justifyContent: "center",
     },
     blurContainer: {
-        width: 36,
-        height: 36,
-        borderRadius: 18,
+        width: normalize(38),
+        height: normalize(38),
+        borderRadius: normalize(19),
         overflow: "hidden",
         alignItems: "center",
         justifyContent: "center",
@@ -57,13 +58,19 @@ export default function Header() {
     const { showNotifications } = useNotification();
 
     return (
-        <View className="flex-row justify-between items-center px-5 pt-[55px]">
+        <View
+            className="flex-row justify-between items-center px-5"
+            style={{ paddingTop: normalize(55) }}
+        >
 
             {/* Left Logo */}
-            <View className="w-9 h-9 items-center justify-center">
+            <View
+                className="items-center justify-center"
+                style={{ width: normalize(38), height: normalize(38) }}
+            >
                 <Image
                     source={require("../../assets/images/logo.png")}
-                    className="w-9 h-9"
+                    style={{ width: normalize(38), height: normalize(38) }}
                     resizeMode="contain"
                 />
             </View>
@@ -73,22 +80,26 @@ export default function Header() {
 
                 {/* Notification */}
                 <TouchableOpacity
-                    className="w-9 h-9 items-center justify-center"
+                    className="items-center justify-center"
+                    style={{ width: normalize(38), height: normalize(38) }}
                     onPress={showNotifications}
                 >
                     <Image
                         source={require("../../assets/images/notification.png")}
-                        className="w-9 h-9"
+                        style={{ width: normalize(38), height: normalize(38) }}
                         resizeMode="contain"
                     />
                 </TouchableOpacity>
 
                 {/* RAPDXP Logo with Gradient Ring */}
-                <View className="w-9 h-9 items-center justify-center relative">
+                <View
+                    className="items-center justify-center relative"
+                    style={{ width: normalize(38), height: normalize(38) }}
+                >
                     <GradientRingSVG />
                     <Image
                         source={require("../../assets/images/rapdxp-logo.png")}
-                        className="w-9 h-9"
+                        style={{ width: normalize(37), height: normalize(37) }}
                         resizeMode="contain"
                     />
                 </View>
