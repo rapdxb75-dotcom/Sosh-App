@@ -1,9 +1,11 @@
 import { BlurView } from 'expo-blur';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Upload } from 'lucide-react-native';
 import { useState } from 'react';
 import { Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle, Defs, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import Toast from 'react-native-toast-message';
 import Header from '../../components/common/Header';
 
 /* ---------- Gradient Ring Component ---------- */
@@ -60,6 +62,27 @@ export default function Profile() {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
     const [username, setUsername] = useState("RAPDXB");
+    const [image, setImage] = useState<string | null>(null);
+
+    const pickImage = async () => {
+        // No permissions request is necessary for launching the image library
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            setImage(result.assets[0].uri);
+            setEditModalVisible(false); // Optionally close modal after selection
+            Toast.show({
+                type: 'success',
+                text1: 'Upload Successful',
+                text2: 'Profile image updated successfully'
+            });
+        }
+    };
 
     const handleDisconnectPress = (accountName: string) => {
         setSelectedAccount(accountName);
@@ -79,97 +102,125 @@ export default function Profile() {
             style={{ flex: 1, backgroundColor: "#000" }}
             resizeMode="cover"
         >
-            <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
                 {/* Header */}
-                <View className="-mx-5">
+                <View className="w-full">
                     <Header />
                 </View>
 
-                <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px] leading-[56px] mb-8 mt-4">
-                    Your{'\n'}Account
-                </Text>
+                <View className="w-full px-5">
+                    <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px] leading-[56px] mb-8 mt-4">
+                        Your{'\n'}Account
+                    </Text>
 
-                {/* Profile Card */}
-                <View className="rounded-[32px] overflow-hidden mb-8">
-                    <BlurView intensity={20} tint="dark" className="p-1">
-                        <LinearGradient
-                            colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']}
-                            style={{ borderRadius: 32, paddingVertical: 20, paddingHorizontal: 10, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' }}
-                        >
-                            {/* User Header */}
-                            <View className="flex-row items-center justify-between mb-2 px-2">
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-[45px] h-[45px] items-center justify-center">
-                                        <GradientRingSVG />
-                                        <Image source={require('../../assets/images/rapdxp-logo.png')} className="w-12 h-12" resizeMode="contain" />
-                                    </View>
-                                    <Text className="text-white text-2xl font-medium">RAPDXB</Text>
+                    {/* Profile Card with Gradient Border Overlay */}
+                    <View className="rounded-[32px] overflow-hidden mb-8">
+                        <BlurView intensity={40} tint="dark" className="p-[1px]">
+                            <LinearGradient
+                                colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.1)']}
+                                style={{ borderRadius: 32, paddingVertical: 20, paddingHorizontal: 10, position: 'relative' }}
+                            >
+                                {/* Gradient Border SVG (Taller to hide bottom stroke) */}
+                                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                                    <Svg height="120%" width="100%">
+                                        <Defs>
+                                            <SvgLinearGradient id="cardBorderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                                <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.7)" stopOpacity="1" />
+                                                <Stop offset="100%" stopColor="rgba(0, 0, 0, 0.7)" stopOpacity="1" />
+                                            </SvgLinearGradient>
+                                        </Defs>
+                                        <Rect
+                                            x="0.5"
+                                            y="0.5"
+                                            width="99.7%"
+                                            height="85%" // Relative to SVG height="120%", this puts bottom edge way outside container
+                                            rx="32"
+                                            ry="32"
+                                            stroke="url(#cardBorderGrad)"
+                                            strokeWidth="1"
+                                            fill="transparent"
+                                        />
+                                    </Svg>
                                 </View>
-                                <TouchableOpacity
-                                    className='rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]'
-                                    onPress={() => setEditModalVisible(true)}
-                                >
-                                    <Image source={require('../../assets/icons/edit.png')} className="w-5 h-5" resizeMode="contain" />
-                                </TouchableOpacity>
-                            </View>
 
-                            {/* Stats Grid */}
-                            <View className="flex-row flex-wrap justify-between gap-y-3 p-2">
-                                <StatItem label="Sosh Views" value="345M" />
-                                <StatItem label="Sosh Likes" value="34.145K" />
-                                <StatItem label="Platforms" value="8" />
-                                <StatItem label="Sosh Posts" value="8" />
-                            </View>
-                        </LinearGradient>
-                    </BlurView>
+                                {/* User Header */}
+                                <View className="flex-row items-center justify-between mb-2 px-2">
+                                    <View className="flex-row items-center gap-3">
+                                        <View className="w-[45px] h-[45px] items-center justify-center">
+                                            <GradientRingSVG />
+                                            <Image
+                                                source={image ? { uri: image } : require('../../assets/images/rapdxp-logo.png')}
+                                                className="w-12 h-12 rounded-full"
+                                                resizeMode={image ? "cover" : "contain"}
+                                            />
+                                        </View>
+                                        <Text className="text-white text-2xl font-medium">RAPDXB</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        className='rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]'
+                                        onPress={() => setEditModalVisible(true)}
+                                    >
+                                        <Image source={require('../../assets/icons/edit.png')} className="w-5 h-5" resizeMode="contain" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Stats Grid */}
+                                <View className="flex-row flex-wrap justify-between gap-y-3 p-2">
+                                    <StatItem label="Sosh Views" value="345M" />
+                                    <StatItem label="Sosh Likes" value="34.145K" />
+                                    <StatItem label="Platforms" value="8" />
+                                    <StatItem label="Sosh Posts" value="8" />
+                                </View>
+                            </LinearGradient>
+                        </BlurView>
+                    </View>
+
+                    {/* Connected Accounts */}
+                    <Text className="text-white text-lg font-medium mb-4">Connected accounts</Text>
+
+                    <ConnectedAccountItem
+                        icon={require('../../assets/icons/instagram.png')}
+                        name="Instagram"
+                        status={"Connected to \n@raptesttheworld"}
+                        isConnected={true}
+                        onDisconnect={() => handleDisconnectPress('Instagram')}
+                    />
+                    <ConnectedAccountItem
+                        icon={require('../../assets/icons/tiktok.png')}
+                        name="TikTok"
+                        status="Not connected"
+                        isConnected={false}
+                        onDisconnect={() => handleDisconnectPress('TikTok')}
+                    />
+                    <ConnectedAccountItem
+                        icon={require('../../assets/icons/youtube.png')}
+                        name="YouTube"
+                        status="Not connected"
+                        isConnected={false}
+                        onDisconnect={() => handleDisconnectPress('YouTube')}
+                    />
+                    <ConnectedAccountItem
+                        icon={require('../../assets/icons/snapchat.png')}
+                        name="Snapchat"
+                        status="Not connected"
+                        isConnected={false}
+                        onDisconnect={() => handleDisconnectPress('Snapchat')}
+                    />
+                    <ConnectedAccountItem
+                        icon={require('../../assets/icons/twitter.png')}
+                        name="Twitter"
+                        status="Not connected"
+                        isConnected={false}
+                        onDisconnect={() => handleDisconnectPress('Twitter')}
+                    />
+                    <ConnectedAccountItem
+                        icon={require('../../assets/icons/facebook.png')}
+                        name="Facebook"
+                        status="Not connected"
+                        isConnected={false}
+                        onDisconnect={() => handleDisconnectPress('Facebook')}
+                    />
                 </View>
-
-                {/* Connected Accounts */}
-                <Text className="text-white text-lg font-medium mb-4">Connected accounts</Text>
-
-                <ConnectedAccountItem
-                    icon={require('../../assets/icons/instagram.png')}
-                    name="Instagram"
-                    status={"Connected to \n@raptesttheworld"}
-                    isConnected={true}
-                    onDisconnect={() => handleDisconnectPress('Instagram')}
-                />
-                <ConnectedAccountItem
-                    icon={require('../../assets/icons/tiktok.png')}
-                    name="TikTok"
-                    status="Not connected"
-                    isConnected={false}
-                    onDisconnect={() => handleDisconnectPress('TikTok')}
-                />
-                <ConnectedAccountItem
-                    icon={require('../../assets/icons/youtube.png')}
-                    name="YouTube"
-                    status="Not connected"
-                    isConnected={false}
-                    onDisconnect={() => handleDisconnectPress('YouTube')}
-                />
-                <ConnectedAccountItem
-                    icon={require('../../assets/icons/snapchat.png')}
-                    name="Snapchat"
-                    status="Not connected"
-                    isConnected={false}
-                    onDisconnect={() => handleDisconnectPress('Snapchat')}
-                />
-                <ConnectedAccountItem
-                    icon={require('../../assets/icons/twitter.png')}
-                    name="Twitter"
-                    status="Not connected"
-                    isConnected={false}
-                    onDisconnect={() => handleDisconnectPress('Twitter')}
-                />
-                <ConnectedAccountItem
-                    icon={require('../../assets/icons/facebook.png')}
-                    name="Facebook"
-                    status="Not connected"
-                    isConnected={false}
-                    onDisconnect={() => handleDisconnectPress('Facebook')}
-                />
-
             </ScrollView>
 
             {/* Disconnect Modal */}
@@ -253,13 +304,20 @@ export default function Profile() {
                                         />
                                     </Svg>
                                 </BlurView>
-                                <Image source={require('../../assets/images/rapdxp-logo.png')} className="w-[80px] h-[80px] absolute" resizeMode="contain" />
+                                <Image
+                                    source={image ? { uri: image } : require('../../assets/images/rapdxp-logo.png')}
+                                    className="w-[88px] h-[88px] absolute rounded-full"
+                                    resizeMode={image ? "cover" : "contain"}
+                                />
                             </View>
                         </View>
 
                         {/* Upload New Button */}
                         <BlurView intensity={14} tint="dark" className="upload-container w-full h-[68px]">
-                            <TouchableOpacity className="upload-content w-full h-full">
+                            <TouchableOpacity
+                                className="upload-content w-full h-full"
+                                onPress={pickImage}
+                            >
                                 <Upload size={20} color="white" />
                                 <Text className="text-white font-medium text-[16px] font-inter mt-2">Upload new</Text>
                             </TouchableOpacity>
@@ -275,7 +333,7 @@ export default function Profile() {
                                         onChangeText={setUsername}
                                         placeholder="Enter username"
                                         placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                        className="text-white text-base font-inter flex-1 w-full py-0"
+                                        className="flex-1 font-inter py-0 text-white"
                                         style={{ fontFamily: 'Inter_400Regular' }}
                                         textAlignVertical="center"
                                     />

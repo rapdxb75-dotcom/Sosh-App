@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     },
     message: {
         fontFamily: FontFamily.interRegular,
-        fontSize: 12,
+        fontSize: FontSize.small,
         color: "rgba(255, 255, 255, 0.8)",
     },
 });

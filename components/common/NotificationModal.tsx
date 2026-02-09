@@ -1,4 +1,5 @@
 import { Modal, Text, TouchableOpacity, View } from 'react-native';
+import { normalize } from '../../constants/Fonts';
 import { useNotification } from '../../context/NotificationContext';
 
 export default function NotificationModal() {
@@ -11,7 +12,7 @@ export default function NotificationModal() {
             visible={isVisible}
             onRequestClose={hideNotifications}
         >
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-start', alignItems: 'center', paddingTop: 110, paddingHorizontal: 20 }}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-start', alignItems: 'center', paddingTop: normalize(110), paddingHorizontal: 20 }}>
                 <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6">
                     {/* Close Button */}
                     <TouchableOpacity
@@ -21,7 +22,10 @@ export default function NotificationModal() {
                         <Text className="text-white/60 text-lg font-medium">×</Text>
                     </TouchableOpacity>
 
-                    <Text className="text-white text-[34px] leading-[40px] font-inter mb-8 mt-2">
+                    <Text
+                        className="text-white font-inter mb-8 mt-2"
+                        style={{ fontSize: normalize(34), lineHeight: normalize(40) }}
+                    >
                         Last{'\n'}notifications
                     </Text>
 
