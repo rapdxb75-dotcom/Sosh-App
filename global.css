@@ -1,3 +1,107 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer components {
+
+    /* Toggle Button in List */
+    .btn-toggle {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        border-radius: 8px;
+    }
+
+    .btn-toggle-connect {
+        background-color: #00DC82;
+    }
+
+    .btn-toggle-disconnect {
+        background-color: #FF4B4B;
+    }
+
+    /* Modal Disconnect Button */
+    .btn-modal-disconnect {
+        background-color: rgba(215, 61, 61, 1);
+        width: 100%;
+        height: 52px;
+        border-radius: 13px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+    }
+
+    /* Save Button */
+    .btn-save {
+        background-color: rgba(0, 201, 80, 1);
+        width: 100%;
+        height: 52px;
+        border-radius: 16px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Input Field */
+    .input-field {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        height: 52px;
+        padding-left: 16px;
+        padding-right: 16px;
+        justify-content: center;
+        width: 100%;
+    }
+
+    /* Upload Button */
+    .upload-container {
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 32px;
+    }
+
+    .upload-content {
+        flex: 1;
+        background-color: rgba(255, 255, 255, 0.1);
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+    }
+
+    /* Notification Cards */
+    .notification-card {
+        width: 100%;
+        border-radius: 24px;
+        padding: 20px;
+        margin-bottom: 12px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .notification-neutral {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .notification-success {
+        background-color: rgba(0, 201, 80, 0.1);
+        border-width: 1px;
+        border-color: rgba(0, 201, 80, 0.6);
+    }
+
+    .notification-error {
+        background-color: rgba(215, 61, 61, 0.1);
+        border-width: 1px;
+        border-color: rgba(215, 61, 61, 0.6);
+    }
+
+    .notification-close-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 16px;
+        background-color: rgba(255, 255, 255, 0.1);
+        align-items: center;
+        justify-content: center;
+    }
+}
