@@ -1,9 +1,17 @@
-import { Modal, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { normalize } from '../../constants/Fonts';
-import { useNotification } from '../../context/NotificationContext';
+import { NotificationType, useNotification } from '../../context/NotificationContext';
 
 export default function NotificationModal() {
-    const { isVisible, hideNotifications } = useNotification();
+    const { isVisible, hideNotifications, notifications, removeNotification, clearNotifications } = useNotification();
+
+    const getNotificationClass = (type: NotificationType) => {
+        switch (type) {
+            case 'success': return 'notification-success';
+            case 'error': return 'notification-error';
+            default: return 'notification-neutral';
+        }
+    };
 
     return (
         <Modal
@@ -13,7 +21,7 @@ export default function NotificationModal() {
             onRequestClose={hideNotifications}
         >
             <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-start', alignItems: 'center', paddingTop: normalize(110), paddingHorizontal: 20 }}>
-                <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6">
+                <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6 max-h-[80%]">
                     {/* Close Button */}
                     <TouchableOpacity
                         onPress={hideNotifications}
@@ -22,46 +30,47 @@ export default function NotificationModal() {
                         <Text className="text-white/60 text-lg font-medium">×</Text>
                     </TouchableOpacity>
 
-                    <Text
-                        className="text-white font-inter mb-8 mt-2"
-                        style={{ fontSize: normalize(34), lineHeight: normalize(40) }}
-                    >
-                        Last{'\n'}notifications
-                    </Text>
-
-                    {/* Neutral Notification */}
-                    <View className="notification-card notification-neutral">
-                        <View>
-                            <Text className="text-white font-semibold text-base mb-1 font-inter">Neutral notifications</Text>
-                            <Text className="text-white/60 text-sm font-inter">It´s a secondary notification state</Text>
-                        </View>
-                        <TouchableOpacity className="notification-close-btn">
-                            <Text className="text-white/80 text-1g text-center">×</Text>
-                        </TouchableOpacity>
+                    <View className="flex-row justify-between items-end mb-8 mt-2">
+                        <Text
+                            className="text-white font-inter"
+                            style={{ fontSize: normalize(34), lineHeight: normalize(40) }}
+                        >
+                            Last{'\n'}notifications
+                        </Text>
+                        {notifications.length > 0 && (
+                            <TouchableOpacity onPress={clearNotifications} className="mb-1">
+                                <Text className="text-white/40 text-xs font-inter uppercase tracking-widest">Clear all</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
-                    {/* Successful Notification */}
-                    <View className="notification-card notification-success">
-                        <View>
-                            <Text className="text-white font-semibold text-base mb-1 font-inter">Successfulnotifications</Text>
-                            <Text className="text-white/60 text-1g font-inter">It´s a green notification state</Text>
-                        </View>
-                        <TouchableOpacity className="notification-close-btn">
-                            <Text className="text-white/80 text-1g text-center">×</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Error Notification */}
-                    <View className="notification-card notification-error">
-                        <View>
-                            <Text className="text-white font-semibold text-base mb-1 font-inter">Error notifications</Text>
-                            <Text className="text-white/60 text-sm font-inter">It's a red notification state</Text>
-                        </View>
-                        <TouchableOpacity className="notification-close-btn">
-                            <Text className="text-white/80 text-1g text-center">×</Text>
-                        </TouchableOpacity>
-                    </View>
-
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {notifications.length === 0 ? (
+                            <View className="py-10 items-center">
+                                <Text className="text-white/40 font-inter">No new notifications</Text>
+                            </View>
+                        ) : (
+                            notifications.map((notif) => (
+                                <View key={notif.id} className={`notification-card ${getNotificationClass(notif.type)} mb-3`}>
+                                    <View className="flex-1 pr-2">
+                                        <View className="flex-row justify-between items-start mb-1">
+                                            <Text className="text-white font-semibold text-base font-inter flex-1 mr-2">{notif.title}</Text>
+                                            <Text className="text-white/40 text-[10px] font-inter mt-1 whitespace-nowrap">
+                                                {notif.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {notif.timestamp.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                            </Text>
+                                        </View>
+                                        <Text className="text-white/60 text-sm font-inter">{notif.message}</Text>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => removeNotification(notif.id)}
+                                        className="notification-close-btn"
+                                    >
+                                        <Text className="text-white/80 text-lg text-center">×</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ))
+                        )}
+                    </ScrollView>
                 </View>
             </View>
         </Modal>

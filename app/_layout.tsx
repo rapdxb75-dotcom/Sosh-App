@@ -7,10 +7,13 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { View } from "react-native";
 import Toast from "react-native-toast-message";
+import { Provider } from 'react-redux';
 import { toastConfig } from "../components/common/CustomToast";
 import NotificationModal from "../components/common/NotificationModal";
 import { NotificationProvider } from "../context/NotificationContext";
 import "../global.css";
+import { store } from '../store/store';
+import { initializeUser } from '../store/userSlice';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,6 +28,8 @@ export default function RootLayout() {
     if (loaded || error) {
       SplashScreen.hideAsync();
     }
+    // Initialize user data from storage into Redux
+    store.dispatch(initializeUser());
   }, [loaded, error]);
 
   if (!loaded && !error) {
@@ -32,26 +37,28 @@ export default function RootLayout() {
   }
 
   return (
-    <NotificationProvider>
-      <View style={{ flex: 1, backgroundColor: "#000" }}>
-        <StatusBar
-          style="light"
-          translucent
-          backgroundColor="transparent"
-        />
+    <Provider store={store}>
+      <NotificationProvider>
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <StatusBar
+            style="light"
+            translucent
+            backgroundColor="transparent"
+          />
 
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: {
-              backgroundColor: 'transparent',
-            },
-            animation: 'none'
-          }}
-        />
-        <NotificationModal />
-        <Toast config={toastConfig} />
-      </View>
-    </NotificationProvider>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: 'transparent',
+              },
+              animation: 'none'
+            }}
+          />
+          <NotificationModal />
+          <Toast config={toastConfig} />
+        </View>
+      </NotificationProvider>
+    </Provider>
   );
 }

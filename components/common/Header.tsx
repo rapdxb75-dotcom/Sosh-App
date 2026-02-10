@@ -1,8 +1,15 @@
 import { BlurView } from "expo-blur";
-import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
-import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import { router } from 'expo-router';
+import { LogOut } from 'lucide-react-native';
+import { useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Svg, { Circle, Defs, LinearGradient, Rect, Stop } from "react-native-svg";
+import { useDispatch, useSelector } from 'react-redux';
 import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
+import storageService from '../../services/storage';
+import { RootState } from '../../store/store';
+import { clearUserData } from '../../store/userSlice';
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
@@ -56,6 +63,16 @@ const ringStyles = StyleSheet.create({
 /* ---------- Header Component ---------- */
 export default function Header() {
     const { showNotifications } = useNotification();
+    const profilePic = useSelector((state: RootState) => state.user.profilePicture);
+    const dispatch = useDispatch();
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    const handleLogout = async () => {
+        dispatch(clearUserData());
+        await storageService.logout();
+        setShowDropdown(false);
+        router.replace('/');
+    };
 
     return (
         <View
@@ -91,18 +108,79 @@ export default function Header() {
                     />
                 </TouchableOpacity>
 
-                {/* RAPDXP Logo with Gradient Ring */}
-                <View
+                {/* RAPDXP User Profile Icon with Gradient Ring */}
+                <TouchableOpacity
                     className="items-center justify-center relative"
                     style={{ width: normalize(38), height: normalize(38) }}
+                    onPress={() => setShowDropdown(!showDropdown)}
                 >
                     <GradientRingSVG />
                     <Image
-                        source={require("../../assets/images/rapdxp-logo.png")}
-                        style={{ width: normalize(37), height: normalize(37) }}
-                        resizeMode="contain"
+                        source={
+                            profilePic
+                                ? { uri: profilePic.startsWith('data:') || profilePic.startsWith('http') || profilePic.startsWith('file') ? profilePic : `data:image/png;base64,${profilePic}` }
+                                : require("../../assets/images/avtar.png")
+                        }
+                        style={{
+                            width: normalize(36),
+                            height: normalize(36),
+                            borderRadius: profilePic ? normalize(18) : 0
+                        }}
+                        resizeMode={profilePic ? "cover" : "contain"}
                     />
-                </View>
+                </TouchableOpacity>
+
+                {/* Dropdown Menu */}
+                {showDropdown && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            top: normalize(45),
+                            right: 0,
+                            width: 120,
+                            backgroundColor: '#1A1A1A',
+                            borderRadius: 12,
+                            overflow: 'hidden',
+                            zIndex: 1000
+                        }}
+                    >
+                        <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
+                            <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', position: 'relative' }}>
+                                {/* SVG Gradient Border */}
+                                <View style={{ position: 'absolute', inset: 0 }} pointerEvents="none">
+                                    <Svg height="100%" width="100%">
+                                        <Defs>
+                                            <LinearGradient id="dropdownBorderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                <Stop offset="0%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
+                                                <Stop offset="48.56%" stopColor="rgba(65, 65, 65, 0.4)" stopOpacity="1" />
+                                                <Stop offset="100%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
+                                            </LinearGradient>
+                                        </Defs>
+                                        <Rect
+                                            x="0.34"
+                                            y="0.34"
+                                            width="99.3%"
+                                            height="99%"
+                                            rx="12"
+                                            ry="12"
+                                            stroke="url(#dropdownBorderGrad)"
+                                            strokeWidth="0.68"
+                                            fill="transparent"
+                                        />
+                                    </Svg>
+                                </View>
+
+                                <TouchableOpacity
+                                    className="flex-row items-center px-3 py-2"
+                                    onPress={handleLogout}
+                                >
+                                    <LogOut color="#fff" size={16} />
+                                    <Text className="text-white font-inter text-sm ml-2">Log out</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </BlurView>
+                    </View>
+                )}
 
             </View>
         </View>
