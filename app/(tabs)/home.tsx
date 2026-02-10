@@ -1,9 +1,13 @@
 import { ImageBackground, Text, View } from 'react-native';
+import { useSelector } from 'react-redux';
 import Header from '../../components/common/Header';
 import StatCard from '../../components/home/StatCard';
+import { RootState } from '../../store/store';
 
 
 export default function Home() {
+    const userName = useSelector((state: RootState) => state.user.userName);
+
     return (
         <ImageBackground
             source={require("../../assets/images/background.png")}
@@ -18,7 +22,7 @@ export default function Home() {
             <View className="flex-1 px-5 pt-[100px] pb-5">
 
                 <View className="mb-4">
-                    <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px] leading-[56px] tracking-normal mb-4 mt-2">Hello{'\n'}RAPDXB,{'\n'}lets create</Text>
+                    <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px] leading-[56px] tracking-normal mb-4 mt-2">Hello{'\n'}{userName},{'\n'}lets create</Text>
                     <View className="flex-row items-center gap-2 mb-9">
                         <View className="w-2 h-2 rounded-full bg-green-500" />
                         <Text className="font-inter font-normal text-sm leading-5 tracking-[-0.15px] text-[#FFFFFF99] ">Live Data • Updated just now</Text>

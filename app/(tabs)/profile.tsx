@@ -2,15 +2,20 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Upload } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import Toast from 'react-native-toast-message';
+import { useDispatch, useSelector } from 'react-redux';
 import Header from '../../components/common/Header';
+import { useNotification } from '../../context/NotificationContext';
+import authService from '../../services/api/auth';
+import { RootState } from '../../store/store';
+import { updateUser } from '../../store/userSlice';
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
-    const size = 41;
+    const size = 50;
     const strokeWidth = 1;
     const radius = (size - strokeWidth) / 2;
     const center = size / 2;
@@ -58,11 +63,29 @@ const ringStyles = StyleSheet.create({
 });
 
 export default function Profile() {
+    const dispatch = useDispatch();
+    const { addNotification } = useNotification();
+
+    // Global User State from Redux
+    const globalUserName = useSelector((state: RootState) => state.user.userName);
+    const globalProfilePicture = useSelector((state: RootState) => state.user.profilePicture);
+
     const [modalVisible, setModalVisible] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
-    const [username, setUsername] = useState("RAPDXB");
-    const [image, setImage] = useState<string | null>(null);
+
+    // Local state for the edit modal
+    const [username, setUsername] = useState(globalUserName);
+    const [image, setImage] = useState<string | null>(globalProfilePicture);
+    const [loading, setLoading] = useState(false);
+
+    // Sync local state when modal opens or global state changes
+    useEffect(() => {
+        if (editModalVisible) {
+            setUsername(globalUserName);
+            setImage(globalProfilePicture);
+        }
+    }, [editModalVisible, globalUserName, globalProfilePicture]);
 
     const pickImage = async () => {
         // No permissions request is necessary for launching the image library
@@ -70,17 +93,105 @@ export default function Profile() {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 1,
+            quality: 0.5, // Lower quality to keep Base64 string size reasonable
+            base64: true,
         });
 
         if (!result.canceled) {
-            setImage(result.assets[0].uri);
-            setEditModalVisible(false); // Optionally close modal after selection
-            Toast.show({
-                type: 'success',
-                text1: 'Upload Successful',
-                text2: 'Profile image updated successfully'
+            const asset = result.assets[0];
+            if (asset.base64) {
+                setImage(`data:image/jpeg;base64,${asset.base64}`);
+            } else {
+                setImage(asset.uri);
+            }
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        try {
+            setLoading(true);
+
+            // First update via API
+            const payload = {
+                userName: username,
+                profilePicture: image || ""
+            };
+            console.log("[Profile Update API Payload]:", {
+                ...payload,
+                profilePicture: payload.profilePicture ? `${payload.profilePicture.substring(0, 50)}... (truncated)` : ""
             });
+
+            const response = await authService.updateProfile(payload);
+
+            if (response.success) {
+                // Then Update Redux (which also updates storage via our thunk-like action)
+                // @ts-ignore - dispatch type is complex with thunks
+                await dispatch(updateUser({
+                    userName: username,
+                    profilePicture: image
+                }));
+
+                // Consolidated Notifications
+                const isPicUpdated = image !== globalProfilePicture;
+                const isNameUpdated = username !== globalUserName;
+
+                if (isPicUpdated && isNameUpdated) {
+                    addNotification({
+                        type: 'success',
+                        title: 'Profile Updated',
+                        message: 'Successfully changed your username and profile photo.'
+                    });
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Profile Updated',
+                        text2: 'Username and profile photo updated successfully'
+                    });
+                } else if (isPicUpdated) {
+                    addNotification({
+                        type: 'success',
+                        title: 'Profile Picture Updated',
+                        message: 'Successfully changed your profile photo.'
+                    });
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Profile Updated',
+                        text2: 'Profile photo updated successfully'
+                    });
+                } else if (isNameUpdated) {
+                    addNotification({
+                        type: 'success',
+                        title: 'Username Updated',
+                        message: `Your username is now ${username}`
+                    });
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Profile Updated',
+                        text2: 'Username updated successfully'
+                    });
+                } else {
+                    // Nothing changed, but we show a generic success if API was called
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Profile Saved',
+                        text2: 'Settings saved successfully'
+                    });
+                }
+                setEditModalVisible(false);
+            } else {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Update Failed',
+                    text2: response.message || 'Could not update profile'
+                });
+            }
+        } catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Update Error',
+                text2: error.message || 'An error occurred while saving'
+            });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -146,15 +257,21 @@ export default function Profile() {
                                 {/* User Header */}
                                 <View className="flex-row items-center justify-between mb-2 px-2">
                                     <View className="flex-row items-center gap-3">
-                                        <View className="w-[45px] h-[45px] items-center justify-center">
+                                        <View className="w-[50px] h-[50px] items-center justify-center">
                                             <GradientRingSVG />
                                             <Image
-                                                source={image ? { uri: image } : require('../../assets/images/rapdxp-logo.png')}
-                                                className="w-12 h-12 rounded-full"
+                                                source={
+                                                    image
+                                                        ? { uri: image.startsWith('http') || image.startsWith('file') || image.startsWith('data:') ? image : `data:image/png;base64,${image}` }
+                                                        : require('../../assets/images/avtar.png')
+                                                }
+                                                className="w-[45px] h-[45px] rounded-full"
                                                 resizeMode={image ? "cover" : "contain"}
                                             />
                                         </View>
-                                        <Text className="text-white text-2xl font-medium">RAPDXB</Text>
+                                        <Text className="profile-username text-white">
+                                            {username}
+                                        </Text>
                                     </View>
                                     <TouchableOpacity
                                         className='rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]'
@@ -165,7 +282,7 @@ export default function Profile() {
                                 </View>
 
                                 {/* Stats Grid */}
-                                <View className="flex-row flex-wrap justify-between gap-y-3 p-2">
+                                <View className="flex-row flex-wrap gap-3 p-2">
                                     <StatItem label="Sosh Views" value="345M" />
                                     <StatItem label="Sosh Likes" value="34.145K" />
                                     <StatItem label="Platforms" value="8" />
@@ -305,8 +422,12 @@ export default function Profile() {
                                     </Svg>
                                 </BlurView>
                                 <Image
-                                    source={image ? { uri: image } : require('../../assets/images/rapdxp-logo.png')}
-                                    className="w-[88px] h-[88px] absolute rounded-full"
+                                    source={
+                                        image
+                                            ? { uri: image.startsWith('http') || image.startsWith('file') || image.startsWith('data:') ? image : `data:image/png;base64,${image}` }
+                                            : require('../../assets/images/avtar.png')
+                                    }
+                                    className="w-[82px] h-[82px] absolute rounded-full"
                                     resizeMode={image ? "cover" : "contain"}
                                 />
                             </View>
@@ -343,18 +464,18 @@ export default function Profile() {
 
                         {/* Save Button */}
                         <TouchableOpacity
-                            onPress={() => setEditModalVisible(false)}
-                            className="btn-save"
+                            onPress={handleSaveProfile}
+                            className={`btn-save ${loading ? 'opacity-70' : ''}`}
+                            disabled={loading}
                         >
-                            <Text className="text-white font-medium text-lg">Save</Text>
+                            <Text className="text-white font-medium text-lg">
+                                {loading ? 'Saving...' : 'Save'}
+                            </Text>
                         </TouchableOpacity>
 
                     </View>
                 </View>
             </Modal>
-
-
-
         </ImageBackground>
     );
 }
@@ -362,7 +483,10 @@ export default function Profile() {
 
 function StatItem({ label, value }: { label: string, value: string }) {
     return (
-        <View className="w-[150px] h-[75px] bg-[#FFFFFF1A] rounded-[11px] px-[12px] py-[3px] justify-center">
+        <View
+            className="bg-[#FFFFFF1A] rounded-[11px] px-[12px] py-4 justify-center"
+            style={{ flexBasis: '47%', flexGrow: 1 }}
+        >
             <Text className="text-white/60 font-inter font-normal text-[14px] leading-[24px] tracking-[0px]">{label}</Text>
             <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[34px] leading-[34px] tracking-[0px] mt-1">{value}</Text>
         </View>

@@ -1,8 +1,10 @@
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
+import { jwtDecode } from "jwt-decode";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import {
+    ActivityIndicator,
     Image,
     ImageBackground,
     StyleSheet,
@@ -13,7 +15,12 @@ import {
 } from "react-native";
 import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import Toast from "react-native-toast-message";
+import { useDispatch } from 'react-redux';
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
+import { useNotification } from "../../context/NotificationContext";
+import authService from "../../services/api/auth";
+import storageService from "../../services/storage";
+import { setUserData } from '../../store/userSlice';
 
 export default function LoginForm() {
     const router = useRouter();
@@ -22,12 +29,21 @@ export default function LoginForm() {
     const [password, setPassword] = useState("");
     const [errors, setErrors] = useState({ email: "", password: "" });
 
-    const handleLogin = () => {
+    const [loading, setLoading] = useState(false);
+    const [containerHeight, setContainerHeight] = useState(0);
+
+    const { addNotification } = useNotification();
+    const dispatch = useDispatch();
+
+    const handleLogin = async () => {
         let isValid = true;
         const newErrors = { email: "", password: "" };
 
         if (!email.trim()) {
             newErrors.email = "Email is required";
+            isValid = false;
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            newErrors.email = "Invalid email address";
             isValid = false;
         }
 
@@ -39,12 +55,86 @@ export default function LoginForm() {
         setErrors(newErrors);
 
         if (isValid) {
-            Toast.show({
-                type: 'success',
-                text1: 'Login Successful',
-                text2: 'Welcome back! 👋'
-            });
-            router.replace('/(tabs)/home');
+            try {
+                setLoading(true);
+                // API Call
+                const response = await authService.login({ email, password });
+
+                if (response.token) {
+                    // On Success
+                    addNotification({
+                        type: 'success',
+                        title: 'Login Successful',
+                        message: 'Welcome back! 👋'
+                    });
+
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Login Successful',
+                        text2: 'Welcome back! 👋'
+                    });
+
+                    // Save token to storage
+                    if (response.token) {
+                        console.log("Saving token:", response.token);
+                        await storageService.setToken(response.token);
+
+                        try {
+                            const decoded: any = jwtDecode(response.token);
+                            if (decoded.userName) {
+                                console.log("Saving username:", decoded.userName);
+                                await storageService.setUsername(decoded.userName);
+                            }
+                            if (decoded.profilePicture) {
+                                console.log("Saving profile picture data");
+                                await storageService.setProfilePicture(decoded.profilePicture);
+                            }
+
+                            // Update global Redux state for reactive UI
+                            dispatch(setUserData({
+                                userName: decoded.userName,
+                                profilePicture: decoded.profilePicture
+                            }));
+                        } catch (decodeError) {
+                            console.error("Error decoding token:", decodeError);
+                        }
+                    }
+
+                    // Ensure proper navigation based on response
+                    router.replace('/(tabs)/home');
+                } else {
+                    // Handle case where API didn't return success/token
+                    addNotification({
+                        type: 'error',
+                        title: 'Login Failed',
+                        message: response.message || "Invalid credentials"
+                    });
+
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Login Failed',
+                        text2: response.message || "Invalid credentials"
+                    });
+                }
+
+            } catch (error: any) {
+                // On Error
+                const errorMessage = error.response?.data?.message || "Invalid credentials or network error";
+
+                addNotification({
+                    type: 'error',
+                    title: 'Login Failed',
+                    message: errorMessage
+                });
+
+                Toast.show({
+                    type: 'error',
+                    text1: 'Login Failed',
+                    text2: errorMessage
+                });
+            } finally {
+                setLoading(false);
+            }
         }
     };
 
@@ -95,6 +185,7 @@ export default function LoginForm() {
                     intensity={20}
                     tint="light"
                     className="p-6 gap-4"
+                    onLayout={(event) => setContainerHeight(event.nativeEvent.layout.height)}
                 >
                     {/* Gradient Border SVG Overlay (Taller to hide bottom stroke) */}
                     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -109,7 +200,7 @@ export default function LoginForm() {
                                 x="0.5"
                                 y="0.5"
                                 width="99.7%"
-                                height="85%"
+                                height={containerHeight > 0 ? containerHeight * 1.2 : "85%"}
                                 rx="20"
                                 ry="20"
                                 stroke="url(#loginBorderGrad)"
@@ -200,9 +291,13 @@ export default function LoginForm() {
                     resizeMode="cover"
                 >
                     <View className="absolute inset-0 bg-blue-500/20" />
-                    <Text className="text-white font-semibold text-lg">
-                        Sign in
-                    </Text>
+                    {loading ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Text className="text-white font-semibold text-lg">
+                            Sign in
+                        </Text>
+                    )}
                 </ImageBackground>
             </TouchableOpacity>
         </View>

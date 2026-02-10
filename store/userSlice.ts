@@ -1,0 +1,73 @@
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import storageService from '../services/storage';
+
+interface UserState {
+    userName: string;
+    profilePicture: string | null;
+    loading: boolean;
+    isLoggedIn: boolean;
+}
+
+const initialState: UserState = {
+    userName: 'RAPDXB',
+    profilePicture: null,
+    loading: false,
+    isLoggedIn: false,
+};
+
+// Async thunk to initialize user data from storage
+export const initializeUser = createAsyncThunk('user/initialize', async () => {
+    const [userName, profilePicture, token] = await Promise.all([
+        storageService.getUsername(),
+        storageService.getProfilePicture(),
+        storageService.getToken(),
+    ]);
+    return {
+        userName: userName || 'RAPDXB',
+        profilePicture,
+        isLoggedIn: !!token
+    };
+});
+
+const userSlice = createSlice({
+    name: 'user',
+    initialState,
+    reducers: {
+        setUserData: (state, action: PayloadAction<{ userName?: string; profilePicture?: string | null }>) => {
+            if (action.payload.userName !== undefined) {
+                state.userName = action.payload.userName;
+            }
+            if (action.payload.profilePicture !== undefined) {
+                state.profilePicture = action.payload.profilePicture;
+            }
+            state.isLoggedIn = true;
+        },
+        clearUserData: (state) => {
+            state.userName = 'RAPDXB';
+            state.profilePicture = null;
+            state.isLoggedIn = false;
+        },
+    },
+    extraReducers: (builder) => {
+        builder.addCase(initializeUser.fulfilled, (state, action) => {
+            state.userName = action.payload.userName;
+            state.profilePicture = action.payload.profilePicture;
+            state.isLoggedIn = action.payload.isLoggedIn;
+        });
+    },
+});
+
+export const { setUserData, clearUserData } = userSlice.actions;
+
+// Action to update state AND storage
+export const updateUser = (data: { userName?: string; profilePicture?: string | null }) => async (dispatch: any) => {
+    dispatch(setUserData(data));
+    if (data.userName !== undefined) {
+        await storageService.setUsername(data.userName);
+    }
+    if (data.profilePicture !== undefined) {
+        await storageService.setProfilePicture(data.profilePicture || '');
+    }
+};
+
+export default userSlice.reducer;
