@@ -89,6 +89,10 @@ export default function LoginForm() {
                                 console.log("Saving profile picture data");
                                 await storageService.setProfilePicture(decoded.profilePicture);
                             }
+                            if (decoded.email) {
+                                console.log("Saving email data", decoded.email);
+                                await storageService.setEmail(decoded.email);
+                            } ``
 
                             // Update global Redux state for reactive UI
                             dispatch(setUserData({

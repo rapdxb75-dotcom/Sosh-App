@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Plus, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, ImageBackground, Modal, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { Animated, Image, ImageBackground, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import { useSelector } from 'react-redux';
@@ -135,103 +135,109 @@ export default function AI() {
                     </View>
                 </View>
 
-                {/* Content Container */}
-                <View
-                    style={{
-                        flex: 1,
-                        paddingHorizontal: 20,
-                        paddingTop: normalize(110),
-                        paddingBottom: 200
-                    }}
+                {/* Content Container with Keyboard Avoiding */}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? -120 : -150}
                 >
-
-                    {/* Greeting Content */}
-                    <View className="flex-1 items-center justify-center">
-                        <View className="items-center">
-                            <Text
-                                className="text-white font-normal text-center mb-2"
-                                style={{
-                                    fontFamily: 'Questrial_400Regular',
-                                    fontSize: Math.min(width * 0.1, 42),
-                                    lineHeight: Math.min(width * 0.12, 50)
-                                }}
-                            >
-                                Hi, {userName}
-                            </Text>
-                            <Text
-                                className="text-white/60 font-inter text-center"
-                                style={{ fontSize: Math.min(width * 0.045, 18) }}
-                            >
-                                How may I help you?
-                            </Text>
-                        </View>
-                    </View>
-
-                    {/* Bottom Input Area */}
                     <View
                         style={{
-                            position: 'absolute',
-                            bottom: insets.bottom + 110,
-                            left: 20,
-                            right: 20
+                            flex: 1,
+                            paddingHorizontal: 20,
+                            paddingTop: normalize(110),
+                            paddingBottom: 200
                         }}
                     >
-                        <View className="flex-row items-center gap-3">
-                            <View className="flex-1 h-[56px] rounded-full overflow-hidden" style={{ position: 'relative' }}>
-                                <BlurView intensity={30} tint="dark" className="flex-1">
-                                    <View className="flex-1 flex-row items-center pl-5 pr-4 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
-                                        {/* SVG Gradient Border */}
-                                        <View style={{ position: 'absolute', inset: 0 }} pointerEvents="none">
-                                            <Svg height="100%" width="100%">
-                                                <Defs>
-                                                    <SvgLinearGradient id="inputBorderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                        <Stop offset="0%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
-                                                        <Stop offset="48.56%" stopColor="rgba(65, 65, 65, 0.4)" stopOpacity="1" />
-                                                        <Stop offset="100%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
-                                                    </SvgLinearGradient>
-                                                </Defs>
-                                                <Rect
-                                                    x="0.34"
-                                                    y="0.34"
-                                                    width="99.3%"
-                                                    height="99%"
-                                                    rx="28"
-                                                    ry="28"
-                                                    stroke="url(#inputBorderGrad)"
-                                                    strokeWidth="0.68"
-                                                    fill="transparent"
-                                                />
-                                            </Svg>
-                                        </View>
-                                        <TextInput
-                                            placeholder="Type your message..."
-                                            placeholderTextColor="rgba(255,255,255,0.6)"
-                                            className="flex-1 text-white text-base font-inter mr-2"
-                                            selectionColor="#fff"
-                                        />
-                                        <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full relative">
-                                            <GradientRingSVG />
-                                            <Image source={require("../../assets/icons/voice.png")} className="w-5 h-5" resizeMode="contain" />
-                                        </TouchableOpacity>
-                                    </View>
-                                </BlurView>
-                            </View>
 
-                            <TouchableOpacity
-                                className="w-[56px] h-[56px] rounded-full items-center justify-center overflow-hidden"
-                            >
-                                <ImageBackground
-                                    source={require("../../assets/images/button-bg.png")}
-                                    className="w-full h-full items-center justify-center"
-                                    resizeMode="cover"
+                        {/* Greeting Content */}
+                        <View className="flex-1 items-center justify-center">
+                            <View className="items-center">
+                                <Text
+                                    className="text-white font-normal text-center mb-2"
+                                    style={{
+                                        fontFamily: 'Questrial_400Regular',
+                                        fontSize: Math.min(width * 0.1, 42),
+                                        lineHeight: Math.min(width * 0.12, 50)
+                                    }}
                                 >
-                                    <View className="absolute inset-0 bg-blue-500/20" />
-                                    <Image source={require("../../assets/icons/send-msg.png")} className="w-6 h-6" resizeMode="contain" />
-                                </ImageBackground>
-                            </TouchableOpacity>
+                                    Hi, {userName}
+                                </Text>
+                                <Text
+                                    className="text-white/60 font-inter text-center"
+                                    style={{ fontSize: Math.min(width * 0.045, 18) }}
+                                >
+                                    How may I help you?
+                                </Text>
+                            </View>
+                        </View>
+
+                        {/* Bottom Input Area */}
+                        <View
+                            style={{
+                                position: 'absolute',
+                                bottom: insets.bottom + 110,
+                                left: 20,
+                                right: 20
+                            }}
+                        >
+                            <View className="flex-row items-center gap-3">
+                                <View className="flex-1 h-[56px] rounded-full overflow-hidden" style={{ position: 'relative' }}>
+                                    <BlurView intensity={30} tint="dark" className="flex-1">
+                                        <View className="flex-1 flex-row items-center pl-5 pr-4 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                                            {/* SVG Gradient Border */}
+                                            <View style={{ position: 'absolute', inset: 0 }} pointerEvents="none">
+                                                <Svg height="100%" width="100%">
+                                                    <Defs>
+                                                        <SvgLinearGradient id="inputBorderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                            <Stop offset="0%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
+                                                            <Stop offset="48.56%" stopColor="rgba(65, 65, 65, 0.4)" stopOpacity="1" />
+                                                            <Stop offset="100%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
+                                                        </SvgLinearGradient>
+                                                    </Defs>
+                                                    <Rect
+                                                        x="0.34"
+                                                        y="0.34"
+                                                        width="99.3%"
+                                                        height="99%"
+                                                        rx="28"
+                                                        ry="28"
+                                                        stroke="url(#inputBorderGrad)"
+                                                        strokeWidth="0.68"
+                                                        fill="transparent"
+                                                    />
+                                                </Svg>
+                                            </View>
+                                            <TextInput
+                                                placeholder="Type your message..."
+                                                placeholderTextColor="rgba(255,255,255,0.6)"
+                                                className="flex-1 text-white text-base font-inter mr-2"
+                                                selectionColor="#fff"
+                                            />
+                                            <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full relative bg-black/30">
+                                                <GradientRingSVG />
+                                                <Image source={require("../../assets/icons/voice.png")} className="w-5 h-5" resizeMode="contain" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </BlurView>
+                                </View>
+
+                                <TouchableOpacity
+                                    className="w-[56px] h-[56px] rounded-full items-center justify-center overflow-hidden"
+                                >
+                                    <ImageBackground
+                                        source={require("../../assets/images/button-bg.png")}
+                                        className="w-full h-full items-center justify-center"
+                                        resizeMode="cover"
+                                    >
+                                        <View className="absolute inset-0 bg-blue-500/20" />
+                                        <Image source={require("../../assets/icons/send-msg.png")} className="w-6 h-6" resizeMode="contain" />
+                                    </ImageBackground>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </ImageBackground>
 
             {/* Sidebar Overlay */}
