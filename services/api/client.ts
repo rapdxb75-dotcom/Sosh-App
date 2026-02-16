@@ -30,6 +30,8 @@ apiClient.interceptors.request.use(
         }
 
         console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+        console.log('[API Full URL]:', `${config.baseURL}${config.url}`);
+        console.log('[API Payload]:', JSON.stringify(config.data, null, 2));
         return config;
     },
     (error) => {
@@ -44,7 +46,10 @@ apiClient.interceptors.response.use(
     },
     async (error) => {
         // Handle session expiry (403 Forbidden - used as expiry here)
-        if (error.response && error.response.status === 403) {
+        // Check if it's NOT a workflow error (n8n workflow errors often have a 'hint' or 'message' about webhooks)
+        const isWorkflowError = error.response?.data?.hint || (error.response?.data?.message && error.response.data.message.includes('webhook'));
+
+        if (error.response && error.response.status === 403 && !isWorkflowError) {
             Toast.show({
                 type: 'error',
                 text1: 'Session Expired',
@@ -53,6 +58,15 @@ apiClient.interceptors.response.use(
             await storageService.logout();
             store.dispatch(clearUserData());
             router.replace('/login');
+        }
+
+        if (isWorkflowError) {
+            const errorMessage = error.response?.data?.hint || error.response?.data?.message;
+            Toast.show({
+                type: 'error',
+                text1: 'Workflow Error',
+                text2: errorMessage || 'An error occurred in the workflow.'
+            });
         }
 
         // Log errors or implement global error handling

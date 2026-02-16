@@ -3,13 +3,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Upload } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ImageBackground, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import Toast from 'react-native-toast-message';
 import { useDispatch, useSelector } from 'react-redux';
 import Header from '../../components/common/Header';
 import { useNotification } from '../../context/NotificationContext';
-import authService from '../../services/api/auth';
+import userService from '../../services/api/user';
+import storageService from '../../services/storage';
 import { RootState } from '../../store/store';
 import { updateUser } from '../../store/userSlice';
 
@@ -121,7 +122,7 @@ export default function Profile() {
                 profilePicture: payload.profilePicture ? `${payload.profilePicture.substring(0, 50)}... (truncated)` : ""
             });
 
-            const response = await authService.updateProfile(payload);
+            const response = await userService.updateProfile(payload);
 
             if (response.success) {
                 // Then Update Redux (which also updates storage via our thunk-like action)
@@ -205,6 +206,42 @@ export default function Profile() {
         console.log(`Disconnected ${selectedAccount}`);
         setModalVisible(false);
         setSelectedAccount(null);
+    };
+
+    const handleConnectInstagram = async () => {
+        try {
+            const userEmail = await storageService.getEmail();
+            if (!userEmail) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'User email not found'
+                });
+                return;
+            }
+
+            const token = await storageService.getToken();
+            if (!token) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: 'Authentication token not found'
+                });
+                return;
+            }
+
+            const [response]: any = await userService.connectInstagram(userEmail, token);
+            console.log("response : ", response);
+            if (response.authUrl) {
+                await Linking.openURL(response.authUrl);
+            }
+        } catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Connection Failed',
+                text2: error.message || 'Failed to connect Instagram'
+            });
+        }
     };
 
     return (
@@ -298,8 +335,9 @@ export default function Profile() {
                     <ConnectedAccountItem
                         icon={require('../../assets/icons/instagram.png')}
                         name="Instagram"
-                        status={"Connected to \n@raptesttheworld"}
-                        isConnected={true}
+                        status={"Not connected"}
+                        isConnected={false}
+                        onConnect={handleConnectInstagram}
                         onDisconnect={() => handleDisconnectPress('Instagram')}
                     />
                     <ConnectedAccountItem
@@ -493,7 +531,7 @@ function StatItem({ label, value }: { label: string, value: string }) {
     );
 }
 
-function ConnectedAccountItem({ icon, name, status, isConnected, onDisconnect }: { icon: any, name: string, status: string, isConnected: boolean, onDisconnect?: () => void }) {
+function ConnectedAccountItem({ icon, name, status, isConnected, onConnect, onDisconnect }: { icon: any, name: string, status: string, isConnected: boolean, onConnect?: () => void, onDisconnect?: () => void }) {
     return (
         <View className="flex-row items-center justify-between p-4 bg-[#1A1A1A] rounded-2xl mb-3 border border-white/10">
             <View className="flex-row items-center gap-4">
@@ -510,7 +548,7 @@ function ConnectedAccountItem({ icon, name, status, isConnected, onDisconnect }:
             </View>
 
             <TouchableOpacity
-                onPress={isConnected ? onDisconnect : undefined}
+                onPress={isConnected ? onDisconnect : onConnect}
                 className={`btn-toggle ${isConnected ? 'btn-toggle-disconnect' : 'btn-toggle-connect'}`}
             >
                 <View className="flex-row items-center gap-2">

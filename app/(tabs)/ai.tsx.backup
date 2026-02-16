@@ -1,0 +1,605 @@
+import { BlurView } from 'expo-blur';
+import { useFocusEffect } from 'expo-router';
+import { Plus, X } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Image, ImageBackground, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import { useSelector } from 'react-redux';
+import { normalize } from '../../constants/Fonts';
+import authService, { Conversation } from '../../services/api/auth';
+import { RootState } from '../../store/store';
+
+/* ---------- Gradient Ring Component ---------- */
+const GradientRingSVG = () => {
+    const size = normalize(38);
+    const strokeWidth = 1;
+    const radius = (size - strokeWidth) / 2;
+    const center = size / 2;
+
+    return (
+        <View style={ringStyles.container}>
+            <BlurView intensity={5} style={ringStyles.blurContainer}>
+                <Svg width={size} height={size}>
+                    <Defs>
+                        <SvgLinearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                            <Stop offset="50%" stopColor="#000000" stopOpacity="1" />
+                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
+                        </SvgLinearGradient>
+                    </Defs>
+                    <Circle
+                        cx={center}
+                        cy={center}
+                        r={radius}
+                        stroke="url(#headerGrad)"
+                        strokeWidth={strokeWidth}
+                        fill="transparent"
+                    />
+                </Svg>
+            </BlurView>
+        </View>
+    );
+};
+
+const ringStyles = StyleSheet.create({
+    container: {
+        position: "absolute",
+        inset: 0,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    blurContainer: {
+        width: normalize(38),
+        height: normalize(38),
+        borderRadius: normalize(19),
+        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+});
+
+export default function AI() {
+    const { width, height } = useWindowDimensions();
+    const insets = useSafeAreaInsets();
+    const userName = useSelector((state: RootState) => state.user.userName);
+    const userEmail = useSelector((state: RootState) => state.user.email);
+    const profilePicture = useSelector((state: RootState) => state.user.profilePicture);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+    const [conversationsError, setConversationsError] = useState<string | null>(null);
+
+    // Create conversation modal state
+    const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
+    const [conversationName, setConversationName] = useState('');
+    const [isCreating, setIsCreating] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+
+    // Chat history state
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+
+    // Calculate responsiveness
+    const sidebarWidth = Math.min(width * 0.8, 300);
+    const slideAnim = useRef(new Animated.Value(-sidebarWidth)).current;
+
+    // Fetch conversations when page comes into focus (not when drawer opens)
+    useFocusEffect(
+        useCallback(() => {
+            if (userEmail) {
+                fetchConversations();
+            }
+        }, [userEmail])
+    );
+
+    const fetchConversations = async () => {
+        if (!userEmail) return;
+
+        setIsLoadingConversations(true);
+        setConversationsError(null);
+
+        try {
+            const data = await authService.getConversations(userEmail);
+            // Sort by _createTime in descending order (newest first)
+            const sortedData = data.sort((a, b) => {
+                return new Date(b._createTime).getTime() - new Date(a._createTime).getTime();
+            });
+            setConversations(sortedData);
+        } catch (error) {
+            console.error('Failed to fetch conversations:', error);
+            setConversationsError('Failed to load conversations');
+        } finally {
+            setIsLoadingConversations(false);
+        }
+    };
+
+    const openCreateModal = () => {
+        setConversationName('');
+        setCreateError(null);
+        setIsCreateModalVisible(true);
+    };
+
+    const openCreateModalFromDrawer = () => {
+        closeSidebar();
+        setTimeout(() => {
+            openCreateModal();
+        }, 300); // Wait for drawer to close
+    };
+
+    const closeCreateModal = () => {
+        setIsCreateModalVisible(false);
+        setConversationName('');
+        setCreateError(null);
+    };
+
+    const handleCreateConversation = async () => {
+        if (!conversationName.trim()) {
+            setCreateError('Please enter a conversation name');
+            return;
+        }
+
+        setIsCreating(true);
+        setCreateError(null);
+
+        try {
+            await authService.createConversation({
+                boardId: 'crimson-volcano-YMlZP',
+                chatId: 'chatNode-small-field-XgvXp-copied',
+                name: conversationName.trim()
+            });
+
+            // Refresh conversations list
+            await fetchConversations();
+
+            // Close modal and reset
+            closeCreateModal();
+        } catch (error) {
+            console.error('Failed to create conversation:', error);
+            setCreateError('Failed to create conversation. Please try again.');
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    const loadHistory = async (conversationId: string) => {
+        setActiveConversationId(conversationId);
+        setIsLoadingMessages(true);
+        setMessages([]);
+
+        try {
+            const history = await authService.getHistory(conversationId);
+            // Sort messages by _createTime in ascending order (oldest first)
+            const sortedMessages = history.sort((a, b) => {
+                return new Date(a._createTime).getTime() - new Date(b._createTime).getTime();
+            });
+            setMessages(sortedMessages);
+        } catch (error) {
+            console.error('Failed to load conversation history:', error);
+            setMessages([]);
+        } finally {
+            setIsLoadingMessages(false);
+        }
+    };
+
+    const openSidebar = () => {
+        setIsModalVisible(true);
+        setTimeout(() => setIsSidebarOpen(true), 10);
+    };
+
+    const closeSidebar = () => {
+        setIsSidebarOpen(false);
+        setTimeout(() => setIsModalVisible(false), 300);
+    };
+
+    useEffect(() => {
+        Animated.timing(slideAnim, {
+            toValue: isSidebarOpen ? 0 : -sidebarWidth,
+            duration: 300,
+            useNativeDriver: true,
+        }).start();
+    }, [isSidebarOpen, sidebarWidth]);
+
+    // Chat Message Component
+    const ChatMessage = ({ message }: { message: Message }) => {
+        const isUser = message.role === 'User';
+
+        if (isUser) {
+            // User message - right side with border and badge
+            return (
+                <View className="mb-4 flex-row justify-end items-start">
+                    <View
+                        className="max-w-[75%] px-5 py-4 rounded-[28px] border border-white/20"
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                    >
+                        <Text className="text-white font-inter text-base leading-6">{message.content}</Text>
+                    </View>
+                    <View
+                        className="ml-3 w-12 h-12 rounded-full overflow-hidden items-center justify-center"
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                    >
+                        <Image
+                            source={profilePicture ? { uri: profilePicture } : require("../../assets/icons/nav_user.png")}
+                            className="w-full h-full"
+                            resizeMode="cover"
+                        />
+                    </View>
+                </View>
+            );
+        } else {
+            // AI message - left side with dark background and icon
+            return (
+                <View className="mb-4 flex-row justify-start items-start">
+                    <View
+                        className="w-10 h-10 rounded-full items-center justify-center mr-3"
+                        style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                    >
+                        <Image
+                            source={require("../../assets/icons/nav_ai.png")}
+                            className="w-6 h-6"
+                            resizeMode="contain"
+                        />
+                    </View>
+                    <View
+                        className="max-w-[75%] px-5 py-4 rounded-[28px]"
+                        style={{ backgroundColor: 'rgba(30, 30, 30, 0.95)' }}
+                    >
+                        <Text className="text-white font-inter text-base leading-6">{message.content}</Text>
+                    </View>
+                </View>
+            );
+        }
+    };
+
+    const ChatItem = ({ conversation }: { conversation: Conversation }) => (
+        <TouchableOpacity
+            className="flex-row items-center justify-between bg-[#1A1A1A] p-4 rounded-xl mb-3"
+            activeOpacity={0.7}
+            onPress={() => {
+                loadHistory(conversation._id);
+                closeSidebar();
+            }}
+        >
+            <View className="flex-row items-center flex-1">
+                <Image source={require("../../assets/icons/chat.png")} className="w-5 h-5" resizeMode="contain" />
+                <Text className="text-white ml-3 font-inter text-base flex-1" numberOfLines={1}>
+                    {conversation.conversationName}
+                </Text>
+            </View>
+            <View className="flex-row items-center gap-2">
+                <TouchableOpacity className="w-8 h-8 items-center justify-center bg-white/10 rounded-[12px]">
+                    <Image source={require("../../assets/icons/edit.png")} className="w-4 h-4" resizeMode="contain" />
+                </TouchableOpacity>
+                <TouchableOpacity className="w-8 h-8 items-center justify-center bg-white/10 rounded-[12px]">
+                    <Image source={require("../../assets/icons/delete.png")} className="w-4 h-4" resizeMode="contain" />
+                </TouchableOpacity>
+            </View>
+        </TouchableOpacity>
+    );
+
+    return (
+        <View style={{ flex: 1 }}>
+            <ImageBackground
+                source={require("../../assets/images/background.png")}
+                style={{ flex: 1, backgroundColor: "#000" }}
+                resizeMode="cover"
+            >
+                {/* Header Container (Absolute to match Home/Profile) */}
+                <View
+                    className="absolute top-0 left-0 right-0 z-10"
+                    style={{ paddingTop: normalize(55) }}
+                >
+                    <View className="flex-row items-center justify-between px-5">
+                        <TouchableOpacity
+                            onPress={openSidebar}
+                            style={{ width: normalize(38), height: normalize(38) }}
+                            className="items-center justify-center rounded-full relative"
+                        >
+                            <GradientRingSVG />
+                            <Image source={require("../../assets/icons/menu.png")} className="w-6 h-6" resizeMode="contain" />
+                        </TouchableOpacity>
+                        <Text className="text-white text-xl font-bold font-inter">Sosh AI</Text>
+                        <TouchableOpacity
+                            onPress={openCreateModal}
+                            style={{ width: normalize(38), height: normalize(38) }}
+                            className="items-center justify-center rounded-full relative"
+                        >
+                            <GradientRingSVG />
+                            <Plus color="#fff" size={24} />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Content Container with Keyboard Avoiding */}
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? -120 : -150}
+                >
+                    <View
+                        style={{
+                            flex: 1,
+                            paddingHorizontal: 20,
+                            paddingTop: normalize(110),
+                            paddingBottom: 200
+                        }}
+                    >
+
+
+                        {/* Chat Messages or Greeting Content */}
+                        {activeConversationId ? (
+                            // Show chat messages when conversation is active
+                            <ScrollView
+                                className="flex-1"
+                                contentContainerStyle={{ paddingVertical: 20 }}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {isLoadingMessages ? (
+                                    <View className="flex-1 items-center justify-center py-20">
+                                        <ActivityIndicator size="large" color="#fff" />
+                                        <Text className="text-white/60 font-inter mt-4">Loading messages...</Text>
+                                    </View>
+                                ) : messages.length > 0 ? (
+                                    messages.map((message) => (
+                                        <ChatMessage key={message._id} message={message} />
+                                    ))
+                                ) : (
+                                    <View className="flex-1 items-center justify-center py-20">
+                                        <Text className="text-white/60 font-inter">No messages yet</Text>
+                                    </View>
+                                )}
+                            </ScrollView>
+                        ) : (
+                            // Show greeting when no conversation is active
+                            <View className="flex-1 items-center justify-center">
+                                <View className="items-center">
+                                    <Text
+                                        className="text-white font-normal text-center mb-2"
+                                        style={{
+                                            fontFamily: 'Questrial_400Regular',
+                                            fontSize: Math.min(width * 0.1, 42),
+                                            lineHeight: Math.min(width * 0.12, 50)
+                                        }}
+                                    >
+                                        Hi, {userName}
+                                    </Text>
+                                    <Text
+                                        className="text-white/60 font-inter text-center"
+                                        style={{ fontSize: Math.min(width * 0.045, 18) }}
+                                    >
+                                        How may I help you?
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Bottom Input Area */}
+                        <View
+                            style={{
+                                position: 'absolute',
+                                bottom: insets.bottom + 110,
+                                left: 20,
+                                right: 20
+                            }}
+                        >
+                            <View className="flex-row items-center gap-3">
+                                <View className="flex-1 h-[56px] rounded-full overflow-hidden" style={{ position: 'relative' }}>
+                                    <BlurView intensity={30} tint="dark" className="flex-1">
+                                        <View className="flex-1 flex-row items-center pl-5 pr-4 rounded-full" style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}>
+                                            {/* SVG Gradient Border */}
+                                            <View style={{ position: 'absolute', inset: 0 }} pointerEvents="none">
+                                                <Svg height="100%" width="100%">
+                                                    <Defs>
+                                                        <SvgLinearGradient id="inputBorderGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                            <Stop offset="0%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
+                                                            <Stop offset="48.56%" stopColor="rgba(65, 65, 65, 0.4)" stopOpacity="1" />
+                                                            <Stop offset="100%" stopColor="rgba(141, 138, 138, 0.4)" stopOpacity="1" />
+                                                        </SvgLinearGradient>
+                                                    </Defs>
+                                                    <Rect
+                                                        x="0.34"
+                                                        y="0.34"
+                                                        width="99.3%"
+                                                        height="99%"
+                                                        rx="28"
+                                                        ry="28"
+                                                        stroke="url(#inputBorderGrad)"
+                                                        strokeWidth="0.68"
+                                                        fill="transparent"
+                                                    />
+                                                </Svg>
+                                            </View>
+                                            <TextInput
+                                                placeholder="Type your message..."
+                                                placeholderTextColor="rgba(255,255,255,0.6)"
+                                                className="flex-1 text-white text-base font-inter mr-2"
+                                                selectionColor="#fff"
+                                            />
+                                            <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full relative bg-black/30">
+                                                <GradientRingSVG />
+                                                <Image source={require("../../assets/icons/voice.png")} className="w-5 h-5" resizeMode="contain" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </BlurView>
+                                </View>
+
+                                <TouchableOpacity
+                                    className="w-[56px] h-[56px] rounded-full items-center justify-center overflow-hidden"
+                                >
+                                    <ImageBackground
+                                        source={require("../../assets/images/button-bg.png")}
+                                        className="w-full h-full items-center justify-center"
+                                        resizeMode="cover"
+                                    >
+                                        <View className="absolute inset-0 bg-blue-500/20" />
+                                        <Image source={require("../../assets/icons/send-msg.png")} className="w-6 h-6" resizeMode="contain" />
+                                    </ImageBackground>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </ImageBackground>
+
+            {/* Sidebar Overlay */}
+            <Modal
+                visible={isModalVisible}
+                transparent={true}
+                animationType="none"
+                onRequestClose={closeSidebar}
+            >
+                <View className="flex-1 flex-row">
+                    <TouchableOpacity
+                        activeOpacity={1}
+                        onPress={closeSidebar}
+                        className="absolute inset-0 bg-black/60"
+                    />
+                    <Animated.View
+                        style={{
+                            width: sidebarWidth,
+                            height: height + insets.top + insets.bottom,
+                            left: -9,
+                            borderTopRightRadius: 24,
+                            borderBottomRightRadius: 24,
+                            overflow: 'hidden',
+                            transform: [{ translateX: slideAnim }],
+                            paddingTop: Math.max(insets.top, 40)
+                        }}
+                        className="bg-[#0A0A0A] p-6"
+                    >
+                        <View className="flex-row items-center justify-between mb-8">
+                            <Text className="text-white text-2xl font-bold font-inter">Chat History</Text>
+                            <TouchableOpacity
+                                onPress={closeSidebar}
+                                style={{ width: normalize(38), height: normalize(38) }}
+                                className="items-center justify-center rounded-full relative"
+                            >
+                                <GradientRingSVG />
+                                <X color="#fff" size={24} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
+                            onPress={openCreateModalFromDrawer}
+                            className="flex-row items-center bg-white/10 p-4 rounded-xl mb-8 border border-white/5"
+                        >
+                            <Plus color="#fff" size={20} />
+                            <Text className="text-white ml-3 font-inter font-medium text-base">New chat</Text>
+                        </TouchableOpacity>
+
+                        <View className="flex-1">
+                            {isLoadingConversations ? (
+                                <View className="items-center justify-center py-8">
+                                    <ActivityIndicator size="large" color="#fff" />
+                                    <Text className="text-white/60 font-inter text-sm mt-4">Loading conversations...</Text>
+                                </View>
+                            ) : conversationsError ? (
+                                <View className="items-center justify-center py-8">
+                                    <Text className="text-red-400 font-inter text-sm">{conversationsError}</Text>
+                                </View>
+                            ) : conversations.length > 0 ? (
+                                <>
+                                    <Text className="text-white/40 font-inter font-medium text-sm mb-4 tracking-wider">Recent chats</Text>
+                                    {conversations.map((conversation) => (
+                                        <ChatItem key={conversation.conversationId} conversation={conversation} />
+                                    ))}
+                                </>
+                            ) : (
+                                <View className="items-center justify-center py-8">
+                                    <Text className="text-white/60 font-inter text-sm">No conversations yet</Text>
+                                </View>
+                            )}
+                        </View>
+                    </Animated.View>
+                </View>
+            </Modal>
+
+            {/* Create Conversation Modal */}
+            <Modal
+                visible={isCreateModalVisible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={closeCreateModal}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? -150 : 0}
+                    className="flex-1"
+                >
+                    <View className="flex-1 items-center justify-center bg-black/70">
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            onPress={closeCreateModal}
+                            className="absolute inset-0"
+                        />
+                        <View
+                            style={{ width: Math.min(width * 0.85, 350) }}
+                            className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
+                        >
+                            <View className="flex-row items-center justify-between mb-6">
+                                <Text className="text-white text-2xl font-bold font-inter">New Conversation</Text>
+                                <TouchableOpacity
+                                    onPress={closeCreateModal}
+                                    style={{ width: normalize(32), height: normalize(32) }}
+                                    className="items-center justify-center rounded-full bg-white/10"
+                                >
+                                    <X color="#fff" size={20} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text className="text-white/60 font-inter text-sm mb-3">Conversation Name</Text>
+
+                            <View className="mb-4">
+                                <View className="h-[56px] rounded-2xl overflow-hidden" style={{ position: 'relative' }}>
+                                    <BlurView intensity={30} tint="dark" className="flex-1">
+                                        <View className="flex-1 px-5 rounded-2xl justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                                            <TextInput
+                                                value={conversationName}
+                                                onChangeText={setConversationName}
+                                                placeholder="Enter conversation name..."
+                                                placeholderTextColor="rgba(255,255,255,0.4)"
+                                                className="text-white text-base font-inter"
+                                                selectionColor="#fff"
+                                                editable={!isCreating}
+                                                autoFocus
+                                                onSubmitEditing={handleCreateConversation}
+                                            />
+                                        </View>
+                                    </BlurView>
+                                </View>
+                            </View>
+
+                            {createError && (
+                                <Text className="text-red-400 font-inter text-sm mb-4">{createError}</Text>
+                            )}
+
+                            <TouchableOpacity
+                                onPress={handleCreateConversation}
+                                disabled={isCreating || !conversationName.trim()}
+                                className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
+                                style={{
+                                    opacity: (isCreating || !conversationName.trim()) ? 0.5 : 1
+                                }}
+                            >
+                                <ImageBackground
+                                    source={require("../../assets/images/button-bg.png")}
+                                    className="w-full h-full items-center justify-center"
+                                    resizeMode="cover"
+                                >
+                                    <View className="absolute inset-0 bg-blue-500/20" />
+                                    {isCreating ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text className="text-white font-inter font-semibold text-base">Create Conversation</Text>
+                                    )}
+                                </ImageBackground>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
+        </View>
+    );
+}

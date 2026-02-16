@@ -58,7 +58,7 @@ export default function LoginForm() {
             try {
                 setLoading(true);
                 // API Call
-                const response = await authService.login({ email, password });
+                const response: any = await authService.login({ email, password });
 
                 if (response.token) {
                     // On Success
@@ -85,15 +85,19 @@ export default function LoginForm() {
                                 console.log("Saving username:", decoded.userName);
                                 await storageService.setUsername(decoded.userName);
                             }
-                            if (decoded.profilePicture) {
+                            if (response.profilePicture) {
                                 console.log("Saving profile picture data");
-                                await storageService.setProfilePicture(decoded.profilePicture);
+                                await storageService.setProfilePicture(response.profilePicture);
+                            }
+                            if (decoded.email) {
+                                console.log("Saving email data:", decoded.email);
+                                await storageService.setEmail(decoded.email);
                             }
 
                             // Update global Redux state for reactive UI
                             dispatch(setUserData({
                                 userName: decoded.userName,
-                                profilePicture: decoded.profilePicture
+                                profilePicture: response.profilePicture
                             }));
                         } catch (decodeError) {
                             console.error("Error decoding token:", decodeError);

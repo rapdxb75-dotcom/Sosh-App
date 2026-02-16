@@ -4,6 +4,7 @@ const TOKEN_KEY = 'user_token';
 const USERNAME_KEY = 'user_name';
 const PROFILE_PICTURE_KEY = 'profile_picture';
 const NOTIFICATIONS_KEY = 'app_notifications';
+const EMAIL_KEY = 'user_email';
 
 const storageService = {
     /**
@@ -71,6 +72,29 @@ const storageService = {
             return await AsyncStorage.getItem(PROFILE_PICTURE_KEY);
         } catch (error) {
             console.error('Error getting profile picture', error);
+            return null;
+        }
+    },
+
+    /**
+     * Save email to storage
+     */
+    setEmail: async (email: string) => {
+        try {
+            await AsyncStorage.setItem(EMAIL_KEY, email);
+        } catch (error) {
+            console.error('Error saving email', error);
+        }
+    },
+
+    /**
+     * Get email from storage
+     */
+    getEmail: async () => {
+        try {
+            return await AsyncStorage.getItem(EMAIL_KEY);
+        } catch (error) {
+            console.error('Error getting email', error);
             return null;
         }
     },

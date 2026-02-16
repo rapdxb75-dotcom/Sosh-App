@@ -1,4 +1,4 @@
-import { ImageBackground, SafeAreaView, View } from "react-native";
+import { ImageBackground, KeyboardAvoidingView, Platform, SafeAreaView, View } from "react-native";
 import LoginForm from "../components/login/LoginForm";
 
 export default function Login() {
@@ -9,9 +9,15 @@ export default function Login() {
             resizeMode="cover"
         >
             <SafeAreaView className="flex-1">
-                <View className="flex-1 px-6 pb-8">
-                    <LoginForm />
-                </View>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? -120 : -150}
+                >
+                    <View className="flex-1 px-6 pb-8">
+                        <LoginForm />
+                    </View>
+                </KeyboardAvoidingView>
             </SafeAreaView>
         </ImageBackground>
     );

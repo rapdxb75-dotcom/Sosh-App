@@ -55,13 +55,13 @@ export default function BottomNavigation({ state, descriptors, navigation }: Bot
 
                     <TouchableOpacity
                         onPress={() => navigateTo('home')}
-                        className={`w-[50px] h-[50px] items-center justify-center rounded-[14px] ${isActive('home') ? 'bg-[#FFFFFF1A]' : ''}`}
+                        className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive('home') ? 'bg-[#FFFFFF1A]' : ''}`}
                     >
                         <Image source={require("../../assets/icons/nav_home.png")} className="w-[24px] h-[24px]" resizeMode="contain" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => navigateTo('ai')}
-                        className={`w-[50px] h-[50px] items-center justify-center rounded-[14px] ${isActive('ai') ? 'bg-[#FFFFFF1A]' : ''}`}
+                        className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive('ai') ? 'bg-[#FFFFFF1A]' : ''}`}
                     >
                         <Image source={require("../../assets/icons/nav_ai.png")} className="w-[24px] h-[24px]" resizeMode="contain" />
                     </TouchableOpacity>
@@ -70,13 +70,14 @@ export default function BottomNavigation({ state, descriptors, navigation }: Bot
                     <View className="w-[60px]" />
 
                     <TouchableOpacity
-                        className={`w-[50px] h-[50px] items-center justify-center rounded-[14px] ${isActive('analysis') ? 'bg-[#FFFFFF1A]' : ''}`}                        onPress={() => navigateTo('analysis')}
+                        className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive('analysis') ? 'bg-[#FFFFFF1A]' : ''}`}
+                        onPress={() => navigateTo('analysis')}
                     >
                         <Image source={require("../../assets/icons/nav_chart.png")} className="w-[24px] h-[24px]" resizeMode="contain" />
                     </TouchableOpacity>
                     <TouchableOpacity
                         onPress={() => navigateTo('profile')}
-                        className={`w-[50px] h-[50px] items-center justify-center rounded-[14px] ${isActive('profile') ? 'bg-[#FFFFFF1A]' : ''}`}
+                        className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive('profile') ? 'bg-[#FFFFFF1A]' : ''}`}
                     >
                         <Image source={require("../../assets/icons/nav_user.png")} className="w-[24px] h-[24px]" resizeMode="contain" />
                     </TouchableOpacity>
