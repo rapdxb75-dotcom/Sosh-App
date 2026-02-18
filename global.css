@@ -110,6 +110,36 @@
         font-size: 18px;
     }
 
+    .chart-section-title {
+        font-family: 'Inter_600SemiBold';
+        font-size: 14px;
+        line-height: 28px;
+        letter-spacing: -0.89px;
+    }
+
+    .chart-tab {
+        width: 36px;
+        height: 36px;
+        border-radius: 100px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chart-tab-active {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .chart-legend-item {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .chart-legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 2px;
+    }
+
     .page-title {
         font-family: 'Questrial_400Regular';
         font-size: 56px;
@@ -141,5 +171,72 @@
         font-family: 'Questrial_400Regular';
         font-size: 30px;
         line-height: 51px;
+    }
+
+    /* Platform Card System */
+    .platform-card {
+        margin-bottom: 16px;
+        border-radius: 20px;
+        overflow: hidden;
+        shadow-color: #000;
+        shadow-offset: 0px 4px;
+        shadow-opacity: 0.45;
+        shadow-radius: 24px;
+        elevation: 8;
+    }
+
+    .platform-card-inner {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 16px;
+    }
+
+    .platform-info {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .platform-title-row {
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    /* Gauge & Charts */
+    .gauge-card {
+        background-color: rgba(26, 26, 26, 0.6);
+        border-radius: 32px;
+        padding: 20px;
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.1);
+        flex: 1;
+        margin: 4px;
+        overflow: hidden;
+    }
+
+    .chart-container {
+        height: 250px;
+        margin-left: -20px;
+    }
+
+    .tabs-container {
+        flex-direction: row;
+        padding: 4px;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .tab-item {
+        width: 36px;
+        height: 36px;
+        border-radius: 100px;
+        padding: 10px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .tab-item-active {
+        background-color: rgba(255, 255, 255, 0.1);
     }
 }

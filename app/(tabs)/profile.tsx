@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Upload } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Image, ImageBackground, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
 import Toast from 'react-native-toast-message';
 import { useDispatch, useSelector } from 'react-redux';
@@ -245,11 +245,7 @@ export default function Profile() {
     };
 
     return (
-        <ImageBackground
-            source={require("../../assets/images/background.png")}
-            style={{ flex: 1, backgroundColor: "#000" }}
-            resizeMode="cover"
-        >
+        <View className="flex-1">
             <ScrollView contentContainerStyle={{ paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
                 {/* Header */}
                 <View className="w-full">
@@ -257,7 +253,7 @@ export default function Profile() {
                 </View>
 
                 <View className="w-full px-5">
-                    <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px] leading-[56px] mb-8 mt-4">
+                    <Text className="page-title text-white mb-8 mt-3">
                         Your{'\n'}Account
                     </Text>
 
@@ -514,7 +510,7 @@ export default function Profile() {
                     </View>
                 </View>
             </Modal>
-        </ImageBackground>
+        </View>
     );
 }
 
