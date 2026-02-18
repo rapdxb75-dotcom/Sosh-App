@@ -1,4 +1,4 @@
-import { ImageBackground, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import Header from '../../components/common/Header';
 import StatCard from '../../components/home/StatCard';
@@ -9,11 +9,7 @@ export default function Home() {
     const userName = useSelector((state: RootState) => state.user.userName);
 
     return (
-        <ImageBackground
-            source={require("../../assets/images/background.png")}
-            style={{ flex: 1, backgroundColor: "#000" }}
-            resizeMode="cover"
-        >
+        <View className="flex-1">
             {/* Header */}
             <View className="absolute top-0 left-0 right-0 z-10">
                 <Header />
@@ -59,6 +55,6 @@ export default function Home() {
             </View>
             <View className="h-28" />
 
-        </ImageBackground>
+        </View>
     );
 }

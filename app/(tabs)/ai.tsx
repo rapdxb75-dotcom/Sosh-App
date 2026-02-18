@@ -686,11 +686,7 @@ export default function AI() {
 
     return (
         <View style={{ flex: 1 }}>
-            <ImageBackground
-                source={require("../../assets/images/background.png")}
-                style={{ flex: 1, backgroundColor: "#000" }}
-                resizeMode="cover"
-            >
+            <View style={{ flex: 1 }}>
                 {/* Header Container (Absolute to match Home/Profile) */}
                 <View
                     className="absolute top-0 left-0 right-0 z-10"
@@ -837,7 +833,7 @@ export default function AI() {
                                                 returnKeyType="send"
                                                 placeholder="Type your message..."
                                                 placeholderTextColor="rgba(255,255,255,0.6)"
-                                                className="flex-1 text-white text-base font-inter mr-2"
+                                                className="flex-1 h-[44px] px-1 py-0 text-white"
                                                 selectionColor="#fff"
                                             />
                                             <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full relative bg-black/30">
@@ -871,7 +867,7 @@ export default function AI() {
                         </View>
                     </View>
                 </KeyboardAvoidingView>
-            </ImageBackground>
+            </View>
 
             {/* Sidebar Overlay */}
             <Modal
@@ -1051,7 +1047,7 @@ export default function AI() {
                                                 onChangeText={setEditName}
                                                 placeholder="Enter conversation name..."
                                                 placeholderTextColor="rgba(255,255,255,0.4)"
-                                                className="text-white text-base font-inter"
+                                                className="flex-1 h-[44px] px-1 py-0 text-white"
                                                 selectionColor="#fff"
                                                 editable={!isEditing}
                                                 autoFocus
@@ -1136,7 +1132,7 @@ export default function AI() {
                                                 onChangeText={setConversationName}
                                                 placeholder="Enter conversation name..."
                                                 placeholderTextColor="rgba(255,255,255,0.4)"
-                                                className="text-white text-base font-inter"
+                                                className="flex-1 h-[44px] px-1 py-0 text-white"
                                                 selectionColor="#fff"
                                                 editable={!isCreating}
                                                 autoFocus
