@@ -36,7 +36,7 @@ export default function StatCard({ title, value, trend, fullWidth }: StatCardPro
                     {fullWidth ? (
                         // Full Width Layout: Title -> 26px Gap -> Content
                         <View className="flex-row items-end justify-between mt-[26px]">
-                            <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px]">{value}</Text>
+                            <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[54px]">{value}</Text>
                             <View className="flex-row items-center gap-1 mb-2">
                                 <TrendingUp color={Colors.white} size={18} />
                                 <Text className="font-inter font-normal text-xs leading-5 tracking-[0px] text-right text-white/60">{trend}</Text>
@@ -46,7 +46,7 @@ export default function StatCard({ title, value, trend, fullWidth }: StatCardPro
                         // Half Width Layout: Vertical Stack with justify-between
                         <>
                             <View className="flex-1">
-                                <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[56px] mt-2">{value}</Text>
+                                <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[54px] mt-2">{value}</Text>
                             </View>
 
                             <View>

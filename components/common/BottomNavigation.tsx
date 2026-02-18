@@ -90,6 +90,7 @@ export default function BottomNavigation({ state, descriptors, navigation }: Bot
                 style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}
             >
                 <TouchableOpacity
+                    onPress={() => navigateTo('createPost')}
                     className="w-[60px] h-[60px] bg-white rounded-full items-center justify-center -mt-14 shadow-lg shadow-black/30"
                 >
                     <Image source={require("../../assets/icons/nav_center.png")} className="w-[30px] h-[30px]" resizeMode="contain" />

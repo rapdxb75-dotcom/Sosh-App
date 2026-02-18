@@ -19,6 +19,7 @@ import { useDispatch } from 'react-redux';
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import authService from "../../services/api/auth";
+import chatService from "../../services/api/chat";
 import storageService from "../../services/storage";
 import { setUserData } from '../../store/userSlice';
 
@@ -92,6 +93,14 @@ export default function LoginForm() {
                             if (decoded.email) {
                                 console.log("Saving email data:", decoded.email);
                                 await storageService.setEmail(decoded.email);
+
+                                // Fetch conversations on login
+                                try {
+                                    console.log("Fetching conversations...");
+                                    await chatService.getConversations(decoded.email);
+                                } catch (error) {
+                                    console.error("Error fetching conversations:", error);
+                                }
                             }
 
                             // Update global Redux state for reactive UI

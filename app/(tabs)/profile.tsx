@@ -316,10 +316,10 @@ export default function Profile() {
 
                                 {/* Stats Grid */}
                                 <View className="flex-row flex-wrap gap-3 p-2">
-                                    <StatItem label="Sosh Views" value="345M" />
-                                    <StatItem label="Sosh Likes" value="34.145K" />
-                                    <StatItem label="Platforms" value="8" />
-                                    <StatItem label="Sosh Posts" value="8" />
+                                    <StatItem label="Sosh Views" value="2.9M" />
+                                    <StatItem label="Sosh Likes" value="62K" />
+                                    <StatItem label="Platforms" value="6" />
+                                    <StatItem label="Sosh Posts" value="58" />
                                 </View>
                             </LinearGradient>
                         </BlurView>
