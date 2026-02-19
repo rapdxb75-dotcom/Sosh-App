@@ -1,0 +1,29 @@
+{
+  "cli": {
+    "version": ">= 5.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "production": {
+      "ios": {
+        "bundleIdentifier": "com.social.aiautomation"
+      },
+      "android": {
+        "buildType": "apk",
+        "package": "com.social.aiautomation"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

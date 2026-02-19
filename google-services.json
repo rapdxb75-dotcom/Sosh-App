@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "459898012419",
+    "project_id": "rapdxb-app",
+    "storage_bucket": "rapdxb-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:459898012419:android:1ec111bb418237597cdf36",
+        "android_client_info": {
+          "package_name": "com.social.aiautomation"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9bzB3P06DbpzQf3BsXjnzGLPAh4TL324"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
