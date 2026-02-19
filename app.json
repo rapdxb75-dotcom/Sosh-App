@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Sosh-AI",
-    "slug": "Sosh-AI",
+    "name": "Sosh",
+    "slug": "Sosh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
