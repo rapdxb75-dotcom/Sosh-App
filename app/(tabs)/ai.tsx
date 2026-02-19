@@ -695,7 +695,7 @@ export default function AI() {
                     <View className="flex-row items-center justify-between px-5">
                         <TouchableOpacity
                             onPress={openSidebar}
-                            style={{ width: normalize(38), height: normalize(38) }}
+                            style={{ width: normalize(38), height: normalize(38), backgroundColor: '#00000080' }}
                             className="items-center justify-center rounded-full relative"
                         >
                             <GradientRingSVG />
@@ -708,7 +708,7 @@ export default function AI() {
                             className="items-center justify-center rounded-full relative"
                         >
                             <GradientRingSVG />
-                            <Plus color="#fff" size={24} />
+                            <Plus color="#fff" size={20} />
                         </TouchableOpacity>
                     </View>
                 </View>

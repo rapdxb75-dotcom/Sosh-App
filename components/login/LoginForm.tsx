@@ -94,18 +94,24 @@ export default function LoginForm() {
                                 console.log("Saving email data:", decoded.email);
                                 await storageService.setEmail(decoded.email);
 
-                                // Fetch conversations on login
-                                try {
-                                    console.log("Fetching conversations...");
-                                    await chatService.getConversations(decoded.email);
-                                } catch (error) {
-                                    console.error("Error fetching conversations:", error);
-                                }
+                                // Fetch conversations after a short delay to ensure
+                                // token + email are fully committed to storage first
+                                const emailForConversations = decoded.email;
+                                setTimeout(async () => {
+                                    try {
+                                        console.log("Fetching conversations (delayed)...");
+                                        await chatService.getConversations(emailForConversations);
+                                        console.log("Conversations pre-fetched successfully");
+                                    } catch (error) {
+                                        console.error("Error fetching conversations:", error);
+                                    }
+                                }, 1500);
                             }
 
                             // Update global Redux state for reactive UI
                             dispatch(setUserData({
                                 userName: decoded.userName,
+                                email: decoded.email,
                                 profilePicture: response.profilePicture
                             }));
                         } catch (decodeError) {
@@ -230,7 +236,7 @@ export default function LoginForm() {
                         <View className="overflow-hidden rounded-[20px]">
                             <BlurView intensity={20} tint="light">
                                 <TextInput
-                                    placeholder="email@mail.com"
+                                    placeholder="email@gmail.com"
                                     placeholderTextColor="#ffffff80"
                                     style={styles.input}
                                     className="w-full h-[44px] px-4 py-0 text-white"
