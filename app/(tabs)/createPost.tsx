@@ -286,16 +286,16 @@ export default function CreatePost() {
                                                 <View className="glass-input flex-row rounded-full p-1 mb-6">
                                                     <BlurView intensity={5} tint="light" className="flex-1 flex-row">
                                                         <TouchableOpacity
-                                                            className={`flex-1 h-[40px] justify-center rounded-full items-center ${postType === 'Single' ? 'bg-white' : 'bg-transparent'}`}
+                                                            className={`post-type-btn ${postType === 'Single' ? 'post-type-btn-active' : ''}`}
                                                             onPress={() => setPostType('Single')}
                                                         >
-                                                            <Text className={`font-inter font-semibold text-sm ${postType === 'Single' ? 'text-black' : 'text-white/60'}`}>{activeTab === 'Story' ? 'Photo' : 'Single post'}</Text>
+                                                            <Text className={`post-type-btn-label ${postType === 'Single' ? 'post-type-btn-label-active' : ''}`}>{activeTab === 'Story' ? 'Photo' : 'Single post'}</Text>
                                                         </TouchableOpacity>
                                                         <TouchableOpacity
-                                                            className={`flex-1 h-[40px] justify-center rounded-full items-center ${postType === 'Carousel' ? 'bg-white' : 'bg-transparent'}`}
+                                                            className={`post-type-btn ${postType === 'Carousel' ? 'post-type-btn-active' : ''}`}
                                                             onPress={() => setPostType('Carousel')}
                                                         >
-                                                            <Text className={`font-inter font-semibold text-sm ${postType === 'Carousel' ? 'text-black' : 'text-white/60'}`}>{activeTab === 'Story' ? 'Video' : 'Carousel post'}</Text>
+                                                            <Text className={`post-type-btn-label ${postType === 'Carousel' ? 'post-type-btn-label-active' : ''}`}>{activeTab === 'Story' ? 'Video' : 'Carousel post'}</Text>
                                                         </TouchableOpacity>
                                                     </BlurView>
                                                 </View>
@@ -465,10 +465,11 @@ export default function CreatePost() {
                                                         <BlurView intensity={isSelected ? 0 : 5} tint="light" className="flex-row items-center p-3">
                                                             <Image
                                                                 source={platform.icon}
-                                                                className="w-5 h-5 mr-3"
+                                                                className="w-6 h-6 mr-3"
                                                                 resizeMode="contain"
+                                                                style={{ opacity: isSelected ? 1 : 0.5 }}
                                                             />
-                                                            <Text className={`font-inter font-medium text-sm ${isSelected ? 'text-black' : 'text-white/60'}`}>{platform.name}</Text>
+                                                            <Text className={`post-on-platform-name ${isSelected ? 'post-on-platform-name-selected' : 'post-on-platform-name-default'}`}>{platform.name}</Text>
                                                         </BlurView>
                                                     </TouchableOpacity>
                                                 )
@@ -494,7 +495,7 @@ export default function CreatePost() {
                                         {/* Schedule */}
                                         <Text className="input-label">Schedule</Text>
                                         <TouchableOpacity
-                                            className="glass-input flex-row items-center"
+                                            className="schedule-input flex-row items-center"
                                             onPress={() => setShowDatePicker(true)}
                                         >
                                             <BlurView intensity={5} tint="light" className="flex-1 flex-row items-center px-4 py-3">
@@ -519,7 +520,7 @@ export default function CreatePost() {
                                     className="w-full h-full items-center justify-center"
                                     resizeMode="cover"
                                 >
-                                    <View className="absolute inset-0 bg-blue-500/20" />
+                                    <View className="absolute inset-0" />
                                     <Text className="text-white font-semibold text-lg">
                                         Generate Post
                                     </Text>

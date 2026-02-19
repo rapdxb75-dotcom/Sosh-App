@@ -6,19 +6,23 @@
 
     /* Toggle Button in List */
     .btn-toggle {
-        padding-left: 16px;
-        padding-right: 16px;
+        width: 96px;
+        height: 31px;
+        border-radius: 8px;
         padding-top: 8px;
         padding-bottom: 8px;
-        border-radius: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
+        align-items: center;
+        justify-content: center;
     }
 
     .btn-toggle-connect {
-        background-color: #00DC82;
+        background-color: #00C950;
     }
 
     .btn-toggle-disconnect {
-        background-color: #FF4B4B;
+        background-color: #D73D3D;
     }
 
     /* Modal Disconnect Button */
@@ -173,6 +177,64 @@
         line-height: 51px;
     }
 
+    .stat-item {
+        width: 150px;
+        height: 70px;
+        border-radius: 11px;
+        padding-top: 3px;
+        padding-bottom: 3px;
+        padding-left: 12px;
+        padding-right: 12px;
+        background-color: rgba(255, 255, 255, 0.1);
+        justify-content: center;
+    }
+
+    .stat-item-label {
+        font-family: 'Inter_400Regular';
+        font-size: 14px;
+        line-height: 24px;
+        letter-spacing: 0px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .platform-card-name {
+        font-family: 'Inter_600SemiBold';
+        font-size: 18px;
+        line-height: 18px;
+        letter-spacing: -0.89px;
+        color: white;
+    }
+
+    .platform-card-status {
+        font-family: 'Inter_400Regular';
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: -0.15px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .connected-account-card {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        height: 96px;
+        padding-left: 16px;
+        padding-right: 16px;
+        background-color: #1A1A1A;
+        border-radius: 20px;
+        margin-bottom: 12px;
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-toggle-label {
+        font-family: 'Inter_400Regular';
+        font-size: 12px;
+        line-height: 12px;
+        letter-spacing: -0.89px;
+        color: white;
+    }
+
     /* Platform Card System */
     .platform-card {
         margin-bottom: 16px;
@@ -242,46 +304,75 @@
 
     /* Create Content Tabs */
     .content-tabs-container {
-        height: 52px;
-        border-radius: 200px;
+        width: 308px;
+        height: 50px;
+        border-radius: 25px;
         align-self: center;
-        margin-top: 10px;
-        shadow-color: #000;
-        shadow-offset: 0px 4px;
-        shadow-opacity: 0.45;
-        shadow-radius: 24px;
-        elevation: 10;
         overflow: hidden;
     }
 
     .content-tabs-blur {
         flex: 1;
-        border-radius: 200px;
+        border-radius: 20px;
         overflow: hidden;
         flex-direction: row;
         align-items: center;
         padding: 6px;
         background-color: rgba(255, 255, 255, 0.1);
-        border-color: rgba(255, 255, 255, 0.1);
-
     }
 
     .content-tab-btn {
         flex: 1;
         height: 100%;
         border-radius: 100px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
         align-items: center;
         justify-content: center;
     }
 
     .content-tab-active {
-        width: 95px;
-        background-color: rgba(4, 196, 255, 1);
-        shadow-color: rgba(4, 196, 255, 1);
-        shadow-offset: 0px 0px;
-        shadow-opacity: 0.31;
-        shadow-radius: 14px;
-        elevation: 5;
+        background-color: #04C4FF;
+    }
+
+    .post-type-btn {
+        flex: 1;
+        height: 40px;
+        border-radius: 100px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .post-type-btn-active {
+        background-color: white;
+    }
+
+    .post-type-btn-label {
+        font-family: 'Inter_500Medium';
+        font-size: 14px;
+        line-height: 14px;
+        letter-spacing: 0px;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    .post-type-btn-label-active {
+        color: black;
+    }
+
+    .post-on-platform-name {
+        font-family: 'Inter_400Regular';
+        font-size: 14px;
+
+    }
+
+    .post-on-platform-name-selected {
+        color: black;
+    }
+
+    .post-on-platform-name-default {
+        color: rgba(255, 255, 255, 0.6);
     }
 
     /* Glass Cards */
@@ -311,6 +402,14 @@
         border-color: rgba(255, 255, 255, 0.1);
     }
 
+    .schedule-input {
+        width: 308px;
+        height: 44px;
+        border-radius: 20px;
+        overflow: hidden;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
     .glass-button {
         background-color: rgba(255, 255, 255, 0.1);
         border-radius: 20px;
@@ -324,16 +423,16 @@
         font-weight: 600;
         font-size: 14px;
         line-height: 28px;
-        letter-spacing: -0.89px;
+        /* letter-spacing: -0.89px; */
         color: #FFFFFF;
         margin-bottom: 12px;
     }
 
     .content-tab-text {
-        font-family: 'Inter';
-        font-weight: 500;
-        font-size: 14px;
-        line-height: 14px;
+        font-family: 'Helvetica Neue';
+        font-weight: 400;
+        font-size: 18px;
+        line-height: 18px;
         letter-spacing: 0px;
     }
 
