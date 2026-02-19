@@ -239,4 +239,107 @@
     .tab-item-active {
         background-color: rgba(255, 255, 255, 0.1);
     }
+
+    /* Create Content Tabs */
+    .content-tabs-container {
+        height: 52px;
+        border-radius: 200px;
+        align-self: center;
+        margin-top: 10px;
+        shadow-color: #000;
+        shadow-offset: 0px 4px;
+        shadow-opacity: 0.45;
+        shadow-radius: 24px;
+        elevation: 10;
+        overflow: hidden;
+    }
+
+    .content-tabs-blur {
+        flex: 1;
+        border-radius: 200px;
+        overflow: hidden;
+        flex-direction: row;
+        align-items: center;
+        padding: 6px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.1);
+
+    }
+
+    .content-tab-btn {
+        flex: 1;
+        height: 100%;
+        border-radius: 100px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .content-tab-active {
+        width: 95px;
+        background-color: rgba(4, 196, 255, 1);
+        shadow-color: rgba(4, 196, 255, 1);
+        shadow-offset: 0px 0px;
+        shadow-opacity: 0.31;
+        shadow-radius: 14px;
+        elevation: 5;
+    }
+
+    /* Glass Cards */
+    .glass-card-container {
+        border-radius: 32px;
+        overflow: hidden;
+        margin-bottom: 22px;
+        shadow-color: #000;
+        shadow-offset: 0px 4px;
+        shadow-opacity: 0.45;
+        shadow-radius: 24px;
+        elevation: 8;
+        background-color: transparent;
+    }
+
+    .glass-card-gradient {
+        border-radius: 32px;
+        padding: 20px;
+        position: relative;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-input {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        overflow: hidden;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-button {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        overflow: hidden;
+        border-width: 1px;
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .input-label {
+        font-family: 'Inter';
+        font-weight: 600;
+        font-size: 14px;
+        line-height: 28px;
+        letter-spacing: -0.89px;
+        color: #FFFFFF;
+        margin-bottom: 12px;
+    }
+
+    .content-tab-text {
+        font-family: 'Inter';
+        font-weight: 500;
+        font-size: 14px;
+        line-height: 14px;
+        letter-spacing: 0px;
+    }
+
+    .input-text-regular {
+        font-family: 'Inter';
+        font-weight: 400;
+        font-size: 14px;
+    }
 }

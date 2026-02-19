@@ -28,7 +28,7 @@ export default function Home() {
                 {/* Followers Card */}
                 <StatCard
                     title="Followers"
-                    value="192.2K"
+                    value="54.5K"
                     trend="+8.2% this month"
                     fullWidth
                 />
@@ -38,14 +38,14 @@ export default function Home() {
                     <View className="flex-1">
                         <StatCard
                             title="Likes"
-                            value="42.2K"
+                            value="1.6M"
                             trend="+8.2% this month"
                         />
                     </View>
                     <View className="flex-1">
                         <StatCard
                             title="Views"
-                            value="3.8M"
+                            value="76.8M"
                             trend="+8.2% this month"
                         />
                     </View>

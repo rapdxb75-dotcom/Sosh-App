@@ -221,7 +221,16 @@ const PlatformCard = ({
     screenWidth: number
 }) => {
     return (
-        <View className="platform-card">
+        <View
+            className="platform-card"
+            style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.45,
+                shadowRadius: 24,
+                elevation: 8,
+            }}
+        >
             <BlurView intensity={14} tint="dark" className="border border-white/10 rounded-[20px]">
                 <View className="platform-card-inner">
                     <View className={`flex-row items-center justify-between ${isExpanded ? 'mb-6' : ''}`}>
