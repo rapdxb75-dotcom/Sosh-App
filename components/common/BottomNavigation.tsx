@@ -91,7 +91,14 @@ export default function BottomNavigation({ state, descriptors, navigation }: Bot
             >
                 <TouchableOpacity
                     onPress={() => navigateTo('createPost')}
-                    className="w-[60px] h-[60px] bg-white rounded-full items-center justify-center -mt-14 shadow-lg shadow-black/30"
+                    className="w-[60px] h-[60px] bg-white rounded-full items-center justify-center -mt-14"
+                    style={{
+                        shadowColor: '#000000',
+                        shadowOffset: { width: 0, height: 8 },
+                        shadowOpacity: 0.97,
+                        shadowRadius: 14,
+                        elevation: 14,
+                    }}
                 >
                     <Image source={require("../../assets/icons/nav_center.png")} className="w-[30px] h-[30px]" resizeMode="contain" />
                 </TouchableOpacity>

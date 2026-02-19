@@ -258,8 +258,17 @@ export default function Profile() {
                     </Text>
 
                     {/* Profile Card with Gradient Border Overlay */}
-                    <View className="rounded-[32px] overflow-hidden mb-8">
-                        <BlurView intensity={40} tint="dark" className="p-[1px]">
+                    <View
+                        className="rounded-[32px] overflow-hidden mb-8"
+                        style={{
+                            shadowColor: '#000000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.45,
+                            shadowRadius: 24,
+                            elevation: 12,
+                        }}
+                    >
+                        <BlurView intensity={12} tint="dark" className="p-[1px]">
                             <LinearGradient
                                 colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.1)']}
                                 style={{ borderRadius: 32, paddingVertical: 20, paddingHorizontal: 10, position: 'relative' }}

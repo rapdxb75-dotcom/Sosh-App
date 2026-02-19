@@ -3,8 +3,80 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import { Upload, X } from 'lucide-react-native';
 import { useState } from 'react';
-import { Image, ImageBackground, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ImageBackground, Keyboard, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import Header from '../../components/common/Header';
+
+const captionModalStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        paddingTop: 96,
+        paddingLeft: 29,
+        backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    },
+    card: {
+        width: 333,
+        height: 601,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.4)',
+        backgroundColor: 'rgba(0, 0, 0, 0.15)',
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.24,
+        shadowRadius: 14,
+        elevation: 14,
+    },
+    cardInner: {
+        flex: 1,
+        borderRadius: 23,
+        overflow: 'hidden',
+    },
+    textInput: {
+        flex: 1,
+        color: 'white',
+        fontSize: 15,
+        fontFamily: 'Inter',
+        padding: 20,
+        textAlignVertical: 'top',
+    },
+    collapseBtn: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        width: 36,
+        height: 36,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    bottomBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    saveBtn: {
+        backgroundColor: 'white',
+        paddingHorizontal: 28,
+        paddingVertical: 10,
+        borderRadius: 30,
+    },
+    saveBtnText: {
+        color: 'black',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    iconRow: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    iconBtn: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+});
 
 export default function CreatePost() {
     const [activeTab, setActiveTab] = useState('Post');
@@ -44,6 +116,7 @@ export default function CreatePost() {
     });
 
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showCaptionModal, setShowCaptionModal] = useState(false);
 
     // Derived State for Active Tab
     const activeData = tabData[activeTab as keyof typeof tabData];
@@ -151,7 +224,16 @@ export default function CreatePost() {
                     </Text>
 
                     {/* Content Type Tabs */}
-                    <View className="content-tabs-container w-full mb-8">
+                    <View
+                        className="content-tabs-container w-full mb-8"
+                        style={{
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.45,
+                            shadowRadius: 24,
+                            elevation: 10,
+                        }}
+                    >
                         <BlurView
                             intensity={50}
                             tint="light"
@@ -164,6 +246,13 @@ export default function CreatePost() {
                                         key={tab}
                                         onPress={() => setActiveTab(tab)}
                                         className={`content-tab-btn ${isActive ? 'content-tab-active' : ''}`}
+                                        style={isActive ? {
+                                            shadowColor: '#04C4FF',
+                                            shadowOffset: { width: 0, height: 0 },
+                                            shadowOpacity: 0.31,
+                                            shadowRadius: 14,
+                                            elevation: 8,
+                                        } : undefined}
                                     >
                                         <Text
                                             className={`content-tab-text ${isActive ? 'text-black' : 'text-white/60'}`}
@@ -179,7 +268,16 @@ export default function CreatePost() {
                     {/* Main Content Area */}
                     {(activeTab === 'Post' || activeTab === 'Reel' || activeTab === 'Story') && (
                         <>
-                            <View className="glass-card-container">
+                            <View
+                                className="glass-card-container"
+                                style={{
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: 0.45,
+                                    shadowRadius: 24,
+                                    elevation: 8,
+                                }}
+                            >
                                 <BlurView intensity={20} tint="light" className="flex-1">
                                     <View className="glass-card-gradient">
                                         {(activeTab === 'Post' || activeTab === 'Story') && (
@@ -260,18 +358,54 @@ export default function CreatePost() {
 
                                         {/* Caption */}
                                         <Text className="input-label">Caption</Text>
-                                        <View className="glass-input mb-6">
-                                            <BlurView intensity={5} tint="light" className="p-6">
-                                                <TextInput
-                                                    className="text-white input-text-regular min-h-[100px] py-0"
-                                                    placeholder="Write your caption..."
-                                                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                                                    multiline
-                                                    // textAlignVertical="top"
-                                                    value={caption}
-                                                    onChangeText={setCaption}
-                                                />
-                                            </BlurView>
+                                        <View className="flex-row gap-3 mb-6" style={{ alignItems: 'stretch' }}>
+                                            {/* Text Input */}
+                                            <View className="flex-1 glass-input">
+                                                <BlurView intensity={5} tint="light" className="p-4">
+                                                    <TextInput
+                                                        className="text-white input-text-regular min-h-[120px] py-0"
+                                                        placeholder="Write your caption..."
+                                                        placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                                        multiline
+                                                        textAlignVertical="top"
+                                                        value={caption}
+                                                        onChangeText={setCaption}
+                                                    />
+                                                </BlurView>
+                                            </View>
+
+                                            {/* Right Action Buttons - Pill Container */}
+                                            <View
+                                                className="overflow-hidden w-full"
+                                                style={{ width: 42, height: 147, borderRadius: 20 }}
+                                            >
+                                                <BlurView
+                                                    intensity={20}
+                                                    tint="light"
+                                                    style={{ flex: 1, paddingHorizontal: 8, justifyContent: 'space-evenly', alignItems: 'center', backgroundColor: '#FFFFFF1A' }}
+                                                >
+                                                    {/* Move / Expand */}
+                                                    <TouchableOpacity
+                                                        style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}
+                                                        onPress={() => setShowCaptionModal(true)}
+                                                    >
+                                                        <Image source={require('../../assets/icons/move.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                                                    </TouchableOpacity>
+
+
+                                                    {/* AI */}
+                                                    <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Image source={require('../../assets/icons/chat_ai.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                                                    </TouchableOpacity>
+
+
+                                                    {/* Voice */}
+                                                    <TouchableOpacity style={{ alignItems: 'center', justifyContent: 'center', marginTop: 14 }}>
+                                                        <Image source={require('../../assets/icons/caption_mike.png')} style={{ width: 30, height: 30 }} resizeMode="contain" />
+                                                    </TouchableOpacity>
+
+                                                </BlurView>
+                                            </View>
                                         </View>
 
                                         {/* Tags */}
@@ -298,7 +432,16 @@ export default function CreatePost() {
                             </View>
 
                             {/* Second Card: Post Settings */}
-                            <View className="glass-card-container">
+                            <View
+                                className="glass-card-container"
+                                style={{
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: 0.45,
+                                    shadowRadius: 24,
+                                    elevation: 8,
+                                }}
+                            >
                                 <BlurView intensity={20} tint="light" className="flex-1">
                                     <View className="glass-card-gradient">
                                         {/* Post On (Platforms) */}
@@ -336,7 +479,16 @@ export default function CreatePost() {
                             </View>
 
                             {/* Third Card: Schedule */}
-                            <View className="glass-card-container">
+                            <View
+                                className="glass-card-container"
+                                style={{
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: 0.45,
+                                    shadowRadius: 24,
+                                    elevation: 8,
+                                }}
+                            >
                                 <BlurView intensity={20} tint="light" className="flex-1">
                                     <View className="glass-card-gradient">
                                         {/* Schedule */}
@@ -418,6 +570,65 @@ export default function CreatePost() {
                 )
             )
             }
-        </View >
+            {/* Expanded Caption Modal */}
+            <Modal
+                visible={showCaptionModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowCaptionModal(false)}
+            >
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                    <BlurView intensity={14} tint="light" style={captionModalStyles.overlay}>
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        >
+                            <View style={captionModalStyles.card}>
+                                <View style={captionModalStyles.cardInner}>
+
+                                    {/* Text Input Area */}
+                                    <TextInput
+                                        style={captionModalStyles.textInput}
+                                        placeholder="Write your caption..."
+                                        placeholderTextColor="rgba(255,255,255,0.4)"
+                                        multiline
+                                        autoFocus
+                                        value={caption}
+                                        onChangeText={setCaption}
+                                    />
+
+                                    {/* Collapse Button Top Right */}
+                                    <TouchableOpacity
+                                        style={captionModalStyles.collapseBtn}
+                                        onPress={() => setShowCaptionModal(false)}
+                                    >
+                                        <Image source={require('../../assets/icons/move_out.png')} style={{ width: 36, height: 36 }} resizeMode="contain" />
+                                    </TouchableOpacity>
+
+                                    {/* Bottom Bar */}
+                                    <View style={captionModalStyles.bottomBar}>
+                                        <TouchableOpacity
+                                            style={captionModalStyles.saveBtn}
+                                            onPress={() => setShowCaptionModal(false)}
+                                        >
+                                            <Text style={captionModalStyles.saveBtnText}>Save</Text>
+                                        </TouchableOpacity>
+
+                                        <View style={captionModalStyles.iconRow}>
+                                            <TouchableOpacity style={captionModalStyles.iconBtn}>
+                                                <Image source={require('../../assets/icons/chat_ai.png')} style={{ width: 36, height: 36 }} resizeMode="contain" />
+                                            </TouchableOpacity>
+                                            <TouchableOpacity style={captionModalStyles.iconBtn}>
+                                                <Image source={require('../../assets/icons/caption_mike.png')} style={{ width: 36, height: 36 }} resizeMode="contain" />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+
+                                </View>
+                            </View>
+                        </KeyboardAvoidingView>
+                    </BlurView>
+                </TouchableWithoutFeedback>
+            </Modal>
+        </View>
     );
 }
