@@ -1,569 +1,892 @@
-import { BlurView } from 'expo-blur';
-import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Upload } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import { Image, Linking, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle, Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
-import Toast from 'react-native-toast-message';
-import { useDispatch, useSelector } from 'react-redux';
-import Header from '../../components/common/Header';
-import { useNotification } from '../../context/NotificationContext';
-import userService from '../../services/api/user';
-import storageService from '../../services/storage';
-import { RootState } from '../../store/store';
-import { updateUser } from '../../store/userSlice';
+import { BlurView } from "expo-blur";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import { Upload } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+    Image,
+    Linking,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import Svg, {
+    Circle,
+    Defs,
+    Rect,
+    Stop,
+    LinearGradient as SvgLinearGradient,
+} from "react-native-svg";
+import Toast from "react-native-toast-message";
+import { useDispatch, useSelector } from "react-redux";
+import Header from "../../components/common/Header";
+import { useNotification } from "../../context/NotificationContext";
+import userService from "../../services/api/user";
+import { initializeFirebase, listenToUserData } from "../../services/firebase";
+import storageService from "../../services/storage";
+import type { AppDispatch } from "../../store/store";
+import { RootState } from "../../store/store";
+import { updateUser } from "../../store/userSlice";
+
+// Social media platform configuration
+const SOCIAL_PLATFORMS = [
+  {
+    key: "instagram",
+    name: "Instagram",
+    icon: require("../../assets/icons/instagram.png"),
+  },
+  {
+    key: "tiktok",
+    name: "TikTok",
+    icon: require("../../assets/icons/tiktok.png"),
+  },
+  {
+    key: "youtube",
+    name: "YouTube",
+    icon: require("../../assets/icons/youtube.png"),
+  },
+  {
+    key: "snapchat",
+    name: "Snapchat",
+    icon: require("../../assets/icons/snapchat.png"),
+  },
+  {
+    key: "twitter",
+    name: "Twitter",
+    icon: require("../../assets/icons/twitter.png"),
+  },
+  {
+    key: "facebook",
+    name: "Facebook",
+    icon: require("../../assets/icons/facebook.png"),
+  },
+] as const;
+
+type SocialPlatformKey = (typeof SOCIAL_PLATFORMS)[number]["key"];
+
+interface SocialMediaData {
+  [key: string]: string[] | undefined;
+}
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
-    const size = 50;
-    const strokeWidth = 1;
-    const radius = (size - strokeWidth) / 2;
-    const center = size / 2;
+  const size = 50;
+  const strokeWidth = 1;
+  const radius = (size - strokeWidth) / 2;
+  const center = size / 2;
 
-    return (
-        <View style={ringStyles.container}>
-            <BlurView intensity={5} style={ringStyles.blurContainer}>
-                <Svg width={size} height={size}>
-                    <Defs>
-                        <SvgLinearGradient id="profileGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
-                            <Stop offset="50%" stopColor="#000000" stopOpacity="1" />
-                            <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
-                        </SvgLinearGradient>
-                    </Defs>
-                    <Circle
-                        cx={center}
-                        cy={center}
-                        r={radius}
-                        stroke="url(#profileGrad)"
-                        strokeWidth={strokeWidth}
-                        fill="transparent"
-                    />
-                </Svg>
-            </BlurView>
-        </View>
-    );
+  return (
+    <View style={ringStyles.container}>
+      <BlurView intensity={5} style={ringStyles.blurContainer}>
+        <Svg width={size} height={size}>
+          <Defs>
+            <SvgLinearGradient
+              id="profileGrad"
+              x1="0%"
+              y1="0%"
+              x2="100%"
+              y2="100%"
+            >
+              <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+              <Stop offset="50%" stopColor="#000000" stopOpacity="1" />
+              <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
+            </SvgLinearGradient>
+          </Defs>
+          <Circle
+            cx={center}
+            cy={center}
+            r={radius}
+            stroke="url(#profileGrad)"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+        </Svg>
+      </BlurView>
+    </View>
+  );
 };
 
 const ringStyles = StyleSheet.create({
-    container: {
-        position: "absolute",
-        inset: 0,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    blurContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        overflow: "hidden",
-        alignItems: "center",
-        justifyContent: "center",
-    },
+  container: {
+    position: "absolute",
+    inset: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  blurContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 export default function Profile() {
-    const dispatch = useDispatch();
-    const { addNotification } = useNotification();
+  const dispatch = useDispatch<AppDispatch>();
+  const { addNotification } = useNotification();
 
-    // Global User State from Redux
-    const globalUserName = useSelector((state: RootState) => state.user.userName);
-    const globalProfilePicture = useSelector((state: RootState) => state.user.profilePicture);
+  // Global User State from Redux
+  const globalUserName = useSelector((state: RootState) => state.user.userName);
+  const globalProfilePicture = useSelector(
+    (state: RootState) => state.user.profilePicture,
+  );
+  const globalEmail = useSelector((state: RootState) => state.user.email);
 
-    const [modalVisible, setModalVisible] = useState(false);
-    const [editModalVisible, setEditModalVisible] = useState(false);
-    const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const [selectedPlatformKey, setSelectedPlatformKey] = useState<string | null>(
+    null,
+  );
 
-    // Local state for the edit modal
-    const [username, setUsername] = useState(globalUserName);
-    const [image, setImage] = useState<string | null>(globalProfilePicture);
-    const [loading, setLoading] = useState(false);
+  // Local state for the edit modal
+  const [username, setUsername] = useState(globalUserName);
+  const [image, setImage] = useState<string | null>(globalProfilePicture);
+  const [loading, setLoading] = useState(false);
 
-    // Sync local state when modal opens or global state changes
-    useEffect(() => {
-        if (editModalVisible) {
-            setUsername(globalUserName);
-            setImage(globalProfilePicture);
+  // Social media connections state
+  const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
+
+  // Sync local state when modal opens or global state changes
+  useEffect(() => {
+    if (editModalVisible) {
+      setUsername(globalUserName);
+      setImage(globalProfilePicture);
+    }
+  }, [editModalVisible, globalUserName, globalProfilePicture]);
+
+  // Firebase connection and real-time listener for user data
+  useEffect(() => {
+    initializeFirebase();
+
+    if (!globalEmail) {
+      console.log("No email available for Firebase listener");
+      return;
+    }
+
+    // Set up real-time listener
+    const unsubscribe = listenToUserData(
+      globalEmail,
+      (userData) => {
+        if (userData) {
+          console.log("Received user data update:", userData);
+          // Extract social media data
+          const socialData: SocialMediaData = {};
+          SOCIAL_PLATFORMS.forEach((platform) => {
+            const data = userData[platform.key];
+            if (data && Array.isArray(data) && data.length > 0) {
+              socialData[platform.key] = data;
+            }
+          });
+          setSocialMediaData(socialData);
         }
-    }, [editModalVisible, globalUserName, globalProfilePicture]);
+      },
+      (error) => {
+        console.error("Firebase listener error:", error);
+      },
+    );
 
-    const pickImage = async () => {
-        // No permissions request is necessary for launching the image library
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 0.5, // Lower quality to keep Base64 string size reasonable
-            base64: true,
+    // Cleanup listener on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [globalEmail]);
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5, // Lower quality to keep Base64 string size reasonable
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setImage(`data:image/jpeg;base64,${asset.base64}`);
+      } else {
+        setImage(asset.uri);
+      }
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+
+      // First update via API
+      const payload = {
+        userName: username,
+        profilePicture: image || "",
+      };
+      console.log("[Profile Update API Payload]:", {
+        ...payload,
+        profilePicture: payload.profilePicture
+          ? `${payload.profilePicture.substring(0, 50)}... (truncated)`
+          : "",
+      });
+
+      const response = await userService.updateProfile(payload);
+
+      if (response.success) {
+        // Then Update Redux (which also updates storage via our thunk-like action)
+        // @ts-ignore - dispatch type is complex with thunks
+        await dispatch(
+          updateUser({
+            userName: username,
+            profilePicture: image,
+          }),
+        );
+
+        // Consolidated Notifications
+        const isPicUpdated = image !== globalProfilePicture;
+        const isNameUpdated = username !== globalUserName;
+
+        if (isPicUpdated && isNameUpdated) {
+          addNotification({
+            type: "success",
+            title: "Profile Updated",
+            message: "Successfully changed your username and profile photo.",
+          });
+          Toast.show({
+            type: "success",
+            text1: "Profile Updated",
+            text2: "Username and profile photo updated successfully",
+          });
+        } else if (isPicUpdated) {
+          addNotification({
+            type: "success",
+            title: "Profile Picture Updated",
+            message: "Successfully changed your profile photo.",
+          });
+          Toast.show({
+            type: "success",
+            text1: "Profile Updated",
+            text2: "Profile photo updated successfully",
+          });
+        } else if (isNameUpdated) {
+          addNotification({
+            type: "success",
+            title: "Username Updated",
+            message: `Your username is now ${username}`,
+          });
+          Toast.show({
+            type: "success",
+            text1: "Profile Updated",
+            text2: "Username updated successfully",
+          });
+        } else {
+          // Nothing changed, but we show a generic success if API was called
+          Toast.show({
+            type: "success",
+            text1: "Profile Saved",
+            text2: "Settings saved successfully",
+          });
+        }
+        setEditModalVisible(false);
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Update Failed",
+          text2: response.message || "Could not update profile",
         });
+      }
+    } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1: "Update Error",
+        text2: error.message || "An error occurred while saving",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-        if (!result.canceled) {
-            const asset = result.assets[0];
-            if (asset.base64) {
-                setImage(`data:image/jpeg;base64,${asset.base64}`);
-            } else {
-                setImage(asset.uri);
-            }
-        }
-    };
+  const handleDisconnectPress = (accountName: string, platformKey: string) => {
+    setSelectedAccount(accountName);
+    setSelectedPlatformKey(platformKey);
+    setModalVisible(true);
+  };
 
-    const handleSaveProfile = async () => {
-        try {
-            setLoading(true);
+  const confirmDisconnect = async () => {
+    if (!selectedPlatformKey || !globalEmail) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Missing platform or email information",
+      });
+      return;
+    }
 
-            // First update via API
-            const payload = {
-                userName: username,
-                profilePicture: image || ""
-            };
-            console.log("[Profile Update API Payload]:", {
-                ...payload,
-                profilePicture: payload.profilePicture ? `${payload.profilePicture.substring(0, 50)}... (truncated)` : ""
-            });
+    try {
+      setLoading(true);
+      await userService.disconnectSocialMedia(globalEmail, selectedPlatformKey);
 
-            const response = await userService.updateProfile(payload);
+      // Show success notification
+      Toast.show({
+        type: "success",
+        text1: `${selectedAccount} disconnected successfully`,
+        text2: "",
+        visibilityTime: 2000,
+      });
 
-            if (response.success) {
-                // Then Update Redux (which also updates storage via our thunk-like action)
-                // @ts-ignore - dispatch type is complex with thunks
-                await dispatch(updateUser({
-                    userName: username,
-                    profilePicture: image
-                }));
+      addNotification({
+        type: "success",
+        title: "Account Disconnected",
+        message: `${selectedAccount} disconnected successfully`,
+      });
 
-                // Consolidated Notifications
-                const isPicUpdated = image !== globalProfilePicture;
-                const isNameUpdated = username !== globalUserName;
+      setModalVisible(false);
+      setSelectedAccount(null);
+      setSelectedPlatformKey(null);
+    } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1: "Disconnect Failed",
+        text2: error.message || "Failed to disconnect account",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                if (isPicUpdated && isNameUpdated) {
-                    addNotification({
-                        type: 'success',
-                        title: 'Profile Updated',
-                        message: 'Successfully changed your username and profile photo.'
-                    });
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Profile Updated',
-                        text2: 'Username and profile photo updated successfully'
-                    });
-                } else if (isPicUpdated) {
-                    addNotification({
-                        type: 'success',
-                        title: 'Profile Picture Updated',
-                        message: 'Successfully changed your profile photo.'
-                    });
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Profile Updated',
-                        text2: 'Profile photo updated successfully'
-                    });
-                } else if (isNameUpdated) {
-                    addNotification({
-                        type: 'success',
-                        title: 'Username Updated',
-                        message: `Your username is now ${username}`
-                    });
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Profile Updated',
-                        text2: 'Username updated successfully'
-                    });
-                } else {
-                    // Nothing changed, but we show a generic success if API was called
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Profile Saved',
-                        text2: 'Settings saved successfully'
-                    });
-                }
-                setEditModalVisible(false);
-            } else {
-                Toast.show({
-                    type: 'error',
-                    text1: 'Update Failed',
-                    text2: response.message || 'Could not update profile'
-                });
-            }
-        } catch (error: any) {
-            Toast.show({
-                type: 'error',
-                text1: 'Update Error',
-                text2: error.message || 'An error occurred while saving'
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+  // Helper function to check if a platform is connected
+  const isPlatformConnected = (platformKey: SocialPlatformKey): boolean => {
+    const data = socialMediaData[platformKey];
+    return !!(data && Array.isArray(data) && data.length > 0);
+  };
 
-    const handleDisconnectPress = (accountName: string) => {
-        setSelectedAccount(accountName);
-        setModalVisible(true);
-    };
+  // Helper function to get platform URL
+  const getPlatformUrl = (platformKey: SocialPlatformKey): string | null => {
+    const data = socialMediaData[platformKey];
+    if (data && Array.isArray(data) && data.length >= 2) {
+      return data[1]; // URL is at index 1
+    }
+    return null;
+  };
 
-    const confirmDisconnect = () => {
-        // Implement actual disconnect logic here
-        console.log(`Disconnected ${selectedAccount}`);
-        setModalVisible(false);
-        setSelectedAccount(null);
-    };
+  // Helper function to get platform status
+  const getPlatformStatus = (platformKey: SocialPlatformKey): string => {
+    return isPlatformConnected(platformKey) ? "Connected" : "Not connected";
+  };
 
-    const handleConnectInstagram = async () => {
-        try {
-            const userEmail = await storageService.getEmail();
-            if (!userEmail) {
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error',
-                    text2: 'User email not found'
-                });
-                return;
-            }
+  const handleConnectSocialMedia = async (
+    platform: string,
+    platformName: string,
+  ) => {
+    try {
+      const userEmail = await storageService.getEmail();
+      if (!userEmail) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "User email not found",
+        });
+        return;
+      }
 
-            const token = await storageService.getToken();
-            if (!token) {
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error',
-                    text2: 'Authentication token not found'
-                });
-                return;
-            }
+      const token = await storageService.getToken();
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Authentication token not found",
+        });
+        return;
+      }
 
-            const [response]: any = await userService.connectInstagram(userEmail, token);
-            console.log("response : ", response);
-            if (response.authUrl) {
-                await Linking.openURL(response.authUrl);
-            }
-        } catch (error: any) {
-            Toast.show({
-                type: 'error',
-                text1: 'Connection Failed',
-                text2: error.message || 'Failed to connect Instagram'
-            });
-        }
-    };
+      const response = await userService.connectSocialMedia(
+        userEmail,
+        token,
+        platform,
+      );
+      console.log("response : ", response);
+      if (
+        response &&
+        Array.isArray(response) &&
+        response.length > 0 &&
+        response[0].url
+      ) {
+        await Linking.openURL(response[0].url);
+      }
+    } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1: "Connection Failed",
+        text2: error.message || `Failed to connect ${platformName}`,
+      });
+    }
+  };
 
-    return (
-        <View className="flex-1">
-            <ScrollView contentContainerStyle={{ paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
-                {/* Header */}
-                <View className="w-full">
-                    <Header />
+  const handleConnectPress = (platformKey: SocialPlatformKey) => {
+    const platform = SOCIAL_PLATFORMS.find((p) => p.key === platformKey);
+    if (platform) {
+      handleConnectSocialMedia(platformKey, platform.name);
+    }
+  };
+
+  return (
+    <View className="flex-1">
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: 160 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View className="w-full">
+          <Header />
+        </View>
+
+        <View className="w-full px-5">
+          <Text className="page-title text-white mb-8 mt-3">
+            Your{"\n"}Account
+          </Text>
+
+          {/* Profile Card with Gradient Border Overlay */}
+          {/* Profile Card with Gradient Border Overlay */}
+          <View
+            className="rounded-[32px] overflow-hidden mb-8"
+            style={{
+              shadowColor: "#000000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.45,
+              shadowRadius: 24,
+              elevation: 12,
+            }}
+          >
+            <BlurView intensity={12} tint="dark" className="p-[1px]">
+              <LinearGradient
+                colors={[
+                  "rgba(255, 255, 255, 0.1)",
+                  "rgba(255, 255, 255, 0.1)",
+                ]}
+                style={{
+                  borderRadius: 32,
+                  paddingVertical: 20,
+                  paddingHorizontal: 10,
+                  position: "relative",
+                }}
+              >
+                {/* Gradient Border SVG (Taller to hide bottom stroke) */}
+                <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                  <Svg height="120%" width="100%">
+                    <Defs>
+                      <SvgLinearGradient
+                        id="cardBorderGrad"
+                        x1="0%"
+                        y1="0%"
+                        x2="0%"
+                        y2="100%"
+                      >
+                        <Stop
+                          offset="0%"
+                          stopColor="rgba(255, 255, 255, 0.7)"
+                          stopOpacity="1"
+                        />
+                        <Stop
+                          offset="100%"
+                          stopColor="rgba(0, 0, 0, 0.7)"
+                          stopOpacity="1"
+                        />
+                      </SvgLinearGradient>
+                    </Defs>
+                    <Rect
+                      x="0.5"
+                      y="0.5"
+                      width="99.7%"
+                      height="85%" // Relative to SVG height="120%", this puts bottom edge way outside container
+                      rx="32"
+                      ry="32"
+                      stroke="url(#cardBorderGrad)"
+                      strokeWidth="1"
+                      fill="transparent"
+                    />
+                  </Svg>
                 </View>
 
-                <View className="w-full px-5">
-                    <Text className="page-title text-white mb-8 mt-3">
-                        Your{'\n'}Account
+                {/* User Header */}
+                <View className="flex-row items-center justify-between mb-2 px-2">
+                  <View className="flex-row items-center gap-3">
+                    <View className="w-[50px] h-[50px] items-center justify-center">
+                      <GradientRingSVG />
+                      <Image
+                        source={
+                          image
+                            ? {
+                                uri:
+                                  image.startsWith("http") ||
+                                  image.startsWith("file") ||
+                                  image.startsWith("data:")
+                                    ? image
+                                    : `data:image/png;base64,${image}`,
+                              }
+                            : require("../../assets/images/avtar.png")
+                        }
+                        className="w-[45px] h-[45px] rounded-full"
+                        resizeMode={image ? "cover" : "contain"}
+                      />
+                    </View>
+                    <Text className="profile-username text-white">
+                      {username}
                     </Text>
-
-                    {/* Profile Card with Gradient Border Overlay */}
-                    <View
-                        className="rounded-[32px] overflow-hidden mb-8"
-                        style={{
-                            shadowColor: '#000000',
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.45,
-                            shadowRadius: 24,
-                            elevation: 12,
-                        }}
-                    >
-                        <BlurView intensity={12} tint="dark" className="p-[1px]">
-                            <LinearGradient
-                                colors={['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.1)']}
-                                style={{ borderRadius: 32, paddingVertical: 20, paddingHorizontal: 10, position: 'relative' }}
-                            >
-                                {/* Gradient Border SVG (Taller to hide bottom stroke) */}
-                                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                                    <Svg height="120%" width="100%">
-                                        <Defs>
-                                            <SvgLinearGradient id="cardBorderGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                                                <Stop offset="0%" stopColor="rgba(255, 255, 255, 0.7)" stopOpacity="1" />
-                                                <Stop offset="100%" stopColor="rgba(0, 0, 0, 0.7)" stopOpacity="1" />
-                                            </SvgLinearGradient>
-                                        </Defs>
-                                        <Rect
-                                            x="0.5"
-                                            y="0.5"
-                                            width="99.7%"
-                                            height="85%" // Relative to SVG height="120%", this puts bottom edge way outside container
-                                            rx="32"
-                                            ry="32"
-                                            stroke="url(#cardBorderGrad)"
-                                            strokeWidth="1"
-                                            fill="transparent"
-                                        />
-                                    </Svg>
-                                </View>
-
-                                {/* User Header */}
-                                <View className="flex-row items-center justify-between mb-2 px-2">
-                                    <View className="flex-row items-center gap-3">
-                                        <View className="w-[50px] h-[50px] items-center justify-center">
-                                            <GradientRingSVG />
-                                            <Image
-                                                source={
-                                                    image
-                                                        ? { uri: image.startsWith('http') || image.startsWith('file') || image.startsWith('data:') ? image : `data:image/png;base64,${image}` }
-                                                        : require('../../assets/images/avtar.png')
-                                                }
-                                                className="w-[45px] h-[45px] rounded-full"
-                                                resizeMode={image ? "cover" : "contain"}
-                                            />
-                                        </View>
-                                        <Text className="profile-username text-white">
-                                            {username}
-                                        </Text>
-                                    </View>
-                                    <TouchableOpacity
-                                        className='rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]'
-                                        onPress={() => setEditModalVisible(true)}
-                                    >
-                                        <Image source={require('../../assets/icons/edit.png')} className="w-5 h-5" resizeMode="contain" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/* Stats Grid */}
-                                <View className="flex-row flex-wrap gap-3 p-2">
-                                    <StatItem label="Sosh Views" value="2.9M" />
-                                    <StatItem label="Sosh Likes" value="62K" />
-                                    <StatItem label="Platforms" value="6" />
-                                    <StatItem label="Sosh Posts" value="58" />
-                                </View>
-                            </LinearGradient>
-                        </BlurView>
-                    </View>
-
-                    {/* Connected Accounts */}
-                    <Text className="text-white text-lg font-medium mb-4">Connected accounts</Text>
-
-                    <ConnectedAccountItem
-                        icon={require('../../assets/icons/instagram.png')}
-                        name="Instagram"
-                        status={"Not connected"}
-                        isConnected={false}
-                        onConnect={handleConnectInstagram}
-                        onDisconnect={() => handleDisconnectPress('Instagram')}
+                  </View>
+                  <TouchableOpacity
+                    className="rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]"
+                    onPress={() => setEditModalVisible(true)}
+                  >
+                    <Image
+                      source={require("../../assets/icons/edit.png")}
+                      className="w-5 h-5"
+                      resizeMode="contain"
                     />
-                    <ConnectedAccountItem
-                        icon={require('../../assets/icons/tiktok.png')}
-                        name="TikTok"
-                        status="Not connected"
-                        isConnected={false}
-                        onDisconnect={() => handleDisconnectPress('TikTok')}
-                    />
-                    <ConnectedAccountItem
-                        icon={require('../../assets/icons/youtube.png')}
-                        name="YouTube"
-                        status="Not connected"
-                        isConnected={false}
-                        onDisconnect={() => handleDisconnectPress('YouTube')}
-                    />
-                    <ConnectedAccountItem
-                        icon={require('../../assets/icons/snapchat.png')}
-                        name="Snapchat"
-                        status="Not connected"
-                        isConnected={false}
-                        onDisconnect={() => handleDisconnectPress('Snapchat')}
-                    />
-                    <ConnectedAccountItem
-                        icon={require('../../assets/icons/twitter.png')}
-                        name="Twitter"
-                        status="Not connected"
-                        isConnected={false}
-                        onDisconnect={() => handleDisconnectPress('Twitter')}
-                    />
-                    <ConnectedAccountItem
-                        icon={require('../../assets/icons/facebook.png')}
-                        name="Facebook"
-                        status="Not connected"
-                        isConnected={false}
-                        onDisconnect={() => handleDisconnectPress('Facebook')}
-                    />
+                  </TouchableOpacity>
                 </View>
-            </ScrollView>
 
-            {/* Disconnect Modal */}
-            <Modal
-                animationType="fade"
-                transparent={true}
-                visible={modalVisible}
-                onRequestClose={() => setModalVisible(false)}
-            >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                    <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6 items-center">
-                        {/* Close Button */}
-                        <TouchableOpacity
-                            onPress={() => setModalVisible(false)}
-                            className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
-                        >
-                            <Text className="text-white/60 text-lg font-medium">×</Text>
-                        </TouchableOpacity>
-
-                        <Text className="text-white text-center text-[22px] leading-8 mt-6 font-inter">
-                            Are you sure you want to
-                        </Text>
-                        <Text className="text-white text-center text-[22px] leading-8 mb-8 font-inter font-bold">
-                            disconnect your {selectedAccount} account?
-                        </Text>
-
-                        <TouchableOpacity
-                            onPress={confirmDisconnect}
-                            className="btn-modal-disconnect"
-                        >
-                            <Text className="text-white font-medium text-lg font-inter">Disconnect account</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => setModalVisible(false)}
-                            style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', width: '100%', height: 52, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            <Text className="text-white font-medium text-lg font-inter">Go Back</Text>
-                        </TouchableOpacity>
-                    </View>
+                {/* Stats Grid */}
+                <View className="flex-row flex-wrap gap-3 p-2">
+                  <StatItem label="Sosh Views" value="2.9M" />
+                  <StatItem label="Sosh Likes" value="62K" />
+                  <StatItem label="Platforms" value="6" />
+                  <StatItem label="Sosh Posts" value="58" />
                 </View>
-            </Modal>
+              </LinearGradient>
+            </BlurView>
+          </View>
 
-            {/* Edit Profile Modal */}
-            <Modal
-                animationType="fade"
-                transparent={true}
-                visible={editModalVisible}
-                onRequestClose={() => setEditModalVisible(false)}
-            >
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                    <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-8 items-center">
-                        {/* Close Button */}
-                        <TouchableOpacity
-                            onPress={() => setEditModalVisible(false)}
-                            className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
-                        >
-                            <Text className="text-white/60 text-lg font-medium">×</Text>
-                        </TouchableOpacity>
+          {/* Connected Accounts */}
+          <Text className="text-white text-lg font-medium mb-4">
+            Connected accounts
+          </Text>
 
-                        {/* Profile Image with Ring */}
-                        <View className="mb-6 items-center justify-center relative">
-                            {/* Reusing Gradient Ring Logic but larger */}
-                            <View style={{ width: 100, height: 100, alignItems: 'center', justifyContent: 'center' }}>
-                                <BlurView intensity={5} style={{ width: 100, height: 100, borderRadius: 50, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
-                                    <Svg width={90} height={90}>
-                                        <Defs>
-                                            <SvgLinearGradient id="editProfileGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                                <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
-                                                <Stop offset="50%" stopColor="#000000" stopOpacity="1" />
-                                                <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
-                                            </SvgLinearGradient>
-                                        </Defs>
-                                        <Circle
-                                            cx={45}
-                                            cy={45}
-                                            r={44}
-                                            stroke="url(#editProfileGrad)"
-                                            strokeWidth={1}
-                                            fill="transparent"
-                                        />
-                                    </Svg>
-                                </BlurView>
-                                <Image
-                                    source={
-                                        image
-                                            ? { uri: image.startsWith('http') || image.startsWith('file') || image.startsWith('data:') ? image : `data:image/png;base64,${image}` }
-                                            : require('../../assets/images/avtar.png')
-                                    }
-                                    className="w-[82px] h-[82px] absolute rounded-full"
-                                    resizeMode={image ? "cover" : "contain"}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Upload New Button */}
-                        <BlurView intensity={14} tint="dark" className="upload-container w-full h-[68px]">
-                            <TouchableOpacity
-                                className="upload-content w-full h-full"
-                                onPress={pickImage}
-                            >
-                                <Upload size={20} color="white" />
-                                <Text className="text-white font-medium text-[16px] font-inter mt-2">Upload new</Text>
-                            </TouchableOpacity>
-                        </BlurView>
-
-                        {/* Username Input */}
-                        <View className="w-full mb-8">
-                            <Text className="text-white font-semibold text-base mb-2 font-inter">User name</Text>
-                            <BlurView intensity={14} tint="dark" className="rounded-[16px] overflow-hidden">
-                                <View className="input-field justify-center">
-                                    <TextInput
-                                        value={username}
-                                        onChangeText={setUsername}
-                                        placeholder="Enter username"
-                                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                                        className="flex-1 font-inter py-0 text-white"
-                                        style={{ fontFamily: 'Inter_400Regular' }}
-                                        textAlignVertical="center"
-                                    />
-                                </View>
-                            </BlurView>
-                        </View>
-
-                        {/* Save Button */}
-                        <TouchableOpacity
-                            onPress={handleSaveProfile}
-                            className={`btn-save ${loading ? 'opacity-70' : ''}`}
-                            disabled={loading}
-                        >
-                            <Text className="text-white font-medium text-lg">
-                                {loading ? 'Saving...' : 'Save'}
-                            </Text>
-                        </TouchableOpacity>
-
-                    </View>
-                </View>
-            </Modal>
+          {SOCIAL_PLATFORMS.map((platform) => (
+            <ConnectedAccountItem
+              key={platform.key}
+              icon={platform.icon}
+              name={platform.name}
+              status={getPlatformStatus(platform.key)}
+              isConnected={isPlatformConnected(platform.key)}
+              onConnect={() => handleConnectPress(platform.key)}
+              onDisconnect={() =>
+                handleDisconnectPress(platform.name, platform.key)
+              }
+            />
+          ))}
         </View>
-    );
-}
+      </ScrollView>
 
-
-function StatItem({ label, value }: { label: string, value: string }) {
-    return (
+      {/* Disconnect Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
         <View
-            className="bg-[#FFFFFF1A] rounded-[11px] px-[12px] py-4 justify-center"
-            style={{ flexBasis: '47%', flexGrow: 1 }}
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.7)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
         >
-            <Text className="text-white/60 font-inter font-normal text-[14px] leading-[24px] tracking-[0px]">{label}</Text>
-            <Text style={{ fontFamily: 'Questrial_400Regular' }} className="text-white text-[34px] leading-[34px] tracking-[0px] mt-1">{value}</Text>
-        </View>
-    );
-}
+          <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6 items-center">
+            {/* Close Button */}
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
+            >
+              <Text className="text-white/60 text-lg font-medium">×</Text>
+            </TouchableOpacity>
 
-function ConnectedAccountItem({ icon, name, status, isConnected, onConnect, onDisconnect }: { icon: any, name: string, status: string, isConnected: boolean, onConnect?: () => void, onDisconnect?: () => void }) {
-    return (
-        <View className="flex-row items-center justify-between p-4 bg-[#1A1A1A] rounded-2xl mb-3 border border-white/10">
-            <View className="flex-row items-center gap-4">
-                <View className="w-12 h-12 items-center justify-center">
-                    <Image source={icon} className="w-8 h-8" resizeMode="contain" />
-                </View>
-                <View>
-                    <Text className="text-white font-medium text-base">{name}</Text>
-                    <View className="flex-row items-center mt-1">
-                        <View className={`w-2 h-2 rounded-full mr-2 ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <Text className="text-white/60 text-xs">{status}</Text>
-                    </View>
-                </View>
-            </View>
+            <Text className="text-white text-center text-[22px] leading-8 mt-6 font-inter">
+              Are you sure you want to
+            </Text>
+            <Text className="text-white text-center text-[22px] leading-8 mb-8 font-inter font-bold">
+              disconnect your {selectedAccount} account?
+            </Text>
 
             <TouchableOpacity
-                onPress={isConnected ? onDisconnect : onConnect}
-                className={`btn-toggle ${isConnected ? 'btn-toggle-disconnect' : 'btn-toggle-connect'}`}
+              onPress={confirmDisconnect}
+              className={`btn-modal-disconnect ${loading ? "opacity-70" : ""}`}
+              disabled={loading}
             >
-                <View className="flex-row items-center gap-2">
-                    {!isConnected && <Image source={require('../../assets/icons/connect.png')} style={{ width: 14, height: 14 }} resizeMode="contain" />}
-                    {isConnected && <Image source={require('../../assets/icons/disconnect.png')} style={{ width: 14, height: 14 }} resizeMode="contain" />}
-                    <Text className={`${isConnected ? 'text-white' : 'text-white'} font-medium text-xs`}>
-                        {isConnected ? 'Disconnect' : 'Connect'}
-                    </Text>
-                </View>
+              <Text className="text-white font-medium text-lg font-inter">
+                {loading ? "Disconnecting..." : "Disconnect account"}
+              </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setModalVisible(false)}
+              disabled={loading}
+              style={{
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                width: "100%",
+                height: 52,
+                borderRadius: 13,
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: loading ? 0.7 : 1,
+              }}
+            >
+              <Text className="text-white font-medium text-lg font-inter">
+                Go Back
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-    );
+      </Modal>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={editModalVisible}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.7)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-8 items-center">
+            {/* Close Button */}
+            <TouchableOpacity
+              onPress={() => setEditModalVisible(false)}
+              className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
+            >
+              <Text className="text-white/60 text-lg font-medium">×</Text>
+            </TouchableOpacity>
+
+            {/* Profile Image with Ring */}
+            <View className="mb-6 items-center justify-center relative">
+              {/* Reusing Gradient Ring Logic but larger */}
+              <View
+                style={{
+                  width: 100,
+                  height: 100,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <BlurView
+                  intensity={5}
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 50,
+                    overflow: "hidden",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Svg width={90} height={90}>
+                    <Defs>
+                      <SvgLinearGradient
+                        id="editProfileGrad"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
+                        <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                        <Stop
+                          offset="50%"
+                          stopColor="#000000"
+                          stopOpacity="1"
+                        />
+                        <Stop
+                          offset="100%"
+                          stopColor="#FFFFFF"
+                          stopOpacity="1"
+                        />
+                      </SvgLinearGradient>
+                    </Defs>
+                    <Circle
+                      cx={45}
+                      cy={45}
+                      r={44}
+                      stroke="url(#editProfileGrad)"
+                      strokeWidth={1}
+                      fill="transparent"
+                    />
+                  </Svg>
+                </BlurView>
+                <Image
+                  source={
+                    image
+                      ? {
+                          uri:
+                            image.startsWith("http") ||
+                            image.startsWith("file") ||
+                            image.startsWith("data:")
+                              ? image
+                              : `data:image/png;base64,${image}`,
+                        }
+                      : require("../../assets/images/avtar.png")
+                  }
+                  className="w-[82px] h-[82px] absolute rounded-full"
+                  resizeMode={image ? "cover" : "contain"}
+                />
+              </View>
+            </View>
+
+            {/* Upload New Button */}
+            <BlurView
+              intensity={14}
+              tint="dark"
+              className="upload-container w-full h-[68px]"
+            >
+              <TouchableOpacity
+                className="upload-content w-full h-full"
+                onPress={pickImage}
+              >
+                <Upload size={20} color="white" />
+                <Text className="text-white font-medium text-[16px] font-inter mt-2">
+                  Upload new
+                </Text>
+              </TouchableOpacity>
+            </BlurView>
+
+            {/* Username Input */}
+            <View className="w-full mb-8">
+              <Text className="text-white font-semibold text-base mb-2 font-inter">
+                User name
+              </Text>
+              <BlurView
+                intensity={14}
+                tint="dark"
+                className="rounded-[16px] overflow-hidden"
+              >
+                <View className="input-field justify-center">
+                  <TextInput
+                    value={username}
+                    onChangeText={setUsername}
+                    placeholder="Enter username"
+                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    className="flex-1 font-inter py-0 text-white"
+                    style={{ fontFamily: "Inter_400Regular" }}
+                    textAlignVertical="center"
+                  />
+                </View>
+              </BlurView>
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              onPress={handleSaveProfile}
+              className={`btn-save ${loading ? "opacity-70" : ""}`}
+              disabled={loading}
+            >
+              <Text className="text-white font-medium text-lg">
+                {loading ? "Saving..." : "Save"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function StatItem({ label, value }: { label: string; value: string }) {
+  return (
+    <View
+      className="bg-[#FFFFFF1A] rounded-[11px] px-[12px] py-4 justify-center"
+      style={{ flexBasis: "47%", flexGrow: 1 }}
+    >
+      <Text className="text-white/60 font-inter font-normal text-[14px] leading-[24px] tracking-[0px]">
+        {label}
+      </Text>
+      <Text
+        style={{ fontFamily: "Questrial_400Regular" }}
+        className="text-white text-[34px] leading-[34px] tracking-[0px] mt-1"
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ConnectedAccountItem({
+  icon,
+  name,
+  status,
+  isConnected,
+  onConnect,
+  onDisconnect,
+}: {
+  icon: any;
+  name: string;
+  status: string;
+  isConnected: boolean;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+}) {
+  const handlePress = () => {
+    if (isConnected) {
+      onDisconnect?.();
+    } else {
+      onConnect?.();
+    }
+  };
+
+  return (
+    <View className="flex-row items-center justify-between p-4 bg-[#1A1A1A] rounded-2xl mb-3 border border-white/10">
+      <View className="flex-row items-center gap-4">
+        <View className="w-12 h-12 items-center justify-center">
+          <Image source={icon} className="w-8 h-8" resizeMode="contain" />
+        </View>
+        <View>
+          <Text className="text-white font-medium text-base">{name}</Text>
+          <View className="flex-row items-center mt-1">
+            <View
+              className={`w-2 h-2 rounded-full mr-2 ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+            />
+            <Text className="text-white/60 text-xs">{status}</Text>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        onPress={handlePress}
+        className={`btn-toggle ${isConnected ? "btn-toggle-disconnect" : "btn-toggle-connect"}`}
+      >
+        <View className="flex-row items-center gap-2">
+          {!isConnected && (
+            <Image
+              source={require("../../assets/icons/connect.png")}
+              style={{ width: 14, height: 14 }}
+              resizeMode="contain"
+            />
+          )}
+          {isConnected && (
+            <Image
+              source={require("../../assets/icons/disconnect.png")}
+              style={{ width: 14, height: 14 }}
+              resizeMode="contain"
+            />
+          )}
+          <Text
+            className={`${isConnected ? "text-white" : "text-white"} font-medium text-xs`}
+          >
+            {isConnected ? "Disconnect" : "Connect"}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
 }
