@@ -9,15 +9,14 @@ import Header from '../../components/common/Header';
 const captionModalStyles = StyleSheet.create({
     overlay: {
         flex: 1,
-        justifyContent: 'flex-start',
-        alignItems: 'flex-start',
-        paddingTop: 96,
-        paddingLeft: 29,
+        justifyContent: 'center',
+        alignItems: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.72)',
     },
     card: {
-        width: 333,
-        height: 601,
+        width: '90%',
+        maxWidth: 400,
+        height: '60%',
         borderRadius: 24,
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.4)',
@@ -350,7 +349,7 @@ export default function CreatePost() {
                                                 ) : (
                                                     <TouchableOpacity className="py-8 items-center justify-center" onPress={pickMedia}>
                                                         <Upload color="white" size={24} className="mb-2" />
-                                                        <Text className="text-white font-inter text-sm">Select {activeTab === 'Reel' ? 'video' : 'media'} <Text className="text-white/40">{activeTab === 'Post' ? '(up to 10)' : ''}</Text></Text>
+                                                        <Text className="text-white font-inter text-sm">Select {activeTab === 'Reel' ? 'video' : 'media'} <Text className="text-white/40">{postType === 'Carousel' ? '(up to 10)' : ''}</Text></Text>
                                                     </TouchableOpacity>
                                                 )}
                                             </BlurView>
@@ -446,7 +445,7 @@ export default function CreatePost() {
                                     <View className="glass-card-gradient">
                                         {/* Post On (Platforms) */}
                                         <Text className="input-label">Post on</Text>
-                                        <View className="flex-row flex-wrap justify-between gap-y-3 mb-6">
+                                        <View className="post-on-container">
                                             {[
                                                 { id: 'instagram', name: 'Instagram', icon: require('../../assets/icons/instagram.png') },
                                                 { id: 'tiktok', name: 'TikTok', icon: require('../../assets/icons/tiktok.png') },
@@ -459,15 +458,14 @@ export default function CreatePost() {
                                                 return (
                                                     <TouchableOpacity
                                                         key={platform.id}
-                                                        className={`w-[48%] rounded-[20px] overflow-hidden border ${isSelected ? 'bg-white border-white' : 'glass-button border-transparent'}`}
+                                                        className={`post-on-btn ${isSelected ? 'post-on-btn-selected' : ''}`}
                                                         onPress={() => togglePlatform(platform.id)}
                                                     >
-                                                        <BlurView intensity={isSelected ? 0 : 5} tint="light" className="flex-row items-center p-3">
+                                                        <BlurView intensity={isSelected ? 0 : 5} tint="light" className="post-on-content">
                                                             <Image
                                                                 source={platform.icon}
-                                                                className="w-6 h-6 mr-3"
+                                                                className={`post-on-icon ${isSelected ? 'post-on-icon-selected' : ''}`}
                                                                 resizeMode="contain"
-                                                                style={{ opacity: isSelected ? 1 : 0.5 }}
                                                             />
                                                             <Text className={`post-on-platform-name ${isSelected ? 'post-on-platform-name-selected' : 'post-on-platform-name-default'}`}>{platform.name}</Text>
                                                         </BlurView>
@@ -495,7 +493,7 @@ export default function CreatePost() {
                                         {/* Schedule */}
                                         <Text className="input-label">Schedule</Text>
                                         <TouchableOpacity
-                                            className="schedule-input flex-row items-center"
+                                            className="schedule-input flex-row items-center w-full"
                                             onPress={() => setShowDatePicker(true)}
                                         >
                                             <BlurView intensity={5} tint="light" className="flex-1 flex-row items-center px-4 py-3">
@@ -582,6 +580,7 @@ export default function CreatePost() {
                     <BlurView intensity={14} tint="light" style={captionModalStyles.overlay}>
                         <KeyboardAvoidingView
                             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
                         >
                             <View style={captionModalStyles.card}>
                                 <View style={captionModalStyles.cardInner}>
