@@ -3,482 +3,481 @@
 @tailwind utilities;
 
 @layer components {
-
-    /* Toggle Button in List */
-    .btn-toggle {
-        width: 96px;
-        height: 31px;
-        border-radius: 8px;
-        padding-top: 8px;
-        padding-bottom: 8px;
-        padding-left: 12px;
-        padding-right: 12px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .btn-toggle-connect {
-        background-color: #00C950;
-    }
-
-    .btn-toggle-disconnect {
-        background-color: #D73D3D;
-    }
-
-    /* Modal Disconnect Button */
-    .btn-modal-disconnect {
-        background-color: rgba(215, 61, 61, 1);
-        width: 100%;
-        height: 52px;
-        border-radius: 13px;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 12px;
-    }
-
-    /* Save Button */
-    .btn-save {
-        background-color: rgba(0, 201, 80, 1);
-        width: 100%;
-        height: 52px;
-        border-radius: 16px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* Input Field */
-    .input-field {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        height: 52px;
-        padding-left: 16px;
-        padding-right: 16px;
-        justify-content: center;
-        width: 100%;
-    }
-
-    /* Upload Button */
-    .upload-container {
-        border-radius: 20px;
-        overflow: hidden;
-        margin-bottom: 32px;
-    }
-
-    .upload-content {
-        flex: 1;
-        background-color: rgba(255, 255, 255, 0.1);
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-    }
-
-    /* Notification Cards */
-    .notification-card {
-        width: 100%;
-        border-radius: 24px;
-        padding: 20px;
-        margin-bottom: 12px;
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .notification-neutral {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .notification-success {
-        background-color: rgba(0, 201, 80, 0.1);
-        border-width: 1px;
-        border-color: rgba(0, 201, 80, 0.6);
-    }
-
-    .notification-error {
-        background-color: rgba(215, 61, 61, 0.1);
-        border-width: 1px;
-        border-color: rgba(215, 61, 61, 0.6);
-    }
-
-    .notification-close-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 16px;
-        background-color: rgba(255, 255, 255, 0.1);
-        align-items: center;
-        justify-content: center;
-    }
-
-    .section-title {
-        font-family: 'Inter_600SemiBold';
-        font-size: 18px;
-    }
-
-    .chart-section-title {
-        font-family: 'Inter_600SemiBold';
-        font-size: 14px;
-        line-height: 28px;
-        letter-spacing: -0.89px;
-    }
-
-    .chart-tab {
-        width: 36px;
-        height: 36px;
-        border-radius: 100px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .chart-tab-active {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .chart-legend-item {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .chart-legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 2px;
-    }
-
-    .page-title {
-        font-family: 'Questrial_400Regular';
-        font-size: 56px;
-        line-height: 56px;
-        letter-spacing: 0px;
-    }
-
-    .growth-badge {
-        background-color: rgba(9, 143, 62, 0.12);
-        border-radius: 8px;
-        padding: 6px 10px;
-        width: fit-content;
-    }
-
-    .platform-name {
-        font-family: 'Inter_600SemiBold';
-        font-size: 18px;
-        line-height: 18px;
-        letter-spacing: -0.89px;
-    }
-
-    .follower-count {
-        font-family: 'Inter_400Regular';
-        font-size: 14px;
-        letter-spacing: -0.15px;
-    }
-
-    .profile-username {
-        font-family: 'Questrial_400Regular';
-        font-size: 30px;
-        line-height: 51px;
-    }
-
-    .stat-item {
-        height: 70px;
-        border-radius: 11px;
-        padding-top: 3px;
-        padding-bottom: 3px;
-        padding-left: 12px;
-        padding-right: 12px;
-        background-color: rgba(255, 255, 255, 0.1);
-        justify-content: center;
-    }
-
-    .stat-item-label {
-        font-family: 'Inter_400Regular';
-        font-size: 14px;
-        line-height: 24px;
-        letter-spacing: 0px;
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .platform-card-name {
-        font-family: 'Inter_600SemiBold';
-        font-size: 18px;
-        line-height: 18px;
-        letter-spacing: -0.89px;
-        color: white;
-    }
-
-    .platform-card-status {
-        font-family: 'Inter_400Regular';
-        font-size: 14px;
-        line-height: 20px;
-        letter-spacing: -0.15px;
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .connected-account-card {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-        height: 96px;
-        padding-left: 16px;
-        padding-right: 16px;
-        background-color: #1A1A1A;
-        border-radius: 20px;
-        margin-bottom: 12px;
-        border-width: 1px;
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .btn-toggle-label {
-        font-family: 'Inter_400Regular';
-        font-size: 12px;
-        line-height: 12px;
-        letter-spacing: -0.89px;
-        color: white;
-    }
-
-    /* Platform Card System */
-    .platform-card {
-        margin-bottom: 16px;
-        border-radius: 20px;
-        overflow: hidden;
-        shadow-color: #000;
-        shadow-offset: 0px 4px;
-        shadow-opacity: 0.45;
-        shadow-radius: 24px;
-        elevation: 8;
-    }
-
-    .platform-card-inner {
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 16px;
-    }
-
-    .platform-info {
-        flex-direction: row;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .platform-title-row {
-        flex-direction: row;
-        align-items: flex-end;
-        gap: 8px;
-        margin-bottom: 8px;
-    }
-
-    /* Gauge & Charts */
-    .gauge-card {
-        background-color: rgba(26, 26, 26, 0.6);
-        border-radius: 32px;
-        padding: 20px;
-        border-width: 1px;
-        border-color: rgba(255, 255, 255, 0.1);
-        flex: 1;
-        margin: 4px;
-        overflow: hidden;
-    }
-
-    .chart-container {
-        height: 250px;
-        margin-left: -20px;
-    }
-
-    .tabs-container {
-        flex-direction: row;
-        padding: 4px;
-        align-items: center;
-        gap: 4px;
-    }
-
-    .tab-item {
-        width: 36px;
-        height: 36px;
-        border-radius: 100px;
-        padding: 10px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .tab-item-active {
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    /* Create Content Tabs */
-    .content-tabs-container {
-        width: 308px;
-        height: 50px;
-        border-radius: 25px;
-        align-self: center;
-        overflow: hidden;
-    }
-
-    .content-tabs-blur {
-        flex: 1;
-        border-radius: 20px;
-        overflow: hidden;
-        flex-direction: row;
-        align-items: center;
-        padding: 6px;
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .content-tab-btn {
-        flex: 1;
-        height: 100%;
-        border-radius: 100px;
-        padding-top: 8px;
-        padding-bottom: 8px;
-        padding-left: 12px;
-        padding-right: 12px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .content-tab-active {
-        background-color: #04C4FF;
-    }
-
-    .post-type-btn {
-        flex: 1;
-        height: 40px;
-        border-radius: 100px;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .post-type-btn-active {
-        background-color: white;
-    }
-
-    .post-type-btn-label {
-        font-family: 'Inter_500Medium';
-        font-size: 14px;
-        line-height: 14px;
-        letter-spacing: 0px;
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .post-type-btn-label-active {
-        color: black;
-    }
-
-    .post-on-platform-name {
-        font-family: 'Inter_400Regular';
-        font-size: 14px;
-
-    }
-
-    .post-on-platform-name-selected {
-        color: black;
-    }
-
-    .post-on-platform-name-default {
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    /* Glass Cards */
-    .glass-card-container {
-        border-radius: 32px;
-        overflow: hidden;
-        margin-bottom: 22px;
-        shadow-color: #000;
-        shadow-offset: 0px 4px;
-        shadow-opacity: 0.45;
-        shadow-radius: 24px;
-        elevation: 8;
-        background-color: transparent;
-    }
-
-    .glass-card-gradient {
-        border-radius: 32px;
-        padding: 20px;
-        position: relative;
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .glass-input {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        overflow: hidden;
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .schedule-input {
-        height: 44px;
-        border-radius: 20px;
-        overflow: hidden;
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .glass-button {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        overflow: hidden;
-        border-width: 1px;
-        border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .input-label {
-        font-family: 'Inter';
-        font-weight: 600;
-        font-size: 14px;
-        line-height: 28px;
-        /* letter-spacing: -0.89px; */
-        color: #FFFFFF;
-        margin-bottom: 12px;
-    }
-
-    .content-tab-text {
-        font-family: 'Helvetica Neue';
-        font-weight: 400;
-        font-size: 18px;
-        line-height: 18px;
-        letter-spacing: 0px;
-    }
-
-    .input-text-regular {
-        font-family: 'Inter';
-        font-weight: 400;
-        font-size: 14px;
-    }
-
-    /* Post On Platform Buttons */
-    .post-on-container {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 24px;
-    }
-
-    .post-on-btn {
-        width: 149px;
-        height: 44px;
-        border-radius: 20px;
-        overflow: hidden;
-        border-width: 1px;
-        border-color: transparent;
-        background-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .post-on-btn-selected {
-        border-color: white;
-        background-color: white;
-    }
-
-    .post-on-content {
-        flex: 1;
-        flex-direction: row;
-        align-items: center;
-        padding-left: 14px;
-        padding-right: 14px;
-    }
-
-    .post-on-icon {
-        width: 22px;
-        height: 22px;
-        margin-right: 10px;
-        opacity: 0.5;
-    }
-
-    .post-on-icon-selected {
-        opacity: 1;
-    }
+  /* Toggle Button in List */
+  .btn-toggle {
+    width: 96px;
+    height: 31px;
+    border-radius: 8px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-toggle-connect {
+    background-color: #00c950;
+  }
+
+  .btn-toggle-disconnect {
+    background-color: #d73d3d;
+  }
+
+  /* Modal Disconnect Button */
+  .btn-modal-disconnect {
+    background-color: rgba(215, 61, 61, 1);
+    width: 100%;
+    height: 52px;
+    border-radius: 13px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+  }
+
+  /* Save Button */
+  .btn-save {
+    background-color: rgba(0, 201, 80, 1);
+    width: 100%;
+    height: 52px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Input Field */
+  .input-field {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    height: 52px;
+    padding-left: 16px;
+    padding-right: 16px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* Upload Button */
+  .upload-container {
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+
+  .upload-content {
+    flex: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  /* Notification Cards */
+  .notification-card {
+    width: 100%;
+    border-radius: 24px;
+    padding: 20px;
+    margin-bottom: 12px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .notification-neutral {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .notification-success {
+    background-color: rgba(0, 201, 80, 0.1);
+    border-width: 1px;
+    border-color: rgba(0, 201, 80, 0.6);
+  }
+
+  .notification-error {
+    background-color: rgba(215, 61, 61, 0.1);
+    border-width: 1px;
+    border-color: rgba(215, 61, 61, 0.6);
+  }
+
+  .notification-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    background-color: rgba(255, 255, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+  }
+
+  .section-title {
+    font-family: "Inter_600SemiBold";
+    font-size: 18px;
+  }
+
+  .chart-section-title {
+    font-family: "Inter_600SemiBold";
+    font-size: 14px;
+    line-height: 28px;
+    letter-spacing: -0.89px;
+  }
+
+  .chart-tab {
+    width: 36px;
+    height: 36px;
+    border-radius: 100px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .chart-tab-active {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .chart-legend-item {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .chart-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+
+  .page-title {
+    font-family: "Questrial_400Regular";
+    font-size: 56px;
+    line-height: 56px;
+    letter-spacing: 0px;
+  }
+
+  .growth-badge {
+    background-color: rgba(9, 143, 62, 0.12);
+    border-radius: 8px;
+    padding: 6px 10px;
+    width: fit-content;
+  }
+
+  .platform-name {
+    font-family: "Inter_600SemiBold";
+    font-size: 18px;
+    line-height: 18px;
+    letter-spacing: -0.89px;
+  }
+
+  .follower-count {
+    font-family: "Inter_400Regular";
+    font-size: 14px;
+    letter-spacing: -0.15px;
+  }
+
+  .profile-username {
+    font-family: "Questrial_400Regular";
+    font-size: 30px;
+    line-height: 51px;
+  }
+
+  .stat-item {
+    height: 70px;
+    border-radius: 11px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 12px;
+    padding-right: 12px;
+    background-color: rgba(255, 255, 255, 0.1);
+    justify-content: center;
+  }
+
+  .stat-item-label {
+    font-family: "Inter_400Regular";
+    font-size: 14px;
+    line-height: 24px;
+    letter-spacing: 0px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .platform-card-name {
+    font-family: "Inter_600SemiBold";
+    font-size: 18px;
+    line-height: 18px;
+    letter-spacing: -0.89px;
+    color: white;
+  }
+
+  .platform-card-status {
+    font-family: "Inter_400Regular";
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.15px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .connected-account-card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 96px;
+    padding-left: 16px;
+    padding-right: 16px;
+    background-color: #1a1a1a;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .btn-toggle-label {
+    font-family: "Inter_400Regular";
+    font-size: 12px;
+    line-height: 12px;
+    letter-spacing: -0.89px;
+    color: white;
+  }
+
+  /* Platform Card System */
+  .platform-card {
+    margin-bottom: 16px;
+    border-radius: 20px;
+    overflow: hidden;
+    shadow-color: #000;
+    shadow-offset: 0px 4px;
+    shadow-opacity: 0.45;
+    shadow-radius: 24px;
+    elevation: 8;
+  }
+
+  .platform-card-inner {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 16px;
+  }
+
+  .platform-info {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .platform-title-row {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  /* Gauge & Charts */
+  .gauge-card {
+    background-color: rgba(26, 26, 26, 0.6);
+    border-radius: 32px;
+    padding: 20px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    flex: 1;
+    margin: 4px;
+    overflow: hidden;
+  }
+
+  .chart-container {
+    height: 250px;
+    margin-left: -20px;
+  }
+
+  .tabs-container {
+    flex-direction: row;
+    padding: 4px;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tab-item {
+    width: 36px;
+    height: 36px;
+    border-radius: 100px;
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tab-item-active {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  /* Create Content Tabs */
+  .content-tabs-container {
+    width: 308px;
+    height: 50px;
+    border-radius: 25px;
+    align-self: center;
+    overflow: hidden;
+  }
+
+  .content-tabs-blur {
+    flex: 1;
+    border-radius: 20px;
+    overflow: hidden;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .content-tab-btn {
+    flex: 1;
+    height: 100%;
+    border-radius: 100px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .content-tab-active {
+    background-color: #04c4ff;
+  }
+
+  .post-type-btn {
+    flex: 1;
+    height: 40px;
+    border-radius: 100px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .post-type-btn-active {
+    background-color: white;
+  }
+
+  .post-type-btn-label {
+    font-family: "Inter_500Medium";
+    font-size: 14px;
+    line-height: 14px;
+    letter-spacing: 0px;
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .post-type-btn-label-active {
+    color: black;
+  }
+
+  .post-on-platform-name {
+    font-family: "Inter_400Regular";
+    font-size: 14px;
+  }
+
+  .post-on-platform-name-selected {
+    color: black;
+  }
+
+  .post-on-platform-name-default {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  /* Glass Cards */
+  .glass-card-container {
+    border-radius: 32px;
+    overflow: hidden;
+    margin-bottom: 22px;
+    shadow-color: #000;
+    shadow-offset: 0px 4px;
+    shadow-opacity: 0.45;
+    shadow-radius: 24px;
+    elevation: 8;
+    background-color: transparent;
+  }
+
+  .glass-card-gradient {
+    border-radius: 32px;
+    padding: 20px;
+    position: relative;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .schedule-input {
+    height: 44px;
+    border-radius: 20px;
+    overflow: hidden;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .glass-button {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    overflow: hidden;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .input-label {
+    font-family: "Inter";
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 28px;
+    /* letter-spacing: -0.89px; */
+    color: #ffffff;
+    margin-bottom: 12px;
+  }
+
+  .content-tab-text {
+    font-family: "Helvetica Neue";
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 18px;
+    letter-spacing: 0px;
+  }
+
+  .input-text-regular {
+    font-family: "Inter";
+    font-weight: 400;
+    font-size: 14px;
+  }
+
+  /* Post On Platform Buttons */
+  .post-on-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
+    justify-content: space-between;
+  }
+
+  .post-on-btn {
+    width: 48%;
+    height: 44px;
+    border-radius: 20px;
+    overflow: hidden;
+    border-width: 1px;
+    border-color: transparent;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .post-on-btn-selected {
+    border-color: white;
+    background-color: white;
+  }
+
+  .post-on-content {
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .post-on-icon {
+    width: 22px;
+    height: 22px;
+    margin-right: 10px;
+    opacity: 0.5;
+  }
+
+  .post-on-icon-selected {
+    opacity: 1;
+  }
 }
