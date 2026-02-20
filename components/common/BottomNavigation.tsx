@@ -1,7 +1,7 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
-import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient } from 'react-native-svg';
+import Svg, { Defs, Rect, Stop, LinearGradient as SvgLinearGradient, Path as SvgPath } from 'react-native-svg';
 
 export default function BottomNavigation({ state, descriptors, navigation }: BottomTabBarProps) {
     const currentRoute = state.routes[state.index].name;
@@ -25,7 +25,7 @@ export default function BottomNavigation({ state, descriptors, navigation }: Bot
             className="absolute bottom-10 left-5 right-5 h-[72px]"
             style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 24, elevation: 10 }}
         >
-            <BlurView intensity={40} tint="dark" style={{ flex: 1, borderRadius: 24, overflow: 'hidden' }}>
+            <BlurView intensity={20} tint="dark" style={{ flex: 1, borderRadius: 24, overflow: 'hidden' }}>
                 <View
                     style={{ flex: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)', paddingHorizontal: 24, position: 'relative', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
                 >
@@ -100,7 +100,23 @@ export default function BottomNavigation({ state, descriptors, navigation }: Bot
                         elevation: 14,
                     }}
                 >
-                    <Image source={require("../../assets/icons/nav_center.png")} className="w-[30px] h-[30px]" resizeMode="contain" />
+                    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
+                        {/* Outer circle */}
+                        <SvgPath
+                            d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                            stroke="#000000"
+                            strokeWidth="1.6"
+                            fill="none"
+                        />
+                        {/* Arrow up */}
+                        <SvgPath
+                            d="M12 16V8M12 8L9 11M12 8L15 11"
+                            stroke="#000000"
+                            strokeWidth="1.6"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
+                    </Svg>
                 </TouchableOpacity>
             </View>
         </View>

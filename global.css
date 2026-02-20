@@ -178,7 +178,6 @@
     }
 
     .stat-item {
-        width: 150px;
         height: 70px;
         border-radius: 11px;
         padding-top: 3px;
@@ -403,7 +402,6 @@
     }
 
     .schedule-input {
-        width: 308px;
         height: 44px;
         border-radius: 20px;
         overflow: hidden;
@@ -440,5 +438,47 @@
         font-family: 'Inter';
         font-weight: 400;
         font-size: 14px;
+    }
+
+    /* Post On Platform Buttons */
+    .post-on-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 24px;
+    }
+
+    .post-on-btn {
+        width: 149px;
+        height: 44px;
+        border-radius: 20px;
+        overflow: hidden;
+        border-width: 1px;
+        border-color: transparent;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .post-on-btn-selected {
+        border-color: white;
+        background-color: white;
+    }
+
+    .post-on-content {
+        flex: 1;
+        flex-direction: row;
+        align-items: center;
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .post-on-icon {
+        width: 22px;
+        height: 22px;
+        margin-right: 10px;
+        opacity: 0.5;
+    }
+
+    .post-on-icon-selected {
+        opacity: 1;
     }
 }

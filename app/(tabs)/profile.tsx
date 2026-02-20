@@ -4,23 +4,23 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Upload } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Linking,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Svg, {
-    Circle,
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
@@ -529,13 +529,13 @@ export default function Profile() {
                         source={
                           image
                             ? {
-                                uri:
-                                  image.startsWith("http") ||
+                              uri:
+                                image.startsWith("http") ||
                                   image.startsWith("file") ||
                                   image.startsWith("data:")
-                                    ? image
-                                    : `data:image/png;base64,${image}`,
-                              }
+                                  ? image
+                                  : `data:image/png;base64,${image}`,
+                            }
                             : require("../../assets/images/avtar.png")
                         }
                         className="w-[45px] h-[45px] rounded-full"
@@ -744,13 +744,13 @@ export default function Profile() {
                   source={
                     image
                       ? {
-                          uri:
-                            image.startsWith("http") ||
+                        uri:
+                          image.startsWith("http") ||
                             image.startsWith("file") ||
                             image.startsWith("data:")
-                              ? image
-                              : `data:image/png;base64,${image}`,
-                        }
+                            ? image
+                            : `data:image/png;base64,${image}`,
+                      }
                       : require("../../assets/images/avtar.png")
                   }
                   className="w-[82px] h-[82px] absolute rounded-full"
@@ -819,7 +819,7 @@ export default function Profile() {
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
-    <View className="stat-item">
+    <View className="stat-item flex-1 min-w-[45%]">
       <Text className="stat-item-label">{label}</Text>
       <Text
         style={{ fontFamily: "Questrial_400Regular" }}
