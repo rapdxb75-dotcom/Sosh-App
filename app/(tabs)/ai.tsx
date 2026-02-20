@@ -1,4 +1,5 @@
 import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
 import { Plus, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -808,7 +809,10 @@ export default function AI() {
         >
           <View className="flex-row items-center justify-between px-5">
             <TouchableOpacity
-              onPress={openSidebar}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                openSidebar();
+              }}
               style={{
                 width: normalize(38),
                 height: normalize(38),
@@ -827,7 +831,10 @@ export default function AI() {
               Sosh AI
             </Text>
             <TouchableOpacity
-              onPress={openCreateModal}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                openCreateModal();
+              }}
               style={{ width: normalize(38), height: normalize(38) }}
               className="items-center justify-center rounded-full relative"
             >
@@ -1004,7 +1011,10 @@ export default function AI() {
                 </View>
 
                 <TouchableOpacity
-                  onPress={handleSendMessage}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    handleSendMessage();
+                  }}
                   disabled={!inputText.trim() || isSending}
                   className="w-[56px] h-[56px] rounded-full items-center justify-center overflow-hidden"
                   style={{ opacity: !inputText.trim() || isSending ? 0.7 : 1 }}

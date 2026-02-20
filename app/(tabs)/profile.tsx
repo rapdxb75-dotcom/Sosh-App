@@ -1,4 +1,5 @@
 import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Upload } from "lucide-react-native";
@@ -317,12 +318,14 @@ export default function Profile() {
   };
 
   const handleDisconnectPress = (accountName: string, platformKey: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedAccount(accountName);
     setSelectedPlatformKey(platformKey);
     setModalVisible(true);
   };
 
   const confirmDisconnect = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (!selectedPlatformKey || !globalEmail) {
       Toast.show({
         type: "error",
@@ -437,6 +440,7 @@ export default function Profile() {
   };
 
   const handleConnectPress = (platformKey: SocialPlatformKey) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const platform = SOCIAL_PLATFORMS.find((p) => p.key === platformKey);
     if (platform) {
       handleConnectSocialMedia(platformKey, platform.name);
@@ -455,7 +459,7 @@ export default function Profile() {
         </View>
 
         <View className="w-full px-5">
-          <Text className="page-title text-white mb-8 mt-3">
+          <Text className="page-title text-white mb-4 mt-8">
             Your{"\n"}Account
           </Text>
 
@@ -529,13 +533,13 @@ export default function Profile() {
                         source={
                           image
                             ? {
-                              uri:
-                                image.startsWith("http") ||
+                                uri:
+                                  image.startsWith("http") ||
                                   image.startsWith("file") ||
                                   image.startsWith("data:")
-                                  ? image
-                                  : `data:image/png;base64,${image}`,
-                            }
+                                    ? image
+                                    : `data:image/png;base64,${image}`,
+                              }
                             : require("../../assets/images/avtar.png")
                         }
                         className="w-[45px] h-[45px] rounded-full"
@@ -548,7 +552,10 @@ export default function Profile() {
                   </View>
                   <TouchableOpacity
                     className="rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]"
-                    onPress={() => setEditModalVisible(true)}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setEditModalVisible(true);
+                    }}
                     style={{
                       shadowColor: "#000000",
                       shadowOffset: { width: 0, height: 4 },
@@ -744,13 +751,13 @@ export default function Profile() {
                   source={
                     image
                       ? {
-                        uri:
-                          image.startsWith("http") ||
+                          uri:
+                            image.startsWith("http") ||
                             image.startsWith("file") ||
                             image.startsWith("data:")
-                            ? image
-                            : `data:image/png;base64,${image}`,
-                      }
+                              ? image
+                              : `data:image/png;base64,${image}`,
+                        }
                       : require("../../assets/images/avtar.png")
                   }
                   className="w-[82px] h-[82px] absolute rounded-full"
