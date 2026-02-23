@@ -2,6 +2,7 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Defs,
   Rect,
@@ -16,6 +17,7 @@ export default function BottomNavigation({
   navigation,
 }: BottomTabBarProps) {
   const currentRoute = state.routes[state.index].name;
+  const insets = useSafeAreaInsets();
 
   const navigateTo = (routeName: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -34,8 +36,9 @@ export default function BottomNavigation({
 
   return (
     <View
-      className="absolute bottom-10 left-5 right-5 h-[72px]"
+      className="absolute left-5 right-5 h-[72px]"
       style={{
+        bottom: Math.max(insets.bottom + 10, 40),
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.45,
@@ -107,7 +110,7 @@ export default function BottomNavigation({
           >
             <Image
               source={require("../../assets/icons/nav_home.png")}
-              className="w-[28px] h-[28px]"
+              className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -117,7 +120,7 @@ export default function BottomNavigation({
           >
             <Image
               source={require("../../assets/icons/nav_ai.png")}
-              className="w-[28px] h-[28px]"
+              className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
           </TouchableOpacity>

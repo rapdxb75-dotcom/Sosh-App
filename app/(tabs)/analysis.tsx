@@ -537,7 +537,7 @@ export default function Analysis() {
             Your{"\n"}Analytics
           </Text>
 
-          <Text className="section-title text-white mb-4">
+          <Text className="section-title text-white mb-4 font-semibold">
             Platform Breakdown
           </Text>
 

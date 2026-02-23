@@ -2,10 +2,10 @@ import { BlurView } from "expo-blur";
 import { TrendingUp } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, {
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import { Colors } from "../../constants/Colors";
 
@@ -33,7 +33,7 @@ export default function StatCard({
   return (
     <View
       style={[shadowStyle, { borderRadius: 24, overflow: "hidden" }]}
-      className={`mb-3 ${fullWidth ? "w-full h-[125px]" : "w-full h-[221px]"}`}
+      className="flex-1 w-full"
     >
       <BlurView intensity={40} tint="dark" style={{ flex: 1 }}>
         <View
@@ -93,12 +93,12 @@ export default function StatCard({
             </>
           )}
 
-          {/* Gradient Border SVG Overlay (Taller to hide bottom stroke) */}
+          {/* Gradient Border SVG Overlay */}
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            <Svg height="120%" width="100%">
+            <Svg height="100%" width="100%">
               <Defs>
                 <SvgLinearGradient
-                  id="statCardBorderGrad"
+                  id={`statCardBorderGrad-${title.replace(/\s+/g, "")}`}
                   x1="0%"
                   y1="0%"
                   x2="0%"
@@ -117,14 +117,14 @@ export default function StatCard({
                 </SvgLinearGradient>
               </Defs>
               <Rect
-                x="0.5"
-                y="0.5"
-                width="99.7%"
-                height="85%"
+                x="0"
+                y="0"
+                width="100%"
+                height="100%"
                 rx="24"
                 ry="24"
-                stroke="url(#statCardBorderGrad)"
-                strokeWidth="1"
+                stroke={`url(#statCardBorderGrad-${title.replace(/\s+/g, "")})`}
+                strokeWidth="2"
                 fill="transparent"
               />
             </Svg>

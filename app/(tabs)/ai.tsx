@@ -812,7 +812,7 @@ export default function AI() {
         {/* Header Container (Absolute to match Home/Profile) */}
         <View
           className="absolute top-0 left-0 right-0 z-10"
-          style={{ paddingTop: normalize(55) }}
+          style={{ paddingTop: Math.max(insets.top + 10, normalize(55)) }}
         >
           <View className="flex-row items-center justify-between px-5">
             <TouchableOpacity
@@ -861,7 +861,7 @@ export default function AI() {
             style={{
               flex: 1,
               paddingHorizontal: 20,
-              paddingTop: normalize(110),
+              paddingTop: Math.max(insets.top + 60, normalize(110)),
               paddingBottom: 200,
             }}
           >
