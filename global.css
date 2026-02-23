@@ -361,7 +361,7 @@
 
   .post-on-platform-name {
     font-family: "Inter_400Regular";
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .post-on-platform-name-selected {
@@ -449,7 +449,7 @@
 
   .post-on-btn {
     width: 48%;
-    height: 44px;
+    height: 48px;
     border-radius: 20px;
     overflow: hidden;
     border-width: 1px;
@@ -471,8 +471,8 @@
   }
 
   .post-on-icon {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     margin-right: 10px;
     opacity: 0.5;
   }
