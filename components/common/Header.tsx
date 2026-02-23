@@ -125,7 +125,10 @@ export default function Header() {
         <TouchableOpacity
           className="items-center justify-center relative"
           style={{ width: normalize(38), height: normalize(38) }}
-          onPress={() => setShowDropdown(!showDropdown)}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setShowDropdown(!showDropdown);
+          }}
         >
           <GradientRingSVG />
           <Image

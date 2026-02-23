@@ -10,6 +10,7 @@ import {
   ImageBackground,
   KeyboardAvoidingView,
   Modal,
+  PermissionsAndroid,
   Platform,
   ScrollView,
   StyleSheet,
@@ -35,6 +36,13 @@ import { useNotification } from "../../context/NotificationContext";
 import chatService, { Conversation, Message } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
 import { RootState } from "../../store/store";
+
+let Voice: any = null;
+try {
+  Voice = require('@react-native-voice/voice').default;
+} catch (e) {
+  console.log("React Native Voice is not available in Expo Go. Please use a development build.");
+}
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
@@ -157,7 +165,10 @@ const ChatItem = ({
   <TouchableOpacity
     className="flex-row items-center justify-between bg-[#1A1A1A] p-4 rounded-xl mb-3"
     activeOpacity={0.7}
-    onPress={() => onSelect(conversation._id)}
+    onPress={() => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onSelect(conversation._id);
+    }}
   >
     <View className="flex-row items-center flex-1">
       <Image
@@ -175,7 +186,10 @@ const ChatItem = ({
     <View className="flex-row items-center gap-2">
       <TouchableOpacity
         className="w-8 h-8 items-center justify-center bg-white/10 rounded-[12px]"
-        onPress={() => onEdit(conversation)}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onEdit(conversation);
+        }}
       >
         <Image
           source={require("../../assets/icons/edit.png")}
@@ -185,7 +199,10 @@ const ChatItem = ({
       </TouchableOpacity>
       <TouchableOpacity
         className="w-8 h-8 items-center justify-center bg-white/10 rounded-[12px]"
-        onPress={() => onDelete(conversation._id)}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onDelete(conversation._id);
+        }}
       >
         <Image
           source={require("../../assets/icons/delete.png")}
@@ -366,6 +383,74 @@ export default function AI() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  // Setup React Native Voice Listeners
+  useEffect(() => {
+    if (!Voice) return; // Skip in Expo Go
+
+    Voice.onSpeechResults = (event: any) => {
+      if (event.value && event.value.length > 0) {
+        setInputText(event.value[0]); // most accurate result
+      }
+    };
+
+    Voice.onSpeechError = (error: any) => {
+      console.log('Voice Error:', error);
+      setIsListening(false);
+    };
+
+    return () => {
+      if (Voice) {
+        Voice.destroy().then(Voice.removeAllListeners).catch(console.error);
+      }
+    };
+  }, []);
+
+  const startListening = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!Voice) {
+      Toast.show({
+        type: "error",
+        text1: "Not Supported",
+        text2: "Voice search requires a Custom Development Build.",
+      });
+      return;
+    }
+    try {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Toast.show({
+            type: "error",
+            text1: "Permission Denied",
+            text2: "Microphone access is required for voice search."
+          });
+          return;
+        }
+      }
+      setIsListening(true);
+      await Voice.start('en-IN');
+    } catch (e) {
+      console.log('Start Voice Error:', e);
+      setIsListening(false);
+    }
+  };
+
+  const stopListening = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!Voice) return;
+    try {
+      await Voice.stop();
+      setIsListening(false);
+    } catch (e) {
+      console.log('Stop Voice Error:', e);
+      setIsListening(false);
+    }
+  };
 
   // Calculate responsiveness
   const sidebarWidth = Math.min(width * 0.8, 300);
@@ -999,19 +1084,29 @@ export default function AI() {
                         value={inputText}
                         onChangeText={setInputText}
                         onSubmitEditing={handleSendMessage}
+                        onFocus={() => setIsKeyboardVisible(true)}
+                        onBlur={() => setIsKeyboardVisible(false)}
                         returnKeyType="send"
-                        placeholder="Type your message..."
-                        placeholderTextColor="rgba(255,255,255,0.6)"
-                        className="flex-1 h-[44px] px-1 py-0 text-white"
+                        placeholder={isListening ? "Listening... Speak clearly" : "Type your message..."}
+                        placeholderTextColor={isListening ? "#ff4444" : "rgba(255,255,255,0.6)"}
+                        className={`flex-1 h-[44px] px-1 py-0 ${isListening ? 'text-[#ff4444]' : 'text-white'}`}
                         selectionColor="#fff"
+                        editable={!isListening}
                       />
-                      <TouchableOpacity className="w-10 h-10 items-center justify-center rounded-full relative bg-black/30">
-                        <GradientRingSVG />
-                        <Image
-                          source={require("../../assets/icons/voice.png")}
-                          className="w-5 h-5"
-                          resizeMode="contain"
-                        />
+                      <TouchableOpacity
+                        className={`w-10 h-10 items-center justify-center rounded-full relative ${isListening ? 'bg-red-500' : 'bg-black/30'}`}
+                        onPress={isListening ? stopListening : startListening}
+                      >
+                        {!isListening && <GradientRingSVG />}
+                        {isListening ? (
+                          <View className="w-3 h-3 bg-white rounded-sm" style={{ borderRadius: 3 }} />
+                        ) : (
+                          <Image
+                            source={require("../../assets/icons/voice.png")}
+                            className="w-5 h-5"
+                            resizeMode="contain"
+                          />
+                        )}
                       </TouchableOpacity>
                     </View>
                   </BlurView>
@@ -1059,7 +1154,10 @@ export default function AI() {
         <View className="flex-1 flex-row">
           <TouchableOpacity
             activeOpacity={1}
-            onPress={closeSidebar}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              closeSidebar();
+            }}
             className="absolute inset-0 bg-black/60"
           />
           <Animated.View
