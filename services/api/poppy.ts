@@ -5,6 +5,72 @@ const MODEL = "claude-4-sonnet-20250514";
 
 class PoppyService {
   /**
+   * Generate AI caption for post/reel/story
+   * @param captionPrompt The user's caption prompt
+   * @param isReel Whether this is for a reel (true) or post/story (false)
+   * @param token Bearer token for authentication
+   * @returns Promise<string> The generated caption text
+   */
+  async generateCaption(
+    captionPrompt: string,
+    isReel: boolean,
+    token: string,
+  ): Promise<string> {
+    const url = "https://n8n-production-0558.up.railway.app/webhook/poppyAi";
+
+    try {
+      console.log("🎨 Generating caption...", { captionPrompt, isReel });
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          isReel,
+          captionpromt: captionPrompt,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          "❌ Caption generation error:",
+          response.status,
+          errorText,
+        );
+        throw new Error(`Failed to generate caption: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ Caption generated successfully");
+
+      // Extract text from response
+      if (data.success && data.data?.content?.[0]?.text) {
+        let captionText = data.data.content[0].text;
+
+        // Remove only markdown syntax while preserving content and structure
+        captionText = captionText
+          .replace(/\*\*(.+?)\*\*/g, "$1") // Remove bold but keep text
+          .replace(/\*(.+?)\*/g, "$1") // Remove italic but keep text
+          .replace(/^#{1,6}\s+/gm, "") // Remove header markers but keep heading text
+          .replace(/`([^`]+)`/g, "$1") // Remove inline code markers
+          .replace(/```[^```]*```/g, (match) => match.replace(/```/g, "")) // Remove code block markers
+          .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to text
+          .trim();
+
+        return captionText;
+      }
+
+      throw new Error("Invalid response format");
+    } catch (error) {
+      console.error("❌ Caption generation error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Stream a message to Poppy AI and get real-time response
    * @param conversationId The conversation ID to stream to
    * @param prompt The user's message

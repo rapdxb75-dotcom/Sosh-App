@@ -3,11 +3,11 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import Svg, {
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
-    Path as SvgPath,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
+  Path as SvgPath,
 } from "react-native-svg";
 
 export default function BottomNavigation({
@@ -107,7 +107,7 @@ export default function BottomNavigation({
           >
             <Image
               source={require("../../assets/icons/nav_home.png")}
-              className="w-[24px] h-[24px]"
+              className="w-[28px] h-[28px]"
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -117,7 +117,7 @@ export default function BottomNavigation({
           >
             <Image
               source={require("../../assets/icons/nav_ai.png")}
-              className="w-[24px] h-[24px]"
+              className="w-[28px] h-[28px]"
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -131,7 +131,7 @@ export default function BottomNavigation({
           >
             <Image
               source={require("../../assets/icons/nav_chart.png")}
-              className="w-[24px] h-[24px]"
+              className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -141,7 +141,7 @@ export default function BottomNavigation({
           >
             <Image
               source={require("../../assets/icons/nav_user.png")}
-              className="w-[24px] h-[24px]"
+              className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
           </TouchableOpacity>
@@ -167,7 +167,7 @@ export default function BottomNavigation({
             elevation: 14,
           }}
         >
-          <Svg width={32} height={32} viewBox="0 0 24 24" fill="none">
+          <Svg width={34} height={34} viewBox="0 0 24 24" fill="none">
             {/* Outer circle */}
             <SvgPath
               d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"

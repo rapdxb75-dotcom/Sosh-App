@@ -190,6 +190,16 @@ export default function Profile() {
             }
           });
           setSocialMediaData(socialData);
+
+          // Update Redux store with aiAdditions if available
+          if (userData.aiAdditions) {
+            // @ts-ignore - dispatch type is complex with thunks
+            dispatch(
+              updateUser({
+                aiAdditions: userData.aiAdditions,
+              }),
+            );
+          }
         }
       },
       (error) => {

@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Upload, X } from "lucide-react-native";
 import { useState } from "react";
 import {
+    ActivityIndicator,
     Image,
     ImageBackground,
     Keyboard,
@@ -19,20 +20,22 @@ import {
     TouchableWithoutFeedback,
     View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import Header from "../../components/common/Header";
+import poppyService from "../../services/api/poppy";
+import storageService from "../../services/storage";
 
 const captionModalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "flex-start",
-    paddingTop: 96,
-    paddingLeft: 20,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.72)",
   },
   card: {
-    width: 360,
-    height: 601,
+    width: "90%",
+    maxWidth: 500,
+    height: "60%",
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.4)",
@@ -147,6 +150,7 @@ export default function CreatePost() {
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCaptionModal, setShowCaptionModal] = useState(false);
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
 
   // Derived State for Active Tab
   const activeData = tabData[activeTab as keyof typeof tabData];
@@ -173,6 +177,61 @@ export default function CreatePost() {
 
   const setPostType = (value: string) => updateActiveTab("postType", value);
   const setCaption = (value: string) => updateActiveTab("caption", value);
+
+  // AI Caption Generation Handler
+  const handleGenerateCaption = async () => {
+    if (!caption.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Caption Required",
+        text2: "Please enter a caption prompt first",
+      });
+      return;
+    }
+
+    try {
+      setIsGeneratingCaption(true);
+      const token = await storageService.getToken();
+
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Authentication Error",
+          text2: "Please login again",
+        });
+        return;
+      }
+
+      // Determine if it's a reel
+      const isReel = activeTab === "Reel";
+
+      const generatedCaption = await poppyService.generateCaption(
+        caption,
+        isReel,
+        token,
+      );
+
+      // Update caption with generated content
+      setCaption(generatedCaption);
+
+      Toast.show({
+        type: "success",
+        text1: "Caption Generated",
+        text2: "AI caption generated successfully",
+      });
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      console.error("Caption generation error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Generation Failed",
+        text2: "Failed to generate caption. Please try again.",
+      });
+    } finally {
+      setIsGeneratingCaption(false);
+    }
+  };
   const setDate = (value: Date | null) => updateActiveTab("date", value);
 
   const onDateChange = (event: any, selectedDate?: Date) => {
@@ -465,10 +524,12 @@ export default function CreatePost() {
                       <View className="flex-1 glass-input">
                         <BlurView intensity={5} tint="light" className="p-4">
                           <TextInput
-                            className="text-white input-text-regular min-h-[120px] py-0"
+                            className="text-white input-text-regular py-0"
+                            style={{ minHeight: 120, maxHeight: 120 }}
                             placeholder="Write your caption..."
                             placeholderTextColor="rgba(255, 255, 255, 0.4)"
                             multiline
+                            scrollEnabled={true}
                             textAlignVertical="top"
                             value={caption}
                             onChangeText={setCaption}
@@ -514,12 +575,18 @@ export default function CreatePost() {
                               alignItems: "center",
                               justifyContent: "center",
                             }}
+                            onPress={handleGenerateCaption}
+                            disabled={isGeneratingCaption}
                           >
-                            <Image
-                              source={require("../../assets/icons/chat_ai.png")}
-                              style={{ width: 30, height: 30 }}
-                              resizeMode="contain"
-                            />
+                            {isGeneratingCaption ? (
+                              <ActivityIndicator size="small" color="#fff" />
+                            ) : (
+                              <Image
+                                source={require("../../assets/icons/chat_ai.png")}
+                                style={{ width: 30, height: 30 }}
+                                resizeMode="contain"
+                              />
+                            )}
                           </TouchableOpacity>
 
                           {/* Voice */}
@@ -777,10 +844,9 @@ export default function CreatePost() {
             <KeyboardAvoidingView
               behavior={Platform.OS === "ios" ? "padding" : "height"}
               style={{
-                flex: 1,
                 width: "100%",
-                justifyContent: "flex-start",
-                alignItems: "flex-start",
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
               <View style={captionModalStyles.card}>
@@ -791,6 +857,7 @@ export default function CreatePost() {
                     placeholder="Write your caption..."
                     placeholderTextColor="rgba(255,255,255,0.4)"
                     multiline
+                    scrollEnabled={true}
                     autoFocus
                     value={caption}
                     onChangeText={setCaption}
@@ -818,12 +885,20 @@ export default function CreatePost() {
                     </TouchableOpacity>
 
                     <View style={captionModalStyles.iconRow}>
-                      <TouchableOpacity style={captionModalStyles.iconBtn}>
-                        <Image
-                          source={require("../../assets/icons/chat_ai.png")}
-                          style={{ width: 44, height: 44 }}
-                          resizeMode="contain"
-                        />
+                      <TouchableOpacity
+                        style={captionModalStyles.iconBtn}
+                        onPress={handleGenerateCaption}
+                        disabled={isGeneratingCaption}
+                      >
+                        {isGeneratingCaption ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Image
+                            source={require("../../assets/icons/chat_ai.png")}
+                            style={{ width: 44, height: 44 }}
+                            resizeMode="contain"
+                          />
+                        )}
                       </TouchableOpacity>
                       <TouchableOpacity style={captionModalStyles.iconBtn}>
                         <Image

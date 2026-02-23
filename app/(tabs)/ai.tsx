@@ -321,6 +321,13 @@ export default function AI() {
   const profilePicture = useSelector(
     (state: RootState) => state.user.profilePicture,
   );
+  const aiAdditions = useSelector((state: RootState) => state.user.aiAdditions);
+
+  // Get dynamic boardId and chatId from user's aiAdditions
+  const poppyBoardId =
+    aiAdditions?.poppyAIChatbot?.boardId || "weathered-grassland-TB9JJ";
+  const poppyChatId =
+    aiAdditions?.poppyAIChatbot?.chatId || "chatNode-hidden-butterfly-ugi_J";
   const { addNotification } = useNotification();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -450,8 +457,8 @@ export default function AI() {
 
     try {
       await chatService.createConversation({
-        boardId: "crimson-volcano-YMlZP",
-        chatId: "chatNode-small-field-XgvXp-copied",
+        boardId: poppyBoardId,
+        chatId: poppyChatId,
         name: conversationName.trim(),
       });
 
@@ -617,8 +624,8 @@ export default function AI() {
         console.log("🆕 Creating new conversation with title:", title);
 
         const response = await chatService.createConversation({
-          boardId: "crimson-volcano-YMlZP",
-          chatId: "chatNode-small-field-XgvXp-copied",
+          boardId: poppyBoardId,
+          chatId: poppyChatId,
           name: title,
         });
 
