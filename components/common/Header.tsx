@@ -4,12 +4,13 @@ import { router } from "expo-router";
 import { LogOut } from "lucide-react-native";
 import { useState } from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
-    Circle,
-    Defs,
-    LinearGradient,
-    Rect,
-    Stop,
+  Circle,
+  Defs,
+  LinearGradient,
+  Rect,
+  Stop,
 } from "react-native-svg";
 import { useDispatch, useSelector } from "react-redux";
 import { normalize } from "../../constants/Fonts";
@@ -75,6 +76,7 @@ export default function Header() {
   );
   const dispatch = useDispatch();
   const [showDropdown, setShowDropdown] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -87,7 +89,7 @@ export default function Header() {
   return (
     <View
       className="flex-row justify-between items-center px-5"
-      style={{ paddingTop: normalize(55) }}
+      style={{ paddingTop: Math.max(insets.top + 10, normalize(55)) }}
     >
       {/* Left Logo */}
       <View
@@ -130,13 +132,13 @@ export default function Header() {
             source={
               profilePic
                 ? {
-                    uri:
-                      profilePic.startsWith("data:") ||
+                  uri:
+                    profilePic.startsWith("data:") ||
                       profilePic.startsWith("http") ||
                       profilePic.startsWith("file")
-                        ? profilePic
-                        : `data:image/png;base64,${profilePic}`,
-                  }
+                      ? profilePic
+                      : `data:image/png;base64,${profilePic}`,
+                }
                 : require("../../assets/images/avtar.png")
             }
             style={{
