@@ -5,28 +5,28 @@ import { Stack } from "expo-router";
 import { Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useState } from "react";
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import Svg, {
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgGradient,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgGradient,
 } from "react-native-svg";
 import {
-    VictoryArea,
-    VictoryAxis,
-    VictoryChart,
-    VictoryGroup,
-    VictoryPie,
-    VictoryTheme,
-    VictoryVoronoiContainer,
+  VictoryArea,
+  VictoryAxis,
+  VictoryChart,
+  VictoryGroup,
+  VictoryPie,
+  VictoryTheme,
+  VictoryVoronoiContainer,
 } from "victory-native";
 import Header from "../../components/common/Header";
 
@@ -357,7 +357,12 @@ const PlatformCard = ({
                   {["W1", "W2", "W3", "W4"].map((tab) => (
                     <TouchableOpacity
                       key={tab}
-                      onPress={() => onTabChange(tab)}
+                      onPress={() => {
+                        if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                        onTabChange(tab);
+                      }}
                       className={`chart-tab ${selectedTab === tab ? "chart-tab-active" : ""}`}
                     >
                       <Text
@@ -517,7 +522,7 @@ const dummyChartData: Record<string, { x: number; y: number; y2: number }[]> = {
 export default function Analysis() {
   const { width } = useWindowDimensions();
   const [selectedTab, setSelectedTab] = useState("W1");
-  const [expandedPlatform, setExpandedPlatform] = useState("tiktok");
+  const [expandedPlatform, setExpandedPlatform] = useState("");
 
   return (
     <View className="flex-1">

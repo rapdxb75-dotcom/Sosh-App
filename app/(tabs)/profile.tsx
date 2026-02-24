@@ -216,11 +216,13 @@ export default function Profile() {
   }, [globalEmail]);
 
   const pickImage = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
+      shape: "oval",
       quality: 0.5, // Lower quality to keep Base64 string size reasonable
       base64: true,
     });
@@ -236,6 +238,7 @@ export default function Profile() {
   };
 
   const handleSaveProfile = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       setLoading(true);
 
@@ -543,13 +546,13 @@ export default function Profile() {
                         source={
                           image
                             ? {
-                                uri:
-                                  image.startsWith("http") ||
+                              uri:
+                                image.startsWith("http") ||
                                   image.startsWith("file") ||
                                   image.startsWith("data:")
-                                    ? image
-                                    : `data:image/png;base64,${image}`,
-                              }
+                                  ? image
+                                  : `data:image/png;base64,${image}`,
+                            }
                             : require("../../assets/images/avtar.png")
                         }
                         className="w-[45px] h-[45px] rounded-full"
@@ -761,13 +764,13 @@ export default function Profile() {
                   source={
                     image
                       ? {
-                          uri:
-                            image.startsWith("http") ||
+                        uri:
+                          image.startsWith("http") ||
                             image.startsWith("file") ||
                             image.startsWith("data:")
-                              ? image
-                              : `data:image/png;base64,${image}`,
-                        }
+                            ? image
+                            : `data:image/png;base64,${image}`,
+                      }
                       : require("../../assets/images/avtar.png")
                   }
                   className="w-[82px] h-[82px] absolute rounded-full"

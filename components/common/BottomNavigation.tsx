@@ -21,14 +21,21 @@ export default function BottomNavigation({
 
   const navigateTo = (routeName: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const route = state.routes.find((r) => r.name === routeName);
+
     const event = navigation.emit({
       type: "tabPress",
-      target: routeName,
+      target: route ? route.key : routeName,
       canPreventDefault: true,
     });
 
     if (!event.defaultPrevented) {
-      navigation.navigate(routeName);
+      if (route) {
+        navigation.navigate({ name: route.name, merge: true } as any);
+      } else {
+        navigation.navigate(routeName as never);
+      }
     }
   };
 

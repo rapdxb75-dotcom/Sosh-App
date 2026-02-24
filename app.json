@@ -23,7 +23,10 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.social.aiautomation",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -45,7 +48,14 @@
         }
       ],
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "This app needs access to microphone",
+          "speechRecognitionPermission": "This app needs speech recognition access"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
