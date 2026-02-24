@@ -56,7 +56,7 @@ class PoppyService {
           .replace(/\*(.+?)\*/g, "$1") // Remove italic but keep text
           .replace(/^#{1,6}\s+/gm, "") // Remove header markers but keep heading text
           .replace(/`([^`]+)`/g, "$1") // Remove inline code markers
-          .replace(/```[^```]*```/g, (match) => match.replace(/```/g, "")) // Remove code block markers
+          .replace(/```[^```]*```/g, (match: string) => match.replace(/```/g, "")) // Remove code block markers
           .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to text
           .trim();
 

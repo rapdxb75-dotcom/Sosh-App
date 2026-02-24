@@ -222,6 +222,7 @@ export default function Profile() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
+      shape: "oval",
       quality: 0.5, // Lower quality to keep Base64 string size reasonable
       base64: true,
     });
