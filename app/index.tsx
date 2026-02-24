@@ -1,7 +1,7 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { initializeFirebase, listenToUserData } from "../services/firebase";
+import { initializeFirebase } from "../services/firebase";
 import storageService from "../services/storage";
 
 export default function Index() {
@@ -13,23 +13,10 @@ export default function Index() {
       const token = await storageService.getToken();
       setHasToken(!!token);
 
-      // Initialize Firebase and set up listener if user is logged in
+      // Initialize Firebase if user is logged in
+      // The listener will be set up in _layout.tsx
       if (token) {
-        const email = await storageService.getEmail();
-        if (email) {
-          initializeFirebase();
-          listenToUserData(
-            email,
-            (userData) => {
-              if (userData) {
-                console.log("Firebase data loaded on app open:", userData);
-              }
-            },
-            (error) => {
-              console.error("Firebase listener error on app open:", error);
-            },
-          );
-        }
+        initializeFirebase();
       }
 
       setLoading(false);
