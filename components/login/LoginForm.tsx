@@ -25,6 +25,10 @@ import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import authService from "../../services/api/auth";
 import chatService from "../../services/api/chat";
+import {
+    getCurrentUserData,
+    initializeFirebase,
+} from "../../services/firebase";
 import storageService from "../../services/storage";
 import { setUserData } from "../../store/userSlice";
 
@@ -121,6 +125,27 @@ export default function LoginForm() {
                   profilePicture: response.profilePicture,
                 }),
               );
+
+              // Initialize Firebase and fetch user data
+              if (decoded.email) {
+                try {
+                  initializeFirebase();
+                  const firebaseData = await getCurrentUserData(decoded.email);
+                  if (firebaseData?.aiAdditions) {
+                    dispatch(
+                      setUserData({
+                        aiAdditions: firebaseData.aiAdditions,
+                      }),
+                    );
+                    console.log(
+                      "Firebase data loaded on login:",
+                      firebaseData.aiAdditions,
+                    );
+                  }
+                } catch (firebaseError) {
+                  console.error("Error fetching Firebase data:", firebaseError);
+                }
+              }
             } catch (decodeError) {
               console.error("Error decoding token:", decodeError);
             }

@@ -5,30 +5,30 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Upload } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  Linking,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    Linking,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Svg, {
-  Circle,
-  Defs,
-  Rect,
-  Stop,
-  LinearGradient as SvgLinearGradient,
+    Circle,
+    Defs,
+    Rect,
+    Stop,
+    LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import { useNotification } from "../../context/NotificationContext";
 import userService from "../../services/api/user";
-import { initializeFirebase, listenToUserData } from "../../services/firebase";
+import { listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
@@ -166,21 +166,17 @@ export default function Profile() {
     }
   }, [editModalVisible, globalUserName, globalProfilePicture]);
 
-  // Firebase connection and real-time listener for user data
+  // Fetch social media data from Firebase when profile loads
   useEffect(() => {
-    initializeFirebase();
-
     if (!globalEmail) {
-      console.log("No email available for Firebase listener");
       return;
     }
 
-    // Set up real-time listener
+    // Set up listener for social media data only
     const unsubscribe = listenToUserData(
       globalEmail,
       (userData) => {
         if (userData) {
-          console.log("Received user data update:", userData);
           // Extract social media data
           const socialData: SocialMediaData = {};
           SOCIAL_PLATFORMS.forEach((platform) => {
@@ -190,20 +186,10 @@ export default function Profile() {
             }
           });
           setSocialMediaData(socialData);
-
-          // Update Redux store with aiAdditions if available
-          if (userData.aiAdditions) {
-            // @ts-ignore - dispatch type is complex with thunks
-            dispatch(
-              updateUser({
-                aiAdditions: userData.aiAdditions,
-              }),
-            );
-          }
         }
       },
       (error) => {
-        console.error("Firebase listener error:", error);
+        console.error("Firebase listener error in profile:", error);
       },
     );
 
@@ -546,13 +532,13 @@ export default function Profile() {
                         source={
                           image
                             ? {
-                              uri:
-                                image.startsWith("http") ||
+                                uri:
+                                  image.startsWith("http") ||
                                   image.startsWith("file") ||
                                   image.startsWith("data:")
-                                  ? image
-                                  : `data:image/png;base64,${image}`,
-                            }
+                                    ? image
+                                    : `data:image/png;base64,${image}`,
+                              }
                             : require("../../assets/images/avtar.png")
                         }
                         className="w-[45px] h-[45px] rounded-full"
@@ -764,13 +750,13 @@ export default function Profile() {
                   source={
                     image
                       ? {
-                        uri:
-                          image.startsWith("http") ||
+                          uri:
+                            image.startsWith("http") ||
                             image.startsWith("file") ||
                             image.startsWith("data:")
-                            ? image
-                            : `data:image/png;base64,${image}`,
-                      }
+                              ? image
+                              : `data:image/png;base64,${image}`,
+                        }
                       : require("../../assets/images/avtar.png")
                   }
                   className="w-[82px] h-[82px] absolute rounded-full"
