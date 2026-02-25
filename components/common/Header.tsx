@@ -70,7 +70,7 @@ const ringStyles = StyleSheet.create({
 
 /* ---------- Header Component ---------- */
 export default function Header() {
-  const { showNotifications } = useNotification();
+  const { showNotifications, notifications } = useNotification();
   const profilePic = useSelector(
     (state: RootState) => state.user.profilePicture,
   );
@@ -107,7 +107,7 @@ export default function Header() {
       <View className="flex-row items-center gap-3">
         {/* Notification */}
         <TouchableOpacity
-          className="items-center justify-center"
+          className="items-center justify-center relative"
           style={{ width: normalize(38), height: normalize(38) }}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -119,6 +119,13 @@ export default function Header() {
             style={{ width: normalize(38), height: normalize(38) }}
             resizeMode="contain"
           />
+          {notifications.length > 0 && (
+            <View className="absolute top-1 right-1 bg-[#EE2828] rounded-full min-w-[16px] h-[16px] items-center justify-center px-1 border-[1.5px] border-black">
+              <Text className="text-white text-[9px] font-bold leading-none text-center">
+                {notifications.length > 99 ? "99+" : notifications.length}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
 
         {/* RAPDXP User Profile Icon with Gradient Ring */}
