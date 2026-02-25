@@ -5,7 +5,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ImageBackground, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { Provider, useSelector } from "react-redux";
@@ -13,51 +13,41 @@ import { toastConfig } from "../components/common/CustomToast";
 import NotificationModal from "../components/common/NotificationModal";
 import { NotificationProvider } from "../context/NotificationContext";
 import "../global.css";
-import { listenToUserData } from "../services/firebase";
+import { getCurrentUserData, initializeFirebase } from "../services/firebase";
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
 
 SplashScreen.preventAutoHideAsync();
 
-function FirebaseListener() {
+function FirebaseDataFetcher() {
   const email = useSelector((state: RootState) => state.user.email);
   const isLoggedIn = useSelector((state: RootState) => state.user.isLoggedIn);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
-    if (!email || !isLoggedIn) {
+    if (!email || !isLoggedIn || hasFetchedRef.current) {
       return;
     }
 
-    console.log("Setting up Firebase listener for:", email);
+    // Fetch data once only
+    const fetchData = async () => {
+      try {
+        console.log("Fetching Firebase data once for:", email);
+        initializeFirebase();
+        const userData = (await getCurrentUserData(email)) as any;
 
-    // Set up real-time listener for user data
-    const unsubscribe = listenToUserData(
-      email,
-      (userData) => {
-        if (userData) {
-          console.log("Firebase data received:", userData);
-          // Update Redux store with aiAdditions and other data
-          if (userData.aiAdditions) {
-            store.dispatch(
-              updateUser({
-                aiAdditions: userData.aiAdditions,
-              }),
-            );
-          }
+        if (userData?.aiAdditions) {
+          store.dispatch(updateUser({ aiAdditions: userData.aiAdditions }));
+          console.log("✅ aiAdditions loaded from Firebase");
         }
-      },
-      (error) => {
-        console.error("Firebase listener error:", error);
-      },
-    );
 
-    // Cleanup listener on unmount or when email changes
-    return () => {
-      console.log("Cleaning up Firebase listener");
-      if (unsubscribe) {
-        unsubscribe();
+        hasFetchedRef.current = true;
+      } catch (error) {
+        console.error("Error fetching Firebase data:", error);
       }
     };
+
+    fetchData();
   }, [email, isLoggedIn]);
 
   return null;
@@ -121,7 +111,7 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <NotificationProvider>
-        <FirebaseListener />
+        <FirebaseDataFetcher />
         <View style={{ flex: 1, backgroundColor: "#000" }}>
           <StatusBar style="light" translucent backgroundColor="transparent" />
 

@@ -2,7 +2,7 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack } from "expo-router";
-import { Minus, Plus, TrendingUp } from "lucide-react-native";
+import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useState } from "react";
 import {
   Image,
@@ -85,173 +85,6 @@ const PLATFORMS: PlatformData[] = [
 
 // --- Components ---
 
-const SemiCircleGauge = ({
-  value,
-  total,
-  color,
-  label,
-  subValue1,
-  subLabel1,
-  subValue2,
-  subLabel2,
-}: any) => {
-  const isFirstColor = color === "#FFB800";
-  const secondColor = isFirstColor ? "#FB9400" : "#00FF94";
-
-  const totalSweep = 280;
-  const chartStartAngle = -120; // 9 o'clock
-  const currentRatio = (subValue1 + subValue2) / total;
-  const dataEndAngle = chartStartAngle + totalSweep * currentRatio;
-
-  return (
-    <View
-      style={{
-        width: 147.59,
-        height: 172.03,
-        borderRadius: 10.31,
-        margin: 4,
-        overflow: "hidden",
-      }}
-    >
-      <LinearGradient
-        colors={[
-          "rgba(255, 255, 255, 0.05)",
-          "rgba(0, 0, 0, 0)",
-          "rgba(255, 255, 255, 0)",
-        ]}
-        locations={[0, 0.9999, 1]}
-        style={{
-          flex: 1,
-          borderRadius: 10.31,
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingTop: 16,
-        }}
-      >
-        {/* Gradient Border SVG Overlay */}
-        <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Svg height="100%" width="100%">
-            <Defs>
-              <SvgGradient
-                id="gaugeBorderGrad"
-                x1="0%"
-                y1="0%"
-                x2="0%"
-                y2="100%"
-              >
-                <Stop
-                  offset="0%"
-                  stopColor="rgba(99, 97, 97, 0.1)"
-                  stopOpacity="1"
-                />
-                <Stop
-                  offset="100%"
-                  stopColor="rgba(94, 91, 91, 0)"
-                  stopOpacity="1"
-                />
-              </SvgGradient>
-            </Defs>
-            <Rect
-              x="0.43"
-              y="0.43"
-              width="146.73"
-              height="171.17"
-              rx="10.31"
-              ry="10.31"
-              stroke="url(#gaugeBorderGrad)"
-              strokeWidth="0.86"
-              fill="transparent"
-            />
-          </Svg>
-        </View>
-
-        <View className="items-center w-full mt-4">
-          <View className="w-[140px] h-[90px] items-center justify-center relative">
-            <View className="absolute">
-              <VictoryPie
-                data={[{ y: 1 }]}
-                colorScale={["rgba(255,255,255,0.05)"]}
-                startAngle={-90}
-                endAngle={90}
-                innerRadius={58}
-                radius={60}
-                width={140}
-                height={140}
-                padding={0}
-                labels={() => null}
-              />
-            </View>
-
-            <VictoryPie
-              data={[
-                { x: "1", y: subValue1 },
-                { x: "2", y: subValue2 },
-              ]}
-              colorScale={[secondColor, color]}
-              startAngle={-120}
-              endAngle={dataEndAngle}
-              innerRadius={56}
-              radius={62}
-              cornerRadius={12}
-              padAngle={4}
-              width={140}
-              height={140}
-              padding={0}
-              labels={() => null}
-              animate={{ duration: 1000 }}
-            />
-
-            <View className="absolute inset-x-0 bottom-0 items-center pb-4">
-              <View className="bg-[#0A0A0A] px-2.5 py-0.5 rounded-full border border-white/10 mb-2">
-                <Text className="text-white text-[9px] font-inter font-medium tracking-tight">
-                  ↑ 22.3%
-                </Text>
-              </View>
-              <Text
-                className="text-white text-[28px] text-center"
-                style={{ fontFamily: "Inter_700Bold", lineHeight: 32 }}
-              >
-                {value.toLocaleString()}
-              </Text>
-            </View>
-          </View>
-
-          <View className="flex-row justify-between w-full px-2.5 mb-2.5">
-            <View className="flex-row gap-1.5 items-center">
-              <View
-                className="w-[2.5px] h-[32px] rounded-full"
-                style={{ backgroundColor: secondColor }}
-              />
-              <View>
-                <Text className="text-white/40 text-[10px] font-inter tracking-tight">
-                  {subLabel1}
-                </Text>
-                <Text className="text-white text-[15px] font-inter font-bold leading-tight">
-                  {subValue1.toLocaleString()}
-                </Text>
-              </View>
-            </View>
-            <View className="flex-row gap-1.5 items-center">
-              <View
-                className="w-[2.5px] h-[32px] rounded-full"
-                style={{ backgroundColor: color }}
-              />
-              <View>
-                <Text className="text-white/40 text-[10px] font-inter tracking-tight">
-                  {subLabel2}
-                </Text>
-                <Text className="text-white text-[15px] font-inter font-bold leading-tight">
-                  {subValue2.toLocaleString()}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </LinearGradient>
-    </View>
-  );
-};
-
 const PlatformCard = ({
   platform,
   isExpanded,
@@ -269,9 +102,21 @@ const PlatformCard = ({
   onTabChange: (tab: string) => void;
   screenWidth: number;
 }) => {
+  const formatCompactNumber = (number: number) => {
+    return new Intl.NumberFormat('en-US', {
+      notation: 'compact',
+      maximumFractionDigits: 1,
+    }).format(number);
+  };
+
+  const totalEngagement = platform.metrics.likes + platform.metrics.comments + platform.metrics.shares;
+  const likesPercent = Math.round((platform.metrics.likes / totalEngagement) * 100) || 19;
+  const commentsPercent = Math.round((platform.metrics.comments / totalEngagement) * 100) || 32;
+  const sharesPercent = Math.round((platform.metrics.shares / totalEngagement) * 100) || 29;
+
   return (
     <View
-      className="platform-card"
+      className="mb-4"
       style={{
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
@@ -283,34 +128,35 @@ const PlatformCard = ({
       <BlurView
         intensity={14}
         tint="dark"
-        className="border border-white/10 rounded-[20px]"
+        className="border border-white/10 rounded-[20px] overflow-hidden"
       >
-        <View className="platform-card-inner">
-          <View
-            className={`flex-row items-center justify-between ${isExpanded ? "mb-6" : ""}`}
-          >
+        <View className="p-5">
+          {/* Header */}
+          <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
               <Image
                 source={platform.icon}
                 className="w-12 h-12 rounded-xl mr-3"
               />
               <View>
-                <Text className="platform-name text-white">
-                  {platform.name}{" "}
-                  <Text className="follower-count text-white/40">
+                <View className="flex-row items-center">
+                  <Text className="text-white text-[18px] font-bold font-inter mr-2">
+                    {platform.name}
+                  </Text>
+                  <Text className="text-white/50 text-[14px] font-inter">
                     {platform.followers}
                   </Text>
-                </Text>
-                <View className="growth-badge flex-row items-center mt-2 self-start gap-[10px]">
-                  <TrendingUp size={14} color="#00FF94" />
-                  <Text className="text-[#00FF94] text-[12px] font-inter font-medium">
+                </View>
+                <View className="bg-[#00FF94]/10 rounded-full py-1 px-2.5 flex-row items-center mt-1.5 self-start">
+                  <TrendingUp size={12} color="#00FF94" />
+                  <Text className="text-[#00FF94] text-[12px] font-inter ml-1">
                     {platform.growth}
                   </Text>
                 </View>
               </View>
             </View>
             <TouchableOpacity
-              className="w-10 h-10 rounded-full bg-white/10 items-center justify-center border border-white/10"
+              className="w-8 h-8 rounded-full bg-white/10 items-center justify-center border border-white/10"
               onPress={() => {
                 if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -319,41 +165,28 @@ const PlatformCard = ({
               }}
             >
               {isExpanded ? (
-                <Minus size={20} color="white" />
+                <Minus size={16} color="white" />
               ) : (
-                <Plus size={20} color="white" />
+                <Plus size={16} color="white" />
               )}
             </TouchableOpacity>
           </View>
 
           {isExpanded && (
-            <>
-              <View className="flex-row justify-between mb-8">
-                <SemiCircleGauge
-                  value={platform.metrics.views + platform.metrics.likes}
-                  total={platform.metrics.views * 1.5}
-                  color="#FFB800"
-                  subLabel1="Views"
-                  subValue1={platform.metrics.views}
-                  subLabel2="Likes"
-                  subValue2={platform.metrics.likes}
-                />
-                <SemiCircleGauge
-                  value={platform.metrics.comments + platform.metrics.shares}
-                  total={platform.metrics.comments * 1.5}
-                  color="#00E0FF"
-                  subLabel1="Comments"
-                  subValue1={platform.metrics.comments}
-                  subLabel2="Shares"
-                  subValue2={platform.metrics.shares}
-                />
-              </View>
-
-              <View className="mb-6 flex-row items-center justify-between">
-                <Text className="chart-section-title text-white mx-2">
-                  30 days
+            <View className="mt-8">
+              {/* Views Section */}
+              <View className="flex-row items-center">
+                <Text className="text-white/40 text-[14px] font-inter mr-1">
+                  Views 30 days
                 </Text>
-                <View className="flex-row items-center gap-[10px]">
+                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+              </View>
+                
+              <View className="flex-row items-center justify-between mb-2 mt-2">
+                <Text className="text-white text-[32px] font-bold font-inter tracking-tight">
+                  {formatCompactNumber(platform.metrics.views)}
+                </Text>
+                <View className="flex-row items-center gap-2">
                   {["W1", "W2", "W3", "W4"].map((tab) => (
                     <TouchableOpacity
                       key={tab}
@@ -363,10 +196,10 @@ const PlatformCard = ({
                         }
                         onTabChange(tab);
                       }}
-                      className={`chart-tab ${selectedTab === tab ? "chart-tab-active" : ""}`}
+                      className={`w-8 h-8 rounded-full items-center justify-center ${selectedTab === tab ? "bg-white/10" : ""}`}
                     >
                       <Text
-                        className={`text-[13px] ${selectedTab === tab ? "text-white" : "text-white/40"}`}
+                        className={`text-[12px] ${selectedTab === tab ? "text-white font-medium" : "text-white/40"}`}
                       >
                         {tab}
                       </Text>
@@ -374,20 +207,20 @@ const PlatformCard = ({
                   ))}
                 </View>
               </View>
-
-              <View style={{ height: 220, marginLeft: -30, marginBottom: 0 }}>
+                
+              {/* Area Chart */}
+              <View style={{ height: 160, marginLeft: -30, marginBottom: 10 }}>
                 <VictoryChart
-                  width={screenWidth - 10}
-                  height={200}
+                  width={screenWidth - 20}
+                  height={160}
                   theme={VictoryTheme.material}
-                  containerComponent={<VictoryVoronoiContainer />}
-                  padding={{ top: 20, bottom: 40, left: 40, right: 40 }}
+                  padding={{ top: 10, bottom: 20, left: 40, right: 30 }}
                 >
                   <VictoryAxis
                     style={{
                       axis: { stroke: "transparent" },
                       tickLabels: {
-                        fill: "rgba(255,255,255,0.3)",
+                        fill: "rgba(255,255,255,0.2)",
                         fontSize: 10,
                         fontFamily: "Inter_400Regular",
                       },
@@ -401,31 +234,20 @@ const PlatformCard = ({
                       axis: { stroke: "transparent" },
                       tickLabels: { fill: "transparent" },
                       grid: {
-                        stroke: "rgba(228, 228, 231, 0.15)",
-                        strokeWidth: 0.8,
+                        stroke: "rgba(255, 255, 255, 0.1)",
+                        strokeWidth: 1,
                         strokeDasharray: "none",
                       },
                     }}
                   />
                   <VictoryGroup offset={0}>
                     <VictoryArea
-                      data={chartData}
-                      interpolation="natural"
-                      style={{
-                        data: {
-                          fill: "url(#gradLikes)",
-                          stroke: "#FF9D00",
-                          strokeWidth: 2,
-                        },
-                      }}
-                    />
-                    <VictoryArea
                       data={chartData.map((d) => ({ ...d, y: d.y2 }))}
                       interpolation="natural"
                       style={{
                         data: {
-                          fill: "url(#gradViews)",
-                          stroke: "#00FF94",
+                          fill: "url(#gradViewsCard)",
+                          stroke: "#FFB01A",
                           strokeWidth: 2,
                         },
                       }}
@@ -434,44 +256,87 @@ const PlatformCard = ({
 
                   <Defs>
                     <SvgGradient
-                      id="gradLikes"
+                      id="gradViewsCard"
                       x1="0%"
                       y1="0%"
                       x2="0%"
                       y2="100%"
                     >
-                      <Stop offset="0%" stopColor="#FF9D00" stopOpacity="0.3" />
-                      <Stop offset="100%" stopColor="#FF9D00" stopOpacity="0" />
-                    </SvgGradient>
-                    <SvgGradient
-                      id="gradViews"
-                      x1="0%"
-                      y1="0%"
-                      x2="0%"
-                      y2="100%"
-                    >
-                      <Stop offset="0%" stopColor="#00FF94" stopOpacity="0.2" />
-                      <Stop offset="100%" stopColor="#00FF94" stopOpacity="0" />
+                      <Stop offset="0%" stopColor="#FFB01A" stopOpacity="0.3" />
+                      <Stop offset="100%" stopColor="#FFB01A" stopOpacity="0" />
                     </SvgGradient>
                   </Defs>
                 </VictoryChart>
+              </View>
 
-                <View className="flex-row justify-center items-center gap-6 mt-2">
-                  <View className="chart-legend-item gap-2">
-                    <Text className="text-white text-[14px] font-inter">
-                      Views
-                    </Text>
-                    <View className="chart-legend-dot bg-[#00FF94]" />
+              {/* Engagement Section */}
+              <View className="flex-row items-center mt-4">
+                <Text className="text-white/40 text-[14px] font-inter mr-1">
+                  Engagement 30 days
+                </Text>
+                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+              </View>
+                
+              <View className="flex-row items-center justify-between mt-2 mb-6">
+                <Text className="text-white text-[32px] font-bold font-inter tracking-tight">
+                  {formatCompactNumber(totalEngagement)}
+                </Text>
+                <View className="flex-row items-center gap-2">
+                  {["W1", "W2", "W3", "W4"].map((tab) => (
+                    <TouchableOpacity
+                      key={tab}
+                      onPress={() => {
+                        if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }
+                        onTabChange(tab);
+                      }}
+                      className={`w-8 h-8 rounded-full items-center justify-center ${selectedTab === tab ? "bg-white/10" : ""}`}
+                    >
+                      <Text
+                        className={`text-[12px] ${selectedTab === tab ? "text-white font-medium" : "text-white/40"}`}
+                      >
+                        {tab}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Horizontal Bars Container */}
+              <View className="relative py-2 mt-2">
+                {/* Background Grid Lines */}
+                <View className="absolute inset-x-0 inset-y-0 flex-row justify-between pl-[100px] z-0 px-8">
+                  <View className="w-px h-full bg-white/10" />
+                  <View className="w-px h-full bg-white/10" />
+                  <View className="w-px h-full bg-white/10" />
+                </View>
+
+                {/* Bars */}
+                <View className="gap-3 z-10 w-full relative">
+                  <View className="flex-row items-center relative gap-3">
+                    <View className="bg-[#FAA61A] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, likesPercent)}%` }}>
+                      <Text className="text-black text-[13px] font-medium font-inter">Likes</Text>
+                    </View>
+                    <Text className="text-white/40 text-[12px] font-inter">{likesPercent}%</Text>
                   </View>
-                  <View className="chart-legend-item gap-2">
-                    <Text className="text-white text-[14px] font-inter">
-                      Likes
-                    </Text>
-                    <View className="chart-legend-dot bg-[#FF9D00]" />
+                  
+                  <View className="flex-row items-center relative gap-3">
+                    <View className="bg-[#00E0FF] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, commentsPercent)}%` }}>
+                      <Text className="text-white text-[13px] font-medium font-inter">Comments</Text>
+                    </View>
+                    <Text className="text-white/40 text-[12px] font-inter">{commentsPercent}%</Text>
+                  </View>
+                  
+                  <View className="flex-row items-center relative gap-3">
+                    <View className="bg-[#FF4500] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, sharesPercent)}%` }}>
+                      <Text className="text-white text-[13px] font-medium font-inter">Shares</Text>
+                    </View>
+                    <Text className="text-white/40 text-[12px] font-inter">{sharesPercent}%</Text>
                   </View>
                 </View>
               </View>
-            </>
+            </View>
           )}
         </View>
       </BlurView>

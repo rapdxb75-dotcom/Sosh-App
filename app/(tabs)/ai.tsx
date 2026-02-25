@@ -8,6 +8,7 @@ import {
   Animated,
   Image,
   ImageBackground,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   PermissionsAndroid,
@@ -17,6 +18,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -483,10 +485,15 @@ export default function AI() {
         JSON.stringify(data, null, 2),
       );
 
+      // Ensure data is an array and filter out null or invalid values
+      const validData = Array.isArray(data)
+        ? data.filter((c: any) => c && typeof c === 'object' && c._id && String(c._id).trim() !== '')
+        : [];
+
       // Sort by _createTime in descending order (newest first)
-      const sortedData = data.sort((a, b) => {
+      const sortedData = validData.sort((a, b) => {
         return (
-          new Date(b._createTime).getTime() - new Date(a._createTime).getTime()
+          new Date(b._createTime || 0).getTime() - new Date(a._createTime || 0).getTime()
         );
       });
       setConversations(sortedData);
@@ -541,7 +548,7 @@ export default function AI() {
     setCreateError(null);
 
     try {
-      await chatService.createConversation({
+      const response = await chatService.createConversation({
         boardId: poppyBoardId,
         chatId: poppyChatId,
         name: conversationName.trim(),
@@ -551,8 +558,19 @@ export default function AI() {
       await fetchConversations();
 
       // Close modal and reset
-      // Close modal and reset
       closeCreateModal();
+
+      // Automatically open the newly created conversation
+      if (response && response.conversationId) {
+        // Close sidebar if open
+        if (isSidebarOpen) {
+          closeSidebar();
+        }
+
+        // Load the conversation and start chatting
+        await loadHistory(response.conversationId);
+      }
+
       Toast.show({
         type: "success",
         text1: "Conversation Created",
@@ -743,6 +761,8 @@ export default function AI() {
       await poppyService.streamMessage(
         currentConversationId!,
         content,
+        poppyBoardId,
+        poppyChatId,
         (delta) => {
           // Append delta to full response
           fullAIResponse += delta;
@@ -941,6 +961,7 @@ export default function AI() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
           keyboardVerticalOffset={Platform.OS === "ios" ? -120 : -150}
+          enabled={!isCreateModalVisible && !isEditModalVisible}
         >
           <View
             style={{
@@ -961,6 +982,7 @@ export default function AI() {
                   paddingBottom: 40,
                 }}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 onContentSizeChange={() => {
                   // Scroll to bottom immediately when content changes
                   scrollViewRef.current?.scrollToEnd({ animated: false });
@@ -995,26 +1017,28 @@ export default function AI() {
               </ScrollView>
             ) : (
               // Show greeting when no conversation is active
-              <View className="flex-1 items-center justify-center">
-                <View className="items-center">
-                  <Text
-                    className="text-white font-normal text-center mb-2"
-                    style={{
-                      fontFamily: "Questrial_400Regular",
-                      fontSize: Math.min(width * 0.1, 42),
-                      lineHeight: Math.min(width * 0.12, 50),
-                    }}
-                  >
-                    Hi, {userName}
-                  </Text>
-                  <Text
-                    className="text-white/60 font-inter text-center"
-                    style={{ fontSize: Math.min(width * 0.045, 18) }}
-                  >
-                    How may I help you?
-                  </Text>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <View className="flex-1 items-center justify-center">
+                  <View className="items-center">
+                    <Text
+                      className="text-white font-normal text-center mb-2"
+                      style={{
+                        fontFamily: "Questrial_400Regular",
+                        fontSize: Math.min(width * 0.1, 42),
+                        lineHeight: Math.min(width * 0.12, 50),
+                      }}
+                    >
+                      Hi, {userName}
+                    </Text>
+                    <Text
+                      className="text-white/60 font-inter text-center"
+                      style={{ fontSize: Math.min(width * 0.045, 18) }}
+                    >
+                      How may I help you?
+                    </Text>
+                  </View>
                 </View>
-              </View>
+              </TouchableWithoutFeedback>
             )}
 
             {/* Bottom Input Area */}
@@ -1083,15 +1107,15 @@ export default function AI() {
                       <TextInput
                         value={inputText}
                         onChangeText={setInputText}
-                        onSubmitEditing={handleSendMessage}
                         onFocus={() => setIsKeyboardVisible(true)}
                         onBlur={() => setIsKeyboardVisible(false)}
-                        returnKeyType="send"
                         placeholder={isListening ? "Listening... Speak clearly" : "Type your message..."}
                         placeholderTextColor={isListening ? "#ff4444" : "rgba(255,255,255,0.6)"}
                         className={`flex-1 h-[44px] px-1 py-0 ${isListening ? 'text-[#ff4444]' : 'text-white'}`}
+                        style={{ textAlignVertical: "center", paddingTop: Platform.OS === 'ios' ? 12 : 0 }}
                         selectionColor="#fff"
                         editable={!isListening}
+                        multiline={true}
                       />
                       <TouchableOpacity
                         className={`w-10 h-10 items-center justify-center rounded-full relative ${isListening ? 'bg-red-500' : 'bg-black/30'}`}
@@ -1245,20 +1269,15 @@ export default function AI() {
           {/* Delete Confirmation Overlay (Global Sibling) */}
           {isDeleteModalVisible && (
             <View
-              className="absolute inset-0 bg-black/80 items-center justify-center p-4 z-50"
-              style={{
-                width: width, // Ensure it spans full screen width
-                height: height + insets.top + insets.bottom,
-                top: 0,
-                left: 0,
-              }}
+              className="bg-black/80 items-center justify-center p-4 z-50 elevation-5"
+              style={StyleSheet.absoluteFill}
             >
               <TouchableOpacity
                 activeOpacity={1}
                 onPress={() => !isDeleting && setIsDeleteModalVisible(false)}
-                className="absolute inset-0"
+                style={StyleSheet.absoluteFill}
               />
-              <View className="bg-[#1A1A1A] w-full max-w-xs p-6 rounded-2xl border border-white/10 z-10">
+              <View className="bg-[#1A1A1A] w-full max-w-xs p-6 rounded-2xl border border-white/10 z-10 elevation-5" style={{ zIndex: 100 }}>
                 <Text className="text-white text-lg font-bold font-inter text-center mb-2">
                   Delete Chat?
                 </Text>
@@ -1293,6 +1312,8 @@ export default function AI() {
         </View>
       </Modal>
 
+
+
       {/* Edit Conversation Modal */}
       <Modal
         visible={isEditModalVisible}
@@ -1308,86 +1329,88 @@ export default function AI() {
           <View className="flex-1 items-center justify-center bg-black/70">
             <TouchableOpacity
               activeOpacity={1}
-              onPress={closeEditModal}
+              onPress={Keyboard.dismiss}
               className="absolute inset-0"
             />
-            <View
-              style={{ width: Math.min(width * 0.85, 350) }}
-              className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
-            >
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-white text-2xl font-bold font-inter">
-                  Edit Conversation
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View
+                style={{ width: Math.min(width * 0.85, 350) }}
+                className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
+              >
+                <View className="flex-row items-center justify-between mb-6">
+                  <Text className="text-white text-2xl font-bold font-inter">
+                    Edit Conversation
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeEditModal}
+                    style={{ width: normalize(32), height: normalize(32) }}
+                    className="items-center justify-center rounded-full bg-white/10"
+                  >
+                    <X color="#fff" size={20} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text className="text-white/60 font-inter text-sm mb-3">
+                  Conversation Name
                 </Text>
+
+                <View className="mb-4">
+                  <View
+                    className="h-[56px] rounded-2xl overflow-hidden"
+                    style={{ position: "relative" }}
+                  >
+                    <BlurView intensity={30} tint="dark" className="flex-1">
+                      <View
+                        className="flex-1 px-5 rounded-2xl justify-center"
+                        style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                      >
+                        <TextInput
+                          value={editName}
+                          onChangeText={setEditName}
+                          placeholder="Enter conversation name..."
+                          placeholderTextColor="rgba(255,255,255,0.4)"
+                          className="flex-1 h-[44px] px-1 py-0 text-white"
+                          selectionColor="#fff"
+                          editable={!isEditing}
+                          autoFocus
+                          onSubmitEditing={handleEditConversation}
+                        />
+                      </View>
+                    </BlurView>
+                  </View>
+                </View>
+
+                {editError && (
+                  <Text className="text-red-400 font-inter text-sm mb-4">
+                    {editError}
+                  </Text>
+                )}
+
                 <TouchableOpacity
-                  onPress={closeEditModal}
-                  style={{ width: normalize(32), height: normalize(32) }}
-                  className="items-center justify-center rounded-full bg-white/10"
+                  onPress={handleEditConversation}
+                  disabled={isEditing || !editName.trim()}
+                  className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
+                  style={{
+                    opacity: isEditing || !editName.trim() ? 0.5 : 1,
+                  }}
                 >
-                  <X color="#fff" size={20} />
+                  <ImageBackground
+                    source={require("../../assets/images/button-bg.png")}
+                    className="w-full h-full items-center justify-center"
+                    resizeMode="cover"
+                  >
+                    <View className="absolute inset-0 bg-blue-500/20" />
+                    {isEditing ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text className="text-white font-inter font-semibold text-base">
+                        Save Changes
+                      </Text>
+                    )}
+                  </ImageBackground>
                 </TouchableOpacity>
               </View>
-
-              <Text className="text-white/60 font-inter text-sm mb-3">
-                Conversation Name
-              </Text>
-
-              <View className="mb-4">
-                <View
-                  className="h-[56px] rounded-2xl overflow-hidden"
-                  style={{ position: "relative" }}
-                >
-                  <BlurView intensity={30} tint="dark" className="flex-1">
-                    <View
-                      className="flex-1 px-5 rounded-2xl justify-center"
-                      style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                    >
-                      <TextInput
-                        value={editName}
-                        onChangeText={setEditName}
-                        placeholder="Enter conversation name..."
-                        placeholderTextColor="rgba(255,255,255,0.4)"
-                        className="flex-1 h-[44px] px-1 py-0 text-white"
-                        selectionColor="#fff"
-                        editable={!isEditing}
-                        autoFocus
-                        onSubmitEditing={handleEditConversation}
-                      />
-                    </View>
-                  </BlurView>
-                </View>
-              </View>
-
-              {editError && (
-                <Text className="text-red-400 font-inter text-sm mb-4">
-                  {editError}
-                </Text>
-              )}
-
-              <TouchableOpacity
-                onPress={handleEditConversation}
-                disabled={isEditing || !editName.trim()}
-                className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
-                style={{
-                  opacity: isEditing || !editName.trim() ? 0.5 : 1,
-                }}
-              >
-                <ImageBackground
-                  source={require("../../assets/images/button-bg.png")}
-                  className="w-full h-full items-center justify-center"
-                  resizeMode="cover"
-                >
-                  <View className="absolute inset-0 bg-blue-500/20" />
-                  {isEditing ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text className="text-white font-inter font-semibold text-base">
-                      Save Changes
-                    </Text>
-                  )}
-                </ImageBackground>
-              </TouchableOpacity>
-            </View>
+            </TouchableWithoutFeedback>
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -1407,86 +1430,88 @@ export default function AI() {
           <View className="flex-1 items-center justify-center bg-black/70">
             <TouchableOpacity
               activeOpacity={1}
-              onPress={closeCreateModal}
+              onPress={Keyboard.dismiss}
               className="absolute inset-0"
             />
-            <View
-              style={{ width: Math.min(width * 0.85, 350) }}
-              className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
-            >
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-white text-2xl font-bold font-inter">
-                  New Conversation
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View
+                style={{ width: Math.min(width * 0.85, 350) }}
+                className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
+              >
+                <View className="flex-row items-center justify-between mb-6">
+                  <Text className="text-white text-2xl font-bold font-inter">
+                    New Conversation
+                  </Text>
+                  <TouchableOpacity
+                    onPress={closeCreateModal}
+                    style={{ width: normalize(32), height: normalize(32) }}
+                    className="items-center justify-center rounded-full bg-white/10"
+                  >
+                    <X color="#fff" size={20} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text className="text-white/60 font-inter text-sm mb-3">
+                  Conversation Name
                 </Text>
+
+                <View className="mb-4">
+                  <View
+                    className="h-[56px] rounded-2xl overflow-hidden"
+                    style={{ position: "relative" }}
+                  >
+                    <BlurView intensity={30} tint="dark" className="flex-1">
+                      <View
+                        className="flex-1 px-5 rounded-2xl justify-center"
+                        style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                      >
+                        <TextInput
+                          value={conversationName}
+                          onChangeText={setConversationName}
+                          placeholder="Enter conversation name..."
+                          placeholderTextColor="rgba(255,255,255,0.4)"
+                          className="flex-1 h-[44px] px-1 py-0 text-white"
+                          selectionColor="#fff"
+                          editable={!isCreating}
+                          autoFocus
+                          onSubmitEditing={handleCreateConversation}
+                        />
+                      </View>
+                    </BlurView>
+                  </View>
+                </View>
+
+                {createError && (
+                  <Text className="text-red-400 font-inter text-sm mb-4">
+                    {createError}
+                  </Text>
+                )}
+
                 <TouchableOpacity
-                  onPress={closeCreateModal}
-                  style={{ width: normalize(32), height: normalize(32) }}
-                  className="items-center justify-center rounded-full bg-white/10"
+                  onPress={handleCreateConversation}
+                  disabled={isCreating || !conversationName.trim()}
+                  className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
+                  style={{
+                    opacity: isCreating || !conversationName.trim() ? 0.5 : 1,
+                  }}
                 >
-                  <X color="#fff" size={20} />
+                  <ImageBackground
+                    source={require("../../assets/images/button-bg.png")}
+                    className="w-full h-full items-center justify-center"
+                    resizeMode="cover"
+                  >
+                    <View className="absolute inset-0 bg-blue-500/20" />
+                    {isCreating ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text className="text-white font-inter font-semibold text-base">
+                        Create Conversation
+                      </Text>
+                    )}
+                  </ImageBackground>
                 </TouchableOpacity>
               </View>
-
-              <Text className="text-white/60 font-inter text-sm mb-3">
-                Conversation Name
-              </Text>
-
-              <View className="mb-4">
-                <View
-                  className="h-[56px] rounded-2xl overflow-hidden"
-                  style={{ position: "relative" }}
-                >
-                  <BlurView intensity={30} tint="dark" className="flex-1">
-                    <View
-                      className="flex-1 px-5 rounded-2xl justify-center"
-                      style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                    >
-                      <TextInput
-                        value={conversationName}
-                        onChangeText={setConversationName}
-                        placeholder="Enter conversation name..."
-                        placeholderTextColor="rgba(255,255,255,0.4)"
-                        className="flex-1 h-[44px] px-1 py-0 text-white"
-                        selectionColor="#fff"
-                        editable={!isCreating}
-                        autoFocus
-                        onSubmitEditing={handleCreateConversation}
-                      />
-                    </View>
-                  </BlurView>
-                </View>
-              </View>
-
-              {createError && (
-                <Text className="text-red-400 font-inter text-sm mb-4">
-                  {createError}
-                </Text>
-              )}
-
-              <TouchableOpacity
-                onPress={handleCreateConversation}
-                disabled={isCreating || !conversationName.trim()}
-                className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
-                style={{
-                  opacity: isCreating || !conversationName.trim() ? 0.5 : 1,
-                }}
-              >
-                <ImageBackground
-                  source={require("../../assets/images/button-bg.png")}
-                  className="w-full h-full items-center justify-center"
-                  resizeMode="cover"
-                >
-                  <View className="absolute inset-0 bg-blue-500/20" />
-                  {isCreating ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text className="text-white font-inter font-semibold text-base">
-                      Create Conversation
-                    </Text>
-                  )}
-                </ImageBackground>
-              </TouchableOpacity>
-            </View>
+            </TouchableWithoutFeedback>
           </View>
         </KeyboardAvoidingView>
       </Modal>

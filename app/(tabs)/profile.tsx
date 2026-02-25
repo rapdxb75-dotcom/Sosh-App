@@ -5,23 +5,25 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Upload } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Linking,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  Keyboard,
+  Linking,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import Svg, {
-    Circle,
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
@@ -451,6 +453,7 @@ export default function Profile() {
       <ScrollView
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View className="w-full">
@@ -532,13 +535,13 @@ export default function Profile() {
                         source={
                           image
                             ? {
-                                uri:
-                                  image.startsWith("http") ||
+                              uri:
+                                image.startsWith("http") ||
                                   image.startsWith("file") ||
                                   image.startsWith("data:")
-                                    ? image
-                                    : `data:image/png;base64,${image}`,
-                              }
+                                  ? image
+                                  : `data:image/png;base64,${image}`,
+                            }
                             : require("../../assets/images/avtar.png")
                         }
                         className="w-[45px] h-[45px] rounded-full"
@@ -674,150 +677,152 @@ export default function Profile() {
         visible={editModalVisible}
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 20,
-          }}
-        >
-          <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-8 items-center">
-            {/* Close Button */}
-            <TouchableOpacity
-              onPress={() => setEditModalVisible(false)}
-              className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
-            >
-              <Text className="text-white/60 text-lg font-medium">×</Text>
-            </TouchableOpacity>
-
-            {/* Profile Image with Ring */}
-            <View className="mb-6 items-center justify-center relative">
-              {/* Reusing Gradient Ring Logic but larger */}
-              <View
-                style={{
-                  width: 100,
-                  height: 100,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: "rgba(0,0,0,0.7)",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: 20,
+            }}
+          >
+            <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-8 items-center">
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => setEditModalVisible(false)}
+                className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
               >
-                <BlurView
-                  intensity={5}
+                <Text className="text-white/60 text-lg font-medium">×</Text>
+              </TouchableOpacity>
+
+              {/* Profile Image with Ring */}
+              <View className="mb-6 items-center justify-center relative">
+                {/* Reusing Gradient Ring Logic but larger */}
+                <View
                   style={{
                     width: 100,
                     height: 100,
-                    borderRadius: 50,
-                    overflow: "hidden",
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Svg width={90} height={90}>
-                    <Defs>
-                      <SvgLinearGradient
-                        id="editProfileGrad"
-                        x1="0%"
-                        y1="0%"
-                        x2="100%"
-                        y2="100%"
-                      >
-                        <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
-                        <Stop
-                          offset="50%"
-                          stopColor="#000000"
-                          stopOpacity="1"
-                        />
-                        <Stop
-                          offset="100%"
-                          stopColor="#FFFFFF"
-                          stopOpacity="1"
-                        />
-                      </SvgLinearGradient>
-                    </Defs>
-                    <Circle
-                      cx={45}
-                      cy={45}
-                      r={44}
-                      stroke="url(#editProfileGrad)"
-                      strokeWidth={1}
-                      fill="transparent"
-                    />
-                  </Svg>
-                </BlurView>
-                <Image
-                  source={
-                    image
-                      ? {
+                  <BlurView
+                    intensity={5}
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 50,
+                      overflow: "hidden",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Svg width={90} height={90}>
+                      <Defs>
+                        <SvgLinearGradient
+                          id="editProfileGrad"
+                          x1="0%"
+                          y1="0%"
+                          x2="100%"
+                          y2="100%"
+                        >
+                          <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                          <Stop
+                            offset="50%"
+                            stopColor="#000000"
+                            stopOpacity="1"
+                          />
+                          <Stop
+                            offset="100%"
+                            stopColor="#FFFFFF"
+                            stopOpacity="1"
+                          />
+                        </SvgLinearGradient>
+                      </Defs>
+                      <Circle
+                        cx={45}
+                        cy={45}
+                        r={44}
+                        stroke="url(#editProfileGrad)"
+                        strokeWidth={1}
+                        fill="transparent"
+                      />
+                    </Svg>
+                  </BlurView>
+                  <Image
+                    source={
+                      image
+                        ? {
                           uri:
                             image.startsWith("http") ||
-                            image.startsWith("file") ||
-                            image.startsWith("data:")
+                              image.startsWith("file") ||
+                              image.startsWith("data:")
                               ? image
                               : `data:image/png;base64,${image}`,
                         }
-                      : require("../../assets/images/avtar.png")
-                  }
-                  className="w-[82px] h-[82px] absolute rounded-full"
-                  resizeMode={image ? "cover" : "contain"}
-                />
+                        : require("../../assets/images/avtar.png")
+                    }
+                    className="w-[82px] h-[82px] absolute rounded-full"
+                    resizeMode={image ? "cover" : "contain"}
+                  />
+                </View>
               </View>
-            </View>
 
-            {/* Upload New Button */}
-            <BlurView
-              intensity={14}
-              tint="dark"
-              className="upload-container w-full h-[68px]"
-            >
-              <TouchableOpacity
-                className="upload-content w-full h-full"
-                onPress={pickImage}
-              >
-                <Upload size={20} color="white" />
-                <Text className="text-white font-medium text-[16px] font-inter mt-2">
-                  Upload new
-                </Text>
-              </TouchableOpacity>
-            </BlurView>
-
-            {/* Username Input */}
-            <View className="w-full mb-8">
-              <Text className="text-white font-semibold text-base mb-2 font-inter">
-                User name
-              </Text>
+              {/* Upload New Button */}
               <BlurView
                 intensity={14}
                 tint="dark"
-                className="rounded-[16px] overflow-hidden"
+                className="upload-container w-full h-[68px]"
               >
-                <View className="input-field justify-center">
-                  <TextInput
-                    value={username}
-                    onChangeText={setUsername}
-                    placeholder="Enter username"
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                    className="flex-1 font-inter py-0 text-white"
-                    style={{ fontFamily: "Inter_400Regular" }}
-                    textAlignVertical="center"
-                  />
-                </View>
+                <TouchableOpacity
+                  className="upload-content w-full h-full"
+                  onPress={pickImage}
+                >
+                  <Upload size={20} color="white" />
+                  <Text className="text-white font-medium text-[16px] font-inter mt-2">
+                    Upload new
+                  </Text>
+                </TouchableOpacity>
               </BlurView>
-            </View>
 
-            {/* Save Button */}
-            <TouchableOpacity
-              onPress={handleSaveProfile}
-              className={`btn-save ${loading ? "opacity-70" : ""}`}
-              disabled={loading}
-            >
-              <Text className="text-white font-medium text-lg">
-                {loading ? "Saving..." : "Save"}
-              </Text>
-            </TouchableOpacity>
+              {/* Username Input */}
+              <View className="w-full mb-8">
+                <Text className="text-white font-semibold text-base mb-2 font-inter">
+                  User name
+                </Text>
+                <BlurView
+                  intensity={14}
+                  tint="dark"
+                  className="rounded-[16px] overflow-hidden"
+                >
+                  <View className="input-field justify-center">
+                    <TextInput
+                      value={username}
+                      onChangeText={setUsername}
+                      placeholder="Enter username"
+                      placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                      className="flex-1 font-inter py-0 text-white"
+                      style={{ fontFamily: "Inter_400Regular" }}
+                      textAlignVertical="center"
+                    />
+                  </View>
+                </BlurView>
+              </View>
+
+              {/* Save Button */}
+              <TouchableOpacity
+                onPress={handleSaveProfile}
+                className={`btn-save ${loading ? "opacity-70" : ""}`}
+                disabled={loading}
+              >
+                <Text className="text-white font-medium text-lg">
+                  {loading ? "Saving..." : "Save"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );

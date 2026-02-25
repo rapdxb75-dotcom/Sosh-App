@@ -1,7 +1,4 @@
 const POPPY_API_KEY = "zKNHI3ZmmGQTWTRnlllJM6ozIEpuTCNgATdGo8o2ic";
-const BOARD_ID = "crimson-volcano-YMlZP";
-const CHAT_NODE_ID = "chatNode-small-field-XgvXp-copied";
-const MODEL = "claude-4-sonnet-20250514";
 
 class PoppyService {
   /**
@@ -56,7 +53,9 @@ class PoppyService {
           .replace(/\*(.+?)\*/g, "$1") // Remove italic but keep text
           .replace(/^#{1,6}\s+/gm, "") // Remove header markers but keep heading text
           .replace(/`([^`]+)`/g, "$1") // Remove inline code markers
-          .replace(/```[^```]*```/g, (match: string) => match.replace(/```/g, "")) // Remove code block markers
+          .replace(/```[^```]*```/g, (match: string) =>
+            match.replace(/```/g, ""),
+          ) // Remove code block markers
           .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to text
           .trim();
 
@@ -74,15 +73,20 @@ class PoppyService {
    * Stream a message to Poppy AI and get real-time response
    * @param conversationId The conversation ID to stream to
    * @param prompt The user's message
+   * @param boardId The board ID from user's aiAdditions
+   * @param chatId The chat node ID from user's aiAdditions
+   * @param model The Claude model to use from user's aiAdditions
    * @param onChunk Callback function for each text chunk received
    * @returns Promise<string> The complete response text
    */
   async streamMessage(
     conversationId: string,
     prompt: string,
+    boardId: string,
+    chatId: string,
     onChunk: (delta: string) => void,
   ): Promise<string> {
-    const url = `https://api.getpoppy.ai/api/conversation/${conversationId}?board_id=${BOARD_ID}&chat_id=${CHAT_NODE_ID}&api_key=${POPPY_API_KEY}`;
+    const url = `https://api.getpoppy.ai/api/conversation/${conversationId}?board_id=${boardId}&chat_id=${chatId}&api_key=${POPPY_API_KEY}`;
 
     try {
       console.log("🌊 Starting Poppy XHR request:", url);
@@ -179,7 +183,6 @@ class PoppyService {
         xhr.send(
           JSON.stringify({
             prompt,
-            model: MODEL,
             streaming: true,
             save_history: true,
           }),
