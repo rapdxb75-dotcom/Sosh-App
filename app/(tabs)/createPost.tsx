@@ -54,7 +54,7 @@ const captionModalStyles = StyleSheet.create({
     card: {
         width: "90%",
         maxWidth: 500,
-        height: "60%",
+        height: 420,
         borderRadius: 24,
         borderWidth: 1,
         borderColor: "rgba(255, 255, 255, 0.4)",
@@ -675,7 +675,10 @@ export default function CreatePost() {
                                 return (
                                     <TouchableOpacity
                                         key={tab}
-                                        onPress={() => setActiveTab(tab)}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setActiveTab(tab);
+                                        }}
                                         className={`content-tab-btn ${isActive ? "content-tab-active" : ""}`}
                                         style={
                                             isActive
@@ -728,7 +731,10 @@ export default function CreatePost() {
                                                         >
                                                             <TouchableOpacity
                                                                 className={`post-type-btn ${postType === "Single" ? "post-type-btn-active" : ""}`}
-                                                                onPress={() => setPostType("Single")}
+                                                                onPress={() => {
+                                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                                    setPostType("Single");
+                                                                }}
                                                             >
                                                                 <Text
                                                                     className={`post-type-btn-label ${postType === "Single" ? "post-type-btn-label-active" : ""}`}
@@ -740,7 +746,10 @@ export default function CreatePost() {
                                                             </TouchableOpacity>
                                                             <TouchableOpacity
                                                                 className={`post-type-btn ${postType === "Carousel" ? "post-type-btn-active" : ""}`}
-                                                                onPress={() => setPostType("Carousel")}
+                                                                onPress={() => {
+                                                                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                                    setPostType("Carousel");
+                                                                }}
                                                             >
                                                                 <Text
                                                                     className={`post-type-btn-label ${postType === "Carousel" ? "post-type-btn-label-active" : ""}`}
@@ -1003,7 +1012,10 @@ export default function CreatePost() {
                                                                         justifyContent: "center",
                                                                         marginBottom: 14,
                                                                     }}
-                                                                    onPress={() => setShowCaptionModal(true)}
+                                                                    onPress={() => {
+                                                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                                        setShowCaptionModal(true);
+                                                                    }}
                                                                 >
                                                                     <Image
                                                                         source={require("../../assets/icons/move.png")}
@@ -1329,7 +1341,10 @@ export default function CreatePost() {
                                     themeVariant="dark"
                                 />
                                 <TouchableOpacity
-                                    onPress={() => setShowDatePicker(false)}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setShowDatePicker(false);
+                                    }}
                                     className="mt-4 bg-white py-3 px-8 rounded-full"
                                 >
                                     <Text className="text-black font-inter font-medium">
@@ -1352,102 +1367,105 @@ export default function CreatePost() {
             <Modal
                 visible={showCaptionModal}
                 transparent
-                animationType="fade"
+                animationType="slide"
                 onRequestClose={() => setShowCaptionModal(false)}
             >
-                <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                    <BlurView
-                        intensity={14}
-                        tint="light"
-                        style={captionModalStyles.overlay}
-                    >
-                        <KeyboardAvoidingView
-                            behavior={Platform.OS === "ios" ? "padding" : "height"}
-                            style={{
-                                width: "100%",
-                                justifyContent: "center",
-                                alignItems: "center",
-                            }}
-                        >
-                            <View style={captionModalStyles.card}>
-                                <View style={captionModalStyles.cardInner}>
-                                    {/* Text Input Area */}
-                                    <TextInput
-                                        style={captionModalStyles.textInput}
-                                        placeholder="Write your caption..."
-                                        placeholderTextColor="rgba(255,255,255,0.4)"
-                                        multiline
-                                        scrollEnabled={true}
-                                        autoFocus
-                                        value={caption}
-                                        onChangeText={setCaption}
-                                    />
+                <KeyboardAvoidingView
+                    behavior="padding"
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+                >
+                    <View style={captionModalStyles.overlay}>
+                        <BlurView intensity={14} tint="light" style={StyleSheet.absoluteFillObject} />
 
-                                    {/* Collapse Button Top Right */}
+                        {/* Background Dismiss Tracker */}
+                        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                            <View style={StyleSheet.absoluteFillObject} />
+                        </TouchableWithoutFeedback>
+
+                        <View style={captionModalStyles.card}>
+                            <View style={captionModalStyles.cardInner}>
+                                {/* Text Input Area */}
+                                <TextInput
+                                    style={captionModalStyles.textInput}
+                                    placeholder="Write your caption..."
+                                    placeholderTextColor="rgba(255,255,255,0.4)"
+                                    multiline
+                                    scrollEnabled={true}
+                                    value={caption}
+                                    onChangeText={setCaption}
+                                />
+
+                                {/* Collapse Button Top Right */}
+                                <TouchableOpacity
+                                    style={captionModalStyles.collapseBtn}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setShowCaptionModal(false);
+                                    }}
+                                >
+                                    <Image
+                                        source={require("../../assets/icons/move_out.png")}
+                                        style={{ width: 44, height: 44 }}
+                                        resizeMode="contain"
+                                    />
+                                </TouchableOpacity>
+
+                                {/* Bottom Bar */}
+                                <View style={captionModalStyles.bottomBar}>
                                     <TouchableOpacity
-                                        style={captionModalStyles.collapseBtn}
-                                        onPress={() => setShowCaptionModal(false)}
+                                        style={captionModalStyles.saveBtn}
+                                        onPress={() => {
+                                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                            setShowCaptionModal(false);
+                                        }}
                                     >
-                                        <Image
-                                            source={require("../../assets/icons/move_out.png")}
-                                            style={{ width: 44, height: 44 }}
-                                            resizeMode="contain"
-                                        />
+                                        <Text style={captionModalStyles.saveBtnText}>Save</Text>
                                     </TouchableOpacity>
 
-                                    {/* Bottom Bar */}
-                                    <View style={captionModalStyles.bottomBar}>
+                                    <View style={captionModalStyles.iconRow}>
                                         <TouchableOpacity
-                                            style={captionModalStyles.saveBtn}
-                                            onPress={() => setShowCaptionModal(false)}
+                                            style={captionModalStyles.iconBtn}
+                                            onPress={handleGenerateCaption}
+                                            disabled={isGeneratingCaption}
                                         >
-                                            <Text style={captionModalStyles.saveBtnText}>Save</Text>
+                                            {isGeneratingCaption ? (
+                                                <ActivityIndicator size="small" color="#fff" />
+                                            ) : (
+                                                <Image
+                                                    source={require("../../assets/icons/chat_ai.png")}
+                                                    style={{ width: 44, height: 44 }}
+                                                    resizeMode="contain"
+                                                />
+                                            )}
                                         </TouchableOpacity>
-
-                                        <View style={captionModalStyles.iconRow}>
-                                            <TouchableOpacity
-                                                style={captionModalStyles.iconBtn}
-                                                onPress={handleGenerateCaption}
-                                                disabled={isGeneratingCaption}
-                                            >
-                                                {isGeneratingCaption ? (
-                                                    <ActivityIndicator size="small" color="#fff" />
-                                                ) : (
-                                                    <Image
-                                                        source={require("../../assets/icons/chat_ai.png")}
-                                                        style={{ width: 44, height: 44 }}
-                                                        resizeMode="contain"
-                                                    />
-                                                )}
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                                style={captionModalStyles.iconBtn}
-                                                onPress={isListening ? stopListening : startListening}
-                                            >
-                                                {isListening ? (
-                                                    <View
-                                                        style={{
-                                                            width: 22,
-                                                            height: 22,
-                                                            backgroundColor: "#ff4444",
-                                                            borderRadius: 4,
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <Image
-                                                        source={require("../../assets/icons/caption_mike.png")}
-                                                        style={{ width: 44, height: 44 }}
-                                                        resizeMode="contain"
-                                                    />
-                                                )}
-                                            </TouchableOpacity>
-                                        </View>
+                                        <TouchableOpacity
+                                            style={captionModalStyles.iconBtn}
+                                            onPress={isListening ? stopListening : startListening}
+                                        >
+                                            {isListening ? (
+                                                <View
+                                                    style={{
+                                                        width: 22,
+                                                        height: 22,
+                                                        backgroundColor: "#ff4444",
+                                                        borderRadius: 4,
+                                                    }}
+                                                />
+                                            ) : (
+                                                <Image
+                                                    source={require("../../assets/icons/caption_mike.png")}
+                                                    style={{ width: 44, height: 44 }}
+                                                    resizeMode="contain"
+                                                />
+                                            )}
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
                             </View>
-                        </KeyboardAvoidingView>
-                    </BlurView>
-                </TouchableWithoutFeedback>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
             </Modal>
 
             {/* Edit Cover Modal */}
@@ -1605,7 +1623,10 @@ export default function CreatePost() {
 
                                 <TouchableOpacity
                                     style={coverModalStyles.doneBtn}
-                                    onPress={() => setShowCoverModal(false)}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setShowCoverModal(false);
+                                    }}
                                 >
                                     <Text style={coverModalStyles.doneBtnText}>Done</Text>
                                 </TouchableOpacity>

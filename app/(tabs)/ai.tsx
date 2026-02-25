@@ -960,7 +960,7 @@ export default function AI() {
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? -120 : -150}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           enabled={!isCreateModalVisible && !isEditModalVisible}
         >
           <View
@@ -968,7 +968,7 @@ export default function AI() {
               flex: 1,
               paddingHorizontal: 20,
               paddingTop: Math.max(insets.top + 60, normalize(110)),
-              paddingBottom: 200,
+              paddingBottom: isKeyboardVisible ? 20 : insets.bottom + 110,
             }}
           >
             {/* Chat Messages or Greeting Content */}
@@ -1042,14 +1042,7 @@ export default function AI() {
             )}
 
             {/* Bottom Input Area */}
-            <View
-              style={{
-                position: "absolute",
-                bottom: insets.bottom + 110,
-                left: 20,
-                right: 20,
-              }}
-            >
+            <View style={{ paddingTop: 10 }}>
               <View className="flex-row items-center gap-3">
                 <View
                   className="flex-1 h-[56px] rounded-full overflow-hidden"
