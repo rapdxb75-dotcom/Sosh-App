@@ -227,11 +227,11 @@ export default function Header() {
                 </View>
 
                 <TouchableOpacity
-                  className="flex-row items-center px-7 py-3 bg-red-500"
+                  className="flex-row items-center justify-center px-7 py-3 bg-red-500"
                   onPress={handleLogout}
                 >
-                  <LogOut color="#ffffff" size={16} />
-                  <Text className="text-white font-inter text-sm ml-2">
+                  <LogOut color="#ffffff" size={20} />
+                  <Text className="text-white font-inter text-base font-semibold ml-2">
                     Log out
                   </Text>
                 </TouchableOpacity>

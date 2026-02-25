@@ -362,7 +362,7 @@ export default function LoginForm() {
         onPress={handleLogin}
       >
         <ImageBackground
-          source={require("../../assets/images/button-bg.png")}
+          source={require("../../assets/images/post_without.jpg")}
           className="w-full h-full items-center justify-center"
           resizeMode="cover"
         >

@@ -1,32 +1,26 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { LinearGradient } from "expo-linear-gradient";
 import { Stack } from "expo-router";
 import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useState } from "react";
 import {
   Image,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
-  View,
+  View
 } from "react-native";
-import Svg, {
+import {
   Defs,
-  Rect,
   Stop,
-  LinearGradient as SvgGradient,
+  LinearGradient as SvgGradient
 } from "react-native-svg";
 import {
   VictoryArea,
   VictoryAxis,
   VictoryChart,
-  VictoryGroup,
-  VictoryPie,
-  VictoryTheme,
-  VictoryVoronoiContainer,
+  VictoryGroup
 } from "victory-native";
 import Header from "../../components/common/Header";
 
@@ -102,17 +96,33 @@ const PlatformCard = ({
   onTabChange: (tab: string) => void;
   screenWidth: number;
 }) => {
+  const [engagementTab, setEngagementTab] = useState("W1");
+
   const formatCompactNumber = (number: number) => {
-    return new Intl.NumberFormat('en-US', {
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(number);
+    if (number >= 1000000) {
+      return (number / 1000000).toFixed(1) + 'M';
+    }
+    if (number >= 1000) {
+      return (number / 1000).toFixed(1) + 'K';
+    }
+    return number.toString();
   };
 
-  const totalEngagement = platform.metrics.likes + platform.metrics.comments + platform.metrics.shares;
-  const likesPercent = Math.round((platform.metrics.likes / totalEngagement) * 100) || 19;
-  const commentsPercent = Math.round((platform.metrics.comments / totalEngagement) * 100) || 32;
-  const sharesPercent = Math.round((platform.metrics.shares / totalEngagement) * 100) || 29;
+  const getMultiplierForTab = (tab: string) => {
+    switch (tab) {
+      case 'W1': return { likes: 1, comments: 1, shares: 1 };
+      case 'W2': return { likes: 1.2, comments: 0.8, shares: 1.1 };
+      case 'W3': return { likes: 0.9, comments: 1.3, shares: 0.8 };
+      case 'W4': return { likes: 1.1, comments: 0.9, shares: 1.4 };
+      default: return { likes: 1, comments: 1, shares: 1 };
+    }
+  };
+
+  const multiplier = getMultiplierForTab(engagementTab);
+  const totalEngagement = platform.metrics.likes * multiplier.likes + platform.metrics.comments * multiplier.comments + platform.metrics.shares * multiplier.shares;
+  const likesPercent = Math.round(((platform.metrics.likes * multiplier.likes) / totalEngagement) * 100) || 19;
+  const commentsPercent = Math.round(((platform.metrics.comments * multiplier.comments) / totalEngagement) * 100) || 32;
+  const sharesPercent = Math.round(((platform.metrics.shares * multiplier.shares) / totalEngagement) * 100) || 29;
 
   return (
     <View
@@ -129,6 +139,7 @@ const PlatformCard = ({
         intensity={14}
         tint="dark"
         className="border border-white/10 rounded-[20px] overflow-hidden"
+        style={{ backgroundColor: "#FFFFFF1A" }}
       >
         <View className="p-5">
           {/* Header */}
@@ -136,7 +147,8 @@ const PlatformCard = ({
             <View className="flex-row items-center">
               <Image
                 source={platform.icon}
-                className="w-12 h-12 rounded-xl mr-3"
+                className="rounded-xl mr-3 mb-4"
+                style={{ width: 35, height: 35 }}
               />
               <View>
                 <View className="flex-row items-center">
@@ -147,16 +159,26 @@ const PlatformCard = ({
                     {platform.followers}
                   </Text>
                 </View>
-                <View className="bg-[#00FF94]/10 rounded-full py-1 px-2.5 flex-row items-center mt-1.5 self-start">
+                <View
+                  className="flex-row items-center mt-1.5 self-start justify-center"
+                  style={{
+                    height: 28,
+                    gap: 10,
+                    borderRadius: 8,
+                    padding: 4,
+                    backgroundColor: "#098F3E1F"
+                  }}
+                >
                   <TrendingUp size={12} color="#00FF94" />
-                  <Text className="text-[#00FF94] text-[12px] font-inter ml-1">
+                  <Text className="text-[#00FF94] text-[12px] font-inter">
                     {platform.growth}
                   </Text>
                 </View>
               </View>
             </View>
             <TouchableOpacity
-              className="w-8 h-8 rounded-full bg-white/10 items-center justify-center border border-white/10"
+              className="items-center justify-center"
+              style={{ width: 40, height: 40, borderRadius: 100, padding: 4, backgroundColor: '#FFFFFF1A', marginBottom: 16 }}
               onPress={() => {
                 if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -176,17 +198,17 @@ const PlatformCard = ({
             <View className="mt-8">
               {/* Views Section */}
               <View className="flex-row items-center">
-                <Text className="text-white/40 text-[14px] font-inter mr-1">
+                <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
                   Views 30 days
                 </Text>
                 <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
               </View>
-                
+
               <View className="flex-row items-center justify-between mb-2 mt-2">
-                <Text className="text-white text-[32px] font-bold font-inter tracking-tight">
+                <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
                   {formatCompactNumber(platform.metrics.views)}
                 </Text>
-                <View className="flex-row items-center gap-2">
+                <View className="flex-row items-center gap-[10px]">
                   {["W1", "W2", "W3", "W4"].map((tab) => (
                     <TouchableOpacity
                       key={tab}
@@ -196,7 +218,8 @@ const PlatformCard = ({
                         }
                         onTabChange(tab);
                       }}
-                      className={`w-8 h-8 rounded-full items-center justify-center ${selectedTab === tab ? "bg-white/10" : ""}`}
+                      className={`rounded-full items-center justify-center ${selectedTab === tab ? "bg-white/10" : ""}`}
+                      style={{ width: 36, height: 36, padding: 8 }}
                     >
                       <Text
                         className={`text-[12px] ${selectedTab === tab ? "text-white font-medium" : "text-white/40"}`}
@@ -207,22 +230,24 @@ const PlatformCard = ({
                   ))}
                 </View>
               </View>
-                
+
               {/* Area Chart */}
-              <View style={{ height: 160, marginLeft: -30, marginBottom: 10 }}>
+              <View style={{ height: 180, marginHorizontal: -20, marginBottom: 10 }}>
                 <VictoryChart
-                  width={screenWidth - 20}
-                  height={160}
-                  theme={VictoryTheme.material}
-                  padding={{ top: 10, bottom: 20, left: 40, right: 30 }}
+                  width={screenWidth - 40}
+                  height={180}
+                  padding={{ top: 10, bottom: 30, left: 20, right: 20 }}
                 >
                   <VictoryAxis
+                    tickValues={[1, 2, 3, 4, 5, 6, 7]}
                     style={{
                       axis: { stroke: "transparent" },
+                      ticks: { stroke: "transparent" },
                       tickLabels: {
-                        fill: "rgba(255,255,255,0.2)",
-                        fontSize: 10,
+                        fill: "rgba(255, 255, 255, 0.4)",
+                        fontSize: 13,
                         fontFamily: "Inter_400Regular",
+                        padding: 5,
                       },
                       grid: { stroke: "transparent" },
                     }}
@@ -232,6 +257,7 @@ const PlatformCard = ({
                     dependentAxis
                     style={{
                       axis: { stroke: "transparent" },
+                      ticks: { stroke: "transparent" },
                       tickLabels: { fill: "transparent" },
                       grid: {
                         stroke: "rgba(255, 255, 255, 0.1)",
@@ -247,7 +273,7 @@ const PlatformCard = ({
                       style={{
                         data: {
                           fill: "url(#gradViewsCard)",
-                          stroke: "#FFB01A",
+                          stroke: "#F59E0B",
                           strokeWidth: 2,
                         },
                       }}
@@ -262,26 +288,26 @@ const PlatformCard = ({
                       x2="0%"
                       y2="100%"
                     >
-                      <Stop offset="0%" stopColor="#FFB01A" stopOpacity="0.3" />
-                      <Stop offset="100%" stopColor="#FFB01A" stopOpacity="0" />
+                      <Stop offset="0%" stopColor="#F59E0B" stopOpacity="0.3" />
+                      <Stop offset="92.05%" stopColor="rgba(42, 157, 144, 0.1)" stopOpacity="0.1" />
                     </SvgGradient>
                   </Defs>
                 </VictoryChart>
               </View>
 
               {/* Engagement Section */}
-              <View className="flex-row items-center mt-4">
-                <Text className="text-white/40 text-[14px] font-inter mr-1">
+              <View className="flex-row items-center mt-8">
+                <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
                   Engagement 30 days
                 </Text>
                 <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
               </View>
-                
+
               <View className="flex-row items-center justify-between mt-2 mb-6">
-                <Text className="text-white text-[32px] font-bold font-inter tracking-tight">
+                <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
                   {formatCompactNumber(totalEngagement)}
                 </Text>
-                <View className="flex-row items-center gap-2">
+                <View className="flex-row items-center gap-[10px]">
                   {["W1", "W2", "W3", "W4"].map((tab) => (
                     <TouchableOpacity
                       key={tab}
@@ -289,12 +315,13 @@ const PlatformCard = ({
                         if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }
-                        onTabChange(tab);
+                        setEngagementTab(tab);
                       }}
-                      className={`w-8 h-8 rounded-full items-center justify-center ${selectedTab === tab ? "bg-white/10" : ""}`}
+                      className={`rounded-full items-center justify-center ${engagementTab === tab ? "bg-white/10" : ""}`}
+                      style={{ width: 36, height: 36, padding: 8 }}
                     >
                       <Text
-                        className={`text-[12px] ${selectedTab === tab ? "text-white font-medium" : "text-white/40"}`}
+                        className={`text-[12px] ${engagementTab === tab ? "text-white font-medium" : "text-white/40"}`}
                       >
                         {tab}
                       </Text>
@@ -304,35 +331,37 @@ const PlatformCard = ({
               </View>
 
               {/* Horizontal Bars Container */}
-              <View className="relative py-2 mt-2">
+              <View className="relative mt-2 mb-2">
                 {/* Background Grid Lines */}
-                <View className="absolute inset-x-0 inset-y-0 flex-row justify-between pl-[100px] z-0 px-8">
-                  <View className="w-px h-full bg-white/10" />
-                  <View className="w-px h-full bg-white/10" />
-                  <View className="w-px h-full bg-white/10" />
+                <View className="absolute left-0 top-[-8px] bottom-[-8px] flex-row justify-between z-0" style={{ width: '97%' }}>
+                  <View className="w-px h-full bg-[#FFFFFF1A]" />
+                  <View className="w-px h-full bg-[#FFFFFF1A]" />
+                  <View className="w-px h-full bg-[#FFFFFF1A]" />
+                  <View className="w-px h-full bg-[#FFFFFF1A]" />
+                  <View className="w-px h-full bg-[#FFFFFF1A]" />
                 </View>
 
                 {/* Bars */}
                 <View className="gap-3 z-10 w-full relative">
                   <View className="flex-row items-center relative gap-3">
-                    <View className="bg-[#FAA61A] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, likesPercent)}%` }}>
-                      <Text className="text-black text-[13px] font-medium font-inter">Likes</Text>
+                    <View className="bg-[#F59E0B] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, likesPercent)}%` }}>
+                      <Text className="text-white text-[13px] font-medium font-inter">Likes</Text>
                     </View>
-                    <Text className="text-white/40 text-[12px] font-inter">{likesPercent}%</Text>
+                    <Text className="text-white text-[12px] font-inter">{likesPercent}%</Text>
                   </View>
-                  
+
                   <View className="flex-row items-center relative gap-3">
-                    <View className="bg-[#00E0FF] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, commentsPercent)}%` }}>
+                    <View className="bg-[#04C4FF] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, commentsPercent)}%` }}>
                       <Text className="text-white text-[13px] font-medium font-inter">Comments</Text>
                     </View>
-                    <Text className="text-white/40 text-[12px] font-inter">{commentsPercent}%</Text>
+                    <Text className="text-white text-[12px] font-inter">{commentsPercent}%</Text>
                   </View>
-                  
+
                   <View className="flex-row items-center relative gap-3">
-                    <View className="bg-[#FF4500] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, sharesPercent)}%` }}>
+                    <View className="bg-[#FE5802] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, sharesPercent)}%` }}>
                       <Text className="text-white text-[13px] font-medium font-inter">Shares</Text>
                     </View>
-                    <Text className="text-white/40 text-[12px] font-inter">{sharesPercent}%</Text>
+                    <Text className="text-white text-[12px] font-inter">{sharesPercent}%</Text>
                   </View>
                 </View>
               </View>
