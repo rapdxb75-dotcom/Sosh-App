@@ -2,8 +2,9 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFocusEffect } from "expo-router";
 import { Upload } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -35,6 +36,13 @@ import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
 import { updateUser } from "../../store/userSlice";
+
+let ImageCropPicker: any = null;
+try {
+  ImageCropPicker = require("react-native-image-crop-picker").default;
+} catch (e) {
+  console.log("react-native-image-crop-picker is not available. Falling back to expo-image-picker.");
+}
 
 // Social media platform configuration
 const SOCIAL_PLATFORMS = [
@@ -134,6 +142,13 @@ const ringStyles = StyleSheet.create({
 export default function Profile() {
   const dispatch = useDispatch<AppDispatch>();
   const { addNotification } = useNotification();
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   // Global User State from Redux
   const globalUserName = useSelector((state: RootState) => state.user.userName);
@@ -205,13 +220,39 @@ export default function Profile() {
 
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // No permissions request is necessary for launching the image library
+
+    // Use react-native-image-crop-picker for circular crop if available
+    if (ImageCropPicker) {
+      try {
+        const result = await ImageCropPicker.openPicker({
+          width: 400,
+          height: 400,
+          cropping: true,
+          cropperCircleOverlay: true,
+          includeBase64: true,
+          mediaType: "photo",
+          compressImageQuality: 0.5,
+        });
+
+        if (result.data) {
+          const mime = result.mime || "image/jpeg";
+          setImage(`data:${mime};base64,${result.data}`);
+        } else if (result.path) {
+          setImage(result.path);
+        }
+        return;
+      } catch (e: any) {
+        if (e?.code === "E_PICKER_CANCELLED") return;
+        console.log("ImageCropPicker error, falling back:", e);
+      }
+    }
+
+    // Fallback to expo-image-picker
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      shape: "oval",
-      quality: 0.5, // Lower quality to keep Base64 string size reasonable
+      quality: 0.5,
       base64: true,
     });
 
@@ -388,6 +429,15 @@ export default function Profile() {
     return isPlatformConnected(platformKey) ? "Connected" : "Not connected";
   };
 
+  // Helper function to get platform username
+  const getPlatformUsername = (platformKey: SocialPlatformKey): string | null => {
+    const data = socialMediaData[platformKey];
+    if (data && Array.isArray(data) && data.length >= 3) {
+      return data[2]; // Username is at index 2
+    }
+    return null;
+  };
+
   const handleConnectSocialMedia = async (
     platform: string,
     platformName: string,
@@ -451,6 +501,7 @@ export default function Profile() {
   return (
     <View className="flex-1">
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -596,6 +647,7 @@ export default function Profile() {
               icon={platform.icon}
               name={platform.name}
               status={getPlatformStatus(platform.key)}
+              connectedUsername={getPlatformUsername(platform.key)}
               isConnected={isPlatformConnected(platform.key)}
               isConnecting={connectingPlatform === platform.key}
               onConnect={() => handleConnectPress(platform.key)}
@@ -846,6 +898,7 @@ function ConnectedAccountItem({
   icon,
   name,
   status,
+  connectedUsername,
   isConnected,
   isConnecting,
   onConnect,
@@ -854,6 +907,7 @@ function ConnectedAccountItem({
   icon: any;
   name: string;
   status: string;
+  connectedUsername?: string | null;
   isConnected: boolean;
   isConnecting?: boolean;
   onConnect?: () => void;
@@ -871,7 +925,7 @@ function ConnectedAccountItem({
   return (
     <View className="connected-account-card">
       <View className="flex-row items-center gap-4">
-        <View className="w-12 h-12 items-center justify-center">
+        <View className="w-12 h-12 items-center justify-center mb-6">
           <Image
             source={icon}
             className="w-[36px] h-[36px]"
@@ -880,11 +934,20 @@ function ConnectedAccountItem({
         </View>
         <View>
           <Text className="platform-card-name">{name}</Text>
-          <View className="flex-row items-center mt-1">
+          <View className="flex-row items-start mt-1">
             <View
-              className={`w-2 h-2 rounded-full mr-2 ${isConnected ? "bg-green-500" : "bg-red-500"}`}
+              className={`w-2.5 h-2.5 rounded-full mr-3 mt-1.5 ${isConnected ? "bg-[#11B259]" : "bg-red-500"}`}
             />
-            <Text className="platform-card-status">{status}</Text>
+            <View>
+              <Text className="text-white/60 font-inter text-[13px]">
+                {isConnected && connectedUsername ? "Connected to" : status}
+              </Text>
+              {isConnected && connectedUsername && (
+                <Text className="text-white/80 font-inter text-[13px] font-medium mt-0.5 tracking-tight">
+                  {`@${connectedUsername}`}
+                </Text>
+              )}
+            </View>
           </View>
         </View>
       </View>

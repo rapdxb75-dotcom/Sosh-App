@@ -1,10 +1,12 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { ResizeMode, Video } from "expo-av";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Image as ExpoImage } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { useFocusEffect } from "expo-router";
 import { Plus, Upload, X } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -204,11 +206,24 @@ const coverModalStyles = StyleSheet.create({
         fontWeight: "600",
     },
 });
+const isVideoUrl = (url?: string | null) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.startsWith('data:video');
+};
 
 export default function CreatePost() {
     const [activeTab, setActiveTab] = useState("Post");
     const { width } = useWindowDimensions();
     const { addNotification } = useNotification();
+    const scrollViewRef = useRef<ScrollView>(null);
+
+    // Scroll to top whenever this screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+        }, []),
+    );
     const tabs = ["Post", "Reel", "Story"];
 
     // The available width for the carousel is screen width minus outer horizontal padding:
@@ -316,9 +331,9 @@ export default function CreatePost() {
     useEffect(() => {
         if (!Voice) return; // Skip in Expo Go
 
+        // Final recognised results — commit to caption
         Voice.onSpeechResults = (event: any) => {
             if (event.value && event.value.length > 0) {
-                // Update specific active tab without relying on closure
                 setTabData((prev) => {
                     const currentTab = activeTabRef.current;
                     return {
@@ -332,14 +347,37 @@ export default function CreatePost() {
             }
         };
 
+        // Partial results — show live feedback while user is still speaking
+        Voice.onSpeechPartialResults = (event: any) => {
+            if (event.value && event.value.length > 0) {
+                setTabData((prev) => {
+                    const currentTab = activeTabRef.current;
+                    return {
+                        ...prev,
+                        [currentTab]: {
+                            ...prev[currentTab as keyof typeof prev],
+                            caption: event.value[0],
+                        },
+                    };
+                });
+            }
+        };
+
+        // Speech ended (naturally or via stop) — always reset listening state
+        Voice.onSpeechEnd = () => {
+            setIsListening(false);
+        };
+
         Voice.onSpeechError = (error: any) => {
             console.log("Voice Error:", error);
             setIsListening(false);
         };
 
+        // Only remove listeners on unmount, do NOT destroy the module —
+        // destroying it makes Voice unusable for the lifetime of the app.
         return () => {
             if (Voice) {
-                Voice.destroy().then(Voice.removeAllListeners).catch(console.error);
+                Voice.removeAllListeners();
             }
         };
     }, []);
@@ -381,6 +419,8 @@ export default function CreatePost() {
         if (!Voice) return;
         try {
             await Voice.stop();
+            // onSpeechEnd will fire and set isListening to false;
+            // set it here too as a safety fallback for edge cases.
             setIsListening(false);
         } catch (e) {
             console.log("Stop Voice Error:", e);
@@ -488,27 +528,71 @@ export default function CreatePost() {
 
             const isCarousel = Array.isArray(currentMedia);
 
-            // The images are already in base64 format starting with data:image/jpeg;base64,... due to pickMedia logic
-            let mediaBase64: string | string[] = "";
+            const processMediaForUpload = (mediaItem: string) => {
+                if (mediaItem.startsWith("data:")) {
+                    return mediaItem; // Probably still base64 for images
+                }
+                if (mediaItem.startsWith("file://")) {
+                    const ext = mediaItem.split('.').pop()?.toLowerCase() || 'jpg';
+                    const isVideo = ext === 'mp4' || ext === 'mov';
+                    let mimeType = 'image/jpeg';
+                    if (isVideo) {
+                        mimeType = ext === 'mov' ? 'video/quicktime' : 'video/mp4';
+                    } else if (ext === 'png') {
+                        mimeType = 'image/png';
+                    } else if (ext === 'webp') {
+                        mimeType = 'image/webp';
+                    }
+                    const fileName = mediaItem.split('/').pop() || `upload.${ext}`;
+
+                    return {
+                        uri: mediaItem,
+                        type: mimeType,
+                        name: fileName
+                    } as any;
+                }
+                return mediaItem;
+            };
+
+            let mediaPayload: any | any[] = "";
             if (isCarousel) {
-                mediaBase64 = currentMedia as unknown as string[];
+                mediaPayload = (currentMedia as unknown as string[]).map(processMediaForUpload);
             } else {
-                mediaBase64 = currentMedia as string;
+                mediaPayload = processMediaForUpload(currentMedia as string);
             }
 
             const activePlatforms = Object.entries(selectedPlatforms)
                 .filter(([_, isSelected]) => isSelected)
                 .map(([platform]) => platform);
 
-            await createPostService.createPost(
-                caption,
-                tags,
-                activePlatforms,
-                !date, // publishNow is true if no date is selected
-                isCarousel,
-                mediaBase64,
-                date
-            );
+            if (activeTab === "Reel") {
+                await createPostService.createReel(
+                    caption,
+                    tags,
+                    activePlatforms,
+                    !date,
+                    mediaPayload as any,
+                    date
+                );
+            } else if (activeTab === "Story") {
+                const email = await storageService.getEmail();
+                await createPostService.createStory(
+                    email || "",
+                    activePlatforms,
+                    !date,
+                    mediaPayload as any
+                );
+            } else {
+                await createPostService.createPost(
+                    caption,
+                    tags,
+                    activePlatforms,
+                    !date, // publishNow is true if no date is selected
+                    isCarousel,
+                    mediaPayload,
+                    date
+                );
+            }
 
             addNotification({
                 type: "success",
@@ -618,17 +702,14 @@ export default function CreatePost() {
             mediaTypes,
             allowsEditing: !allowsMultipleSelection,
             shape: "rectangle",
-            quality: 0.5, // Reduced quality for smaller robust base64 payload
+            quality: 0.5,
             allowsMultipleSelection,
             selectionLimit,
-            base64: true,
         });
 
         if (!result.canceled) {
             if (allowsMultipleSelection) {
-                // Return base64 images if available, otherwise just try to get it using FileSystem if needed
-                // It's much safer to just use ImagePicker's `base64` option as requested by the user. "pass image same as update profile"
-                const newUris = result.assets.map((a) => a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri);
+                const newUris = result.assets.map((a) => a.uri);
                 if (isAppending && Array.isArray(currentMedia)) {
                     updateActiveTab(targetKey, [...currentMedia, ...newUris]);
                 } else {
@@ -636,7 +717,7 @@ export default function CreatePost() {
                 }
             } else {
                 const asset = result.assets[0];
-                updateActiveTab(targetKey, asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri);
+                updateActiveTab(targetKey, asset.uri);
             }
         }
     };
@@ -644,6 +725,7 @@ export default function CreatePost() {
     return (
         <View className="flex-1">
             <ScrollView
+                ref={scrollViewRef}
                 contentContainerStyle={{ paddingBottom: 160 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
@@ -867,11 +949,22 @@ export default function CreatePost() {
                                                                                                 style={{ flex: 1 }}
                                                                                                 className="relative rounded-xl overflow-hidden"
                                                                                             >
-                                                                                                <Image
-                                                                                                    source={{ uri: item.uri }}
-                                                                                                    className="w-full h-full rounded-xl"
-                                                                                                    resizeMode="cover"
-                                                                                                />
+                                                                                                {isVideoUrl(item.uri) ? (
+                                                                                                    <Video
+                                                                                                        source={{ uri: item.uri }}
+                                                                                                        style={{ width: '100%', height: '100%', borderRadius: 12 }}
+                                                                                                        resizeMode={ResizeMode.COVER}
+                                                                                                        shouldPlay
+                                                                                                        isLooping
+                                                                                                        isMuted
+                                                                                                    />
+                                                                                                ) : (
+                                                                                                    <Image
+                                                                                                        source={{ uri: item.uri }}
+                                                                                                        className="w-full h-full rounded-xl"
+                                                                                                        resizeMode="cover"
+                                                                                                    />
+                                                                                                )}
                                                                                                 <TouchableOpacity
                                                                                                     className="absolute top-2 right-2 bg-black/80 p-1.5 rounded-full"
                                                                                                     onPress={() => {
@@ -904,11 +997,22 @@ export default function CreatePost() {
                                                                         onPress={() => pickMedia(false)}
                                                                         activeOpacity={0.9}
                                                                     >
-                                                                        <Image
-                                                                            source={{ uri: currentMedia }}
-                                                                            className="w-full h-40"
-                                                                            resizeMode="contain"
-                                                                        />
+                                                                        {isVideoUrl(currentMedia) ? (
+                                                                            <Video
+                                                                                source={{ uri: currentMedia as string }}
+                                                                                style={{ width: '100%', height: 160 }}
+                                                                                resizeMode={ResizeMode.CONTAIN}
+                                                                                shouldPlay
+                                                                                isLooping
+                                                                                isMuted
+                                                                            />
+                                                                        ) : (
+                                                                            <Image
+                                                                                source={{ uri: currentMedia as string }}
+                                                                                className="w-full h-40"
+                                                                                resizeMode="contain"
+                                                                            />
+                                                                        )}
                                                                     </TouchableOpacity>
                                                                     <TouchableOpacity
                                                                         onPress={() =>
@@ -1193,11 +1297,15 @@ export default function CreatePost() {
                                                         icon: require("../../assets/icons/facebook.png"),
                                                     },
                                                 ]
-                                                    .filter((p) =>
-                                                        activeTab === "Reel" || activeTab === "Story"
-                                                            ? ["instagram", "tiktok", "youtube"].includes(p.id)
-                                                            : true,
-                                                    )
+                                                    .filter((p) => {
+                                                        if (activeTab === "Reel") {
+                                                            return ["instagram", "tiktok", "youtube", "snapchat", "facebook"].includes(p.id);
+                                                        }
+                                                        if (activeTab === "Story") {
+                                                            return ["instagram", "snapchat", "facebook"].includes(p.id);
+                                                        }
+                                                        return true;
+                                                    })
                                                     .map((platform) => {
                                                         const isSelected = selectedPlatforms[platform.id];
                                                         return (
@@ -1553,17 +1661,28 @@ export default function CreatePost() {
 
                             {/* Preview */}
                             <View style={coverModalStyles.previewContainer}>
-                                <ExpoImage
-                                    source={
-                                        cover_img || media
-                                            ? { uri: cover_img || media }
-                                            : require("../../assets/images/cover_img.png")
-                                    }
-                                    style={coverModalStyles.previewImage}
-                                    contentFit="cover"
-                                    cachePolicy="memory-disk"
-                                    transition={200}
-                                />
+                                {isVideoUrl(cover_img || media) ? (
+                                    <Video
+                                        source={{ uri: cover_img || media }}
+                                        style={coverModalStyles.previewImage}
+                                        resizeMode={ResizeMode.COVER}
+                                        shouldPlay
+                                        isLooping
+                                        isMuted
+                                    />
+                                ) : (
+                                    <ExpoImage
+                                        source={
+                                            cover_img || media
+                                                ? { uri: cover_img || media }
+                                                : require("../../assets/images/cover_img.png")
+                                        }
+                                        style={coverModalStyles.previewImage}
+                                        contentFit="cover"
+                                        cachePolicy="memory-disk"
+                                        transition={200}
+                                    />
+                                )}
                             </View>
 
                             <View style={{ height: 444 }} />
@@ -1599,16 +1718,27 @@ export default function CreatePost() {
                                             zIndex: 10,
                                         }}
                                     >
-                                        <ExpoImage
-                                            source={
-                                                cover_img || media
-                                                    ? { uri: cover_img || media }
-                                                    : require("../../assets/images/cover_img.png")
-                                            }
-                                            style={{ width: "100%", height: "100%" }}
-                                            contentFit="cover"
-                                            cachePolicy="memory-disk"
-                                        />
+                                        {isVideoUrl(cover_img || media) ? (
+                                            <Video
+                                                source={{ uri: cover_img || media }}
+                                                style={{ width: "100%", height: "100%" }}
+                                                resizeMode={ResizeMode.COVER}
+                                                shouldPlay
+                                                isLooping
+                                                isMuted
+                                            />
+                                        ) : (
+                                            <ExpoImage
+                                                source={
+                                                    cover_img || media
+                                                        ? { uri: cover_img || media }
+                                                        : require("../../assets/images/cover_img.png")
+                                                }
+                                                style={{ width: "100%", height: "100%" }}
+                                                contentFit="cover"
+                                                cachePolicy="memory-disk"
+                                            />
+                                        )}
                                     </View>
                                 </View>
 
