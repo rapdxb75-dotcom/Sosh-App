@@ -29,7 +29,7 @@ export default function Home() {
         <View className="w-full px-5 flex-1">
           <Text className="page-title text-white mb-4 mt-8">
             Hello{"\n"}
-            {userName?.toUpperCase()},{"\n"}lets create
+            {userName},{"\n"}lets create
           </Text>
           <View className="flex-row items-center gap-2 mb-10">
             <View className="w-2 h-2 rounded-full bg-green-500" />

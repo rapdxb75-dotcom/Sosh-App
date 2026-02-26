@@ -1,8 +1,6 @@
-import { BlurView } from "expo-blur";
-import { CheckCircle, Info, XCircle } from "lucide-react-native";
+import { AlertCircle, CheckCircle, Info } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 import { ToastConfig } from "react-native-toast-message";
-import { FontFamily, FontSize } from "../../constants/Fonts";
 
 const ToastMessage = ({
     type,
@@ -16,34 +14,32 @@ const ToastMessage = ({
     const getIcon = () => {
         switch (type) {
             case "success":
-                return <CheckCircle size={24} color="#4ADE80" />; // Green-400
+                return <CheckCircle size={22} color="#34C759" strokeWidth={2.5} />;
             case "error":
-                return <XCircle size={24} color="#EF4444" />; // Red-500
+                return <AlertCircle size={22} color="#FF3B30" strokeWidth={2.5} />;
             case "info":
             default:
-                return <Info size={24} color="#3B82F6" />; // Blue-500
+                return <Info size={22} color="#0A84FF" strokeWidth={2.5} />;
         }
     };
 
     return (
-        <View style={styles.container}>
-            <BlurView intensity={20} tint="light" style={styles.blurContainer}>
-                <View style={styles.content}>
-                    <View style={styles.iconContainer}>{getIcon()}</View>
-                    <View style={styles.textContainer}>
-                        {text1 && (
-                            <Text style={styles.title} numberOfLines={1}>
-                                {text1}
-                            </Text>
-                        )}
-                        {text2 && (
-                            <Text style={styles.message} numberOfLines={2}>
-                                {text2}
-                            </Text>
-                        )}
-                    </View>
-                </View>
-            </BlurView>
+        <View style={styles.container} className="flex-row items-start p-4 rounded-[24px] border border-white/5 bg-[#2C2C2E]/95 shadow-sm">
+            <View className="mr-4 mt-1 bg-white/5 p-2 rounded-full">
+                {getIcon()}
+            </View>
+            <View className="flex-1 mt-1 justify-center">
+                {text1 && (
+                    <Text className="text-white font-semibold text-base font-inter mb-1" numberOfLines={1}>
+                        {text1}
+                    </Text>
+                )}
+                {text2 && (
+                    <Text className="text-white/70 text-sm font-inter leading-5" numberOfLines={2}>
+                        {text2}
+                    </Text>
+                )}
+            </View>
         </View>
     );
 };
@@ -63,10 +59,7 @@ export const toastConfig: ToastConfig = {
 const styles = StyleSheet.create({
     container: {
         width: "90%",
-        borderRadius: 16,
-        overflow: "hidden",
         marginTop: 10,
-        backgroundColor: "rgba(255, 255, 255, 0.1)", // Fallback for Android mainly
         shadowColor: "#000",
         shadowOffset: {
             width: 0,
@@ -75,30 +68,5 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4.65,
         elevation: 8,
-    },
-    blurContainer: {
-        padding: 16,
-    },
-    content: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    iconContainer: {
-        marginRight: 12,
-    },
-    textContainer: {
-        flex: 1,
-        justifyContent: "center",
-    },
-    title: {
-        fontFamily: FontFamily.questrial,
-        fontSize: FontSize.body,
-        color: "#FFFFFF",
-        marginBottom: 4,
-    },
-    message: {
-        fontFamily: FontFamily.interRegular,
-        fontSize: FontSize.small,
-        color: "rgba(255, 255, 255, 0.8)",
     },
 });

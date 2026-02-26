@@ -1,13 +1,15 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { Stack } from "expo-router";
+import { Stack, useFocusEffect } from "expo-router";
 import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   Image,
+  Modal,
   ScrollView,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   useWindowDimensions,
   View
 } from "react-native";
@@ -79,24 +81,95 @@ const PLATFORMS: PlatformData[] = [
 
 // --- Components ---
 
+const FILTER_OPTIONS = ["last 30 days", "last 90 days", "YTD", "All time"];
+
+const DropdownModal = ({
+  visible,
+  onClose,
+  options,
+  onSelect,
+  selectedValue,
+  title
+}: {
+  visible: boolean;
+  onClose: () => void;
+  options: string[];
+  onSelect: (option: string) => void;
+  selectedValue: string;
+  title: string;
+}) => (
+  <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
+    <TouchableWithoutFeedback onPress={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableWithoutFeedback>
+          <View className="bg-[#1A1A1A] w-[80%] max-w-[300px] rounded-[20px] p-4 border border-white/10 shadow-xl">
+            <Text className="text-white/60 font-inter text-sm mb-3 px-2 font-medium">{title}</Text>
+            {options.map((option) => (
+              <TouchableOpacity
+                key={option}
+                onPress={() => {
+                  onSelect(option);
+                  onClose();
+                }}
+                className={`flex-row items-center justify-between p-3 rounded-xl mb-1 ${selectedValue === option ? 'bg-white/10' : ''}`}
+              >
+                <Text className={`font-inter ${selectedValue === option ? 'text-white font-medium' : 'text-white/70'}`}>
+                  {option}
+                </Text>
+                {selectedValue === option && (
+                  <View className="w-2 h-2 rounded-full bg-[#04C4FF]" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableWithoutFeedback>
+      </View>
+    </TouchableWithoutFeedback>
+  </Modal>
+);
+
 const PlatformCard = ({
   platform,
   isExpanded,
   onToggle,
-  chartData,
-  selectedTab,
-  onTabChange,
   screenWidth,
 }: {
   platform: PlatformData;
   isExpanded: boolean;
   onToggle: () => void;
-  chartData: any[];
-  selectedTab: string;
-  onTabChange: (tab: string) => void;
   screenWidth: number;
 }) => {
   const [engagementTab, setEngagementTab] = useState("W1");
+  const [viewsFilter, setViewsFilter] = useState("last 30 days");
+  const [isViewsDropdownOpen, setIsViewsDropdownOpen] = useState(false);
+  const [engagementFilter, setEngagementFilter] = useState("last 30 days");
+  const [isEngagementDropdownOpen, setIsEngagementDropdownOpen] = useState(false);
+  const [viewsTab, setViewsTab] = useState("W1");
+
+  const viewsTabsOptions = viewsFilter === "last 30 days" ? ["W1", "W2", "W3", "W4"] : viewsFilter === "last 90 days" ? ["M1", "M2", "M3"] : [];
+  const engagementTabsOptions = engagementFilter === "last 30 days" ? ["W1", "W2", "W3", "W4"] : engagementFilter === "last 90 days" ? ["M1", "M2", "M3"] : [];
+
+  const handleViewsFilterSelect = (filterVal: string) => {
+    setViewsFilter(filterVal);
+    if (filterVal === "last 30 days") setViewsTab("W1");
+    else if (filterVal === "last 90 days") setViewsTab("M1");
+    else setViewsTab(filterVal);
+  };
+
+  const handleEngagementFilterSelect = (filterVal: string) => {
+    setEngagementFilter(filterVal);
+    if (filterVal === "last 30 days") setEngagementTab("W1");
+    else if (filterVal === "last 90 days") setEngagementTab("M1");
+    else setEngagementTab(filterVal);
+  };
+
+  const chartData = dummyChartData[viewsTab] || dummyChartData["W1"];
+
+  const formatFilterDisplay = (baseText: string, filterVal: string) => {
+    if (filterVal === "last 30 days") return `${baseText} 30 days`;
+    if (filterVal === "last 90 days") return `${baseText} 90 days`;
+    return `${baseText} ${filterVal}`;
+  };
 
   const formatCompactNumber = (number: number) => {
     if (number >= 1000000) {
@@ -110,10 +183,12 @@ const PlatformCard = ({
 
   const getMultiplierForTab = (tab: string) => {
     switch (tab) {
-      case 'W1': return { likes: 1, comments: 1, shares: 1 };
-      case 'W2': return { likes: 1.2, comments: 0.8, shares: 1.1 };
-      case 'W3': return { likes: 0.9, comments: 1.3, shares: 0.8 };
+      case 'W1': case 'M1': return { likes: 1, comments: 1, shares: 1 };
+      case 'W2': case 'M2': return { likes: 1.2, comments: 0.8, shares: 1.1 };
+      case 'W3': case 'M3': return { likes: 1.9, comments: 1.3, shares: 1.8 };
       case 'W4': return { likes: 1.1, comments: 0.9, shares: 1.4 };
+      case 'YTD': return { likes: 3.5, comments: 2.0, shares: 1.8 };
+      case 'All time': return { likes: 10.5, comments: 5.0, shares: 4.8 };
       default: return { likes: 1, comments: 1, shares: 1 };
     }
   };
@@ -197,32 +272,35 @@ const PlatformCard = ({
           {isExpanded && (
             <View className="mt-8">
               {/* Views Section */}
-              <View className="flex-row items-center">
+              <TouchableOpacity
+                className="flex-row items-center"
+                onPress={() => setIsViewsDropdownOpen(true)}
+              >
                 <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
-                  Views 30 days
+                  {formatFilterDisplay("Views", viewsFilter)}
                 </Text>
                 <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
-              </View>
+              </TouchableOpacity>
 
               <View className="flex-row items-center justify-between mb-2 mt-2">
                 <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
                   {formatCompactNumber(platform.metrics.views)}
                 </Text>
                 <View className="flex-row items-center gap-[10px]">
-                  {["W1", "W2", "W3", "W4"].map((tab) => (
+                  {viewsTabsOptions.map((tab) => (
                     <TouchableOpacity
                       key={tab}
                       onPress={() => {
                         if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
                           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         }
-                        onTabChange(tab);
+                        setViewsTab(tab);
                       }}
-                      className={`rounded-full items-center justify-center ${selectedTab === tab ? "bg-white/10" : ""}`}
+                      className={`rounded-full items-center justify-center ${viewsTab === tab ? "bg-white/10" : ""}`}
                       style={{ width: 36, height: 36, padding: 8 }}
                     >
                       <Text
-                        className={`text-[12px] ${selectedTab === tab ? "text-white font-medium" : "text-white/40"}`}
+                        className={`text-[12px] ${viewsTab === tab ? "text-white font-medium" : "text-white/40"}`}
                       >
                         {tab}
                       </Text>
@@ -296,19 +374,22 @@ const PlatformCard = ({
               </View>
 
               {/* Engagement Section */}
-              <View className="flex-row items-center mt-8">
+              <TouchableOpacity
+                className="flex-row items-center mt-8"
+                onPress={() => setIsEngagementDropdownOpen(true)}
+              >
                 <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
-                  Engagement 30 days
+                  {formatFilterDisplay("Engagement", engagementFilter)}
                 </Text>
                 <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
-              </View>
+              </TouchableOpacity>
 
               <View className="flex-row items-center justify-between mt-2 mb-6">
                 <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
                   {formatCompactNumber(totalEngagement)}
                 </Text>
                 <View className="flex-row items-center gap-[10px]">
-                  {["W1", "W2", "W3", "W4"].map((tab) => (
+                  {engagementTabsOptions.map((tab) => (
                     <TouchableOpacity
                       key={tab}
                       onPress={() => {
@@ -365,6 +446,23 @@ const PlatformCard = ({
                   </View>
                 </View>
               </View>
+
+              <DropdownModal
+                visible={isViewsDropdownOpen}
+                onClose={() => setIsViewsDropdownOpen(false)}
+                options={FILTER_OPTIONS}
+                onSelect={handleViewsFilterSelect}
+                selectedValue={viewsFilter}
+                title="Select timeframe for Views"
+              />
+              <DropdownModal
+                visible={isEngagementDropdownOpen}
+                onClose={() => setIsEngagementDropdownOpen(false)}
+                options={FILTER_OPTIONS}
+                onSelect={handleEngagementFilterSelect}
+                selectedValue={engagementFilter}
+                title="Select timeframe for Engagement"
+              />
             </View>
           )}
         </View>
@@ -411,18 +509,70 @@ const dummyChartData: Record<string, { x: number; y: number; y2: number }[]> = {
     { x: 6, y: 4.8, y2: 4.0 },
     { x: 7, y: 4.5, y2: 3.8 },
   ],
+  M1: [
+    { x: 1, y: 2.5, y2: 2.0 },
+    { x: 2, y: 3.0, y2: 2.5 },
+    { x: 3, y: 3.5, y2: 3.0 },
+    { x: 4, y: 4.0, y2: 3.5 },
+    { x: 5, y: 3.8, y2: 3.2 },
+    { x: 6, y: 4.5, y2: 3.8 },
+    { x: 7, y: 4.2, y2: 3.5 },
+  ],
+  M2: [
+    { x: 1, y: 2.8, y2: 2.2 },
+    { x: 2, y: 3.2, y2: 2.8 },
+    { x: 3, y: 3.8, y2: 3.5 },
+    { x: 4, y: 4.5, y2: 4.0 },
+    { x: 5, y: 4.2, y2: 3.8 },
+    { x: 6, y: 5.0, y2: 4.5 },
+    { x: 7, y: 4.8, y2: 4.2 },
+  ],
+  M3: [
+    { x: 1, y: 3.0, y2: 2.5 },
+    { x: 2, y: 3.5, y2: 3.0 },
+    { x: 3, y: 4.2, y2: 3.8 },
+    { x: 4, y: 5.0, y2: 4.5 },
+    { x: 5, y: 4.8, y2: 4.2 },
+    { x: 6, y: 5.5, y2: 5.0 },
+    { x: 7, y: 5.2, y2: 4.8 },
+  ],
+  YTD: [
+    { x: 1, y: 3.5, y2: 3.0 },
+    { x: 2, y: 4.0, y2: 3.5 },
+    { x: 3, y: 4.8, y2: 4.2 },
+    { x: 4, y: 5.5, y2: 5.0 },
+    { x: 5, y: 5.2, y2: 4.8 },
+    { x: 6, y: 6.0, y2: 5.5 },
+    { x: 7, y: 6.5, y2: 6.0 },
+  ],
+  "All time": [
+    { x: 1, y: 4.0, y2: 3.5 },
+    { x: 2, y: 4.5, y2: 4.0 },
+    { x: 3, y: 5.5, y2: 5.0 },
+    { x: 4, y: 6.5, y2: 6.0 },
+    { x: 5, y: 6.0, y2: 5.5 },
+    { x: 6, y: 7.0, y2: 6.5 },
+    { x: 7, y: 8.0, y2: 7.5 },
+  ],
 };
 
 export default function Analysis() {
   const { width } = useWindowDimensions();
-  const [selectedTab, setSelectedTab] = useState("W1");
   const [expandedPlatform, setExpandedPlatform] = useState("");
+  const scrollRef = useRef<ScrollView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   return (
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         contentContainerStyle={{
           paddingBottom: 160,
@@ -450,9 +600,6 @@ export default function Analysis() {
                   expandedPlatform === platform.id ? "" : platform.id,
                 )
               }
-              chartData={dummyChartData[selectedTab]}
-              selectedTab={selectedTab}
-              onTabChange={setSelectedTab}
               screenWidth={width}
             />
           ))}

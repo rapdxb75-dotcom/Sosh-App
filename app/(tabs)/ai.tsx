@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Circle,
   Defs,
+  Path,
   Rect,
   Stop,
   LinearGradient as SvgLinearGradient,
@@ -387,15 +388,30 @@ export default function AI() {
   const [isSending, setIsSending] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const scrollToBottomAnim = useRef(new Animated.Value(0)).current;
 
   // Setup React Native Voice Listeners
   useEffect(() => {
     if (!Voice) return; // Skip in Expo Go
 
+    // Final recognised results — commit to input
     Voice.onSpeechResults = (event: any) => {
       if (event.value && event.value.length > 0) {
         setInputText(event.value[0]); // most accurate result
       }
+    };
+
+    // Partial results — show live feedback while user is still speaking
+    Voice.onSpeechPartialResults = (event: any) => {
+      if (event.value && event.value.length > 0) {
+        setInputText(event.value[0]);
+      }
+    };
+
+    // Speech ended (naturally or via stop) — always reset listening state
+    Voice.onSpeechEnd = () => {
+      setIsListening(false);
     };
 
     Voice.onSpeechError = (error: any) => {
@@ -403,9 +419,11 @@ export default function AI() {
       setIsListening(false);
     };
 
+    // Only remove listeners on unmount, do NOT destroy the module —
+    // destroying it makes Voice unusable for the lifetime of the app.
     return () => {
       if (Voice) {
-        Voice.destroy().then(Voice.removeAllListeners).catch(console.error);
+        Voice.removeAllListeners();
       }
     };
   }, []);
@@ -458,15 +476,19 @@ export default function AI() {
   const sidebarWidth = Math.min(width * 0.8, 300);
   const slideAnim = useRef(new Animated.Value(-sidebarWidth)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+  const lastScrollY = useRef(0);
+  const isUserAtBottomRef = useRef(true); // Track scroll position without re-renders
 
   // Auto-scroll to bottom when messages update (especially during streaming)
+  // Only scrolls if user hasn't manually scrolled up
+  const lastScrollTime = useRef(0);
   useEffect(() => {
-    if (messages.length > 0 && isSending) {
-      // During streaming, keep scrolling to bottom
-      const scrollTimer = setTimeout(() => {
+    if (messages.length > 0 && isSending && isUserAtBottomRef.current) {
+      const now = Date.now();
+      if (now - lastScrollTime.current > 100) {
+        lastScrollTime.current = now;
         scrollViewRef.current?.scrollToEnd({ animated: false });
-      }, 50);
-      return () => clearTimeout(scrollTimer);
+      }
     }
   }, [messages, isSending]);
 
@@ -474,23 +496,16 @@ export default function AI() {
   const fetchConversations = useCallback(async () => {
     if (!userEmail) return;
 
-    console.log("Fetching conversations for:", userEmail);
     setIsLoadingConversations(true);
     setConversationsError(null);
 
     try {
       const data = await chatService.getConversations(userEmail);
-      console.log(
-        "API Response (get-conversations):",
-        JSON.stringify(data, null, 2),
-      );
 
-      // Ensure data is an array and filter out null or invalid values
       const validData = Array.isArray(data)
         ? data.filter((c: any) => c && typeof c === 'object' && c._id && String(c._id).trim() !== '')
         : [];
 
-      // Sort by _createTime in descending order (newest first)
       const sortedData = validData.sort((a, b) => {
         return (
           new Date(b._createTime || 0).getTime() - new Date(a._createTime || 0).getTime()
@@ -528,8 +543,10 @@ export default function AI() {
   const openCreateModalFromDrawer = () => {
     closeSidebar();
     setTimeout(() => {
-      openCreateModal();
-    }, 300); // Wait for drawer to close
+      setActiveConversationId(null);
+      setMessages([]);
+      setInputText("");
+    }, 300);
   };
 
   const closeCreateModal = () => {
@@ -668,9 +685,10 @@ export default function AI() {
 
       setMessages(validMessages);
 
-      // 5. Auto-scroll to bottom (using the ScrollView ref if it exists, or just state update triggers re-render)
-      // Note: We need a ref for ScrollView to scroll.
-      // I'll check if scrollViewRef exists or needs to be added.
+      // Auto-scroll to bottom after loading
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: false });
+      }, 100);
     } catch (error) {
       console.error("Failed to load conversation history:", error);
       setMessages([]);
@@ -678,6 +696,10 @@ export default function AI() {
       setIsLoadingMessages(false);
     }
   };
+
+  // Ref for batching streaming token updates
+  const streamBufferRef = useRef("");
+  const rafIdRef = useRef<number | null>(null);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || isSending || !userEmail) return;
@@ -704,13 +726,12 @@ export default function AI() {
       _id: aiMessageId,
       _createTime: new Date().toISOString(),
       _updateTime: new Date().toISOString(),
-      content: "", // Start empty
+      content: "",
       role: "Model",
       _name: "Model",
       dateTime: new Date().toISOString(),
     };
 
-    // Add both to UI immediately
     setMessages((prev) => [
       ...prev,
       optimisticUserMessage,
@@ -724,7 +745,6 @@ export default function AI() {
       if (!currentConversationId) {
         const title =
           content.length > 30 ? content.substring(0, 30) + "..." : content;
-        console.log("🆕 Creating new conversation with title:", title);
 
         const response = await chatService.createConversation({
           boardId: poppyBoardId,
@@ -735,96 +755,103 @@ export default function AI() {
         if (response && response.conversationId) {
           currentConversationId = response.conversationId;
           setActiveConversationId(currentConversationId);
-          // Fetch in background to update list
           fetchConversations();
         } else {
           throw new Error("Failed to create new conversation");
         }
       }
 
-      console.log("📤 Sending user message to history...", {
-        conversationId: currentConversationId,
-      });
-
-      // 2. Save User Message to History First
-      await chatService.manageHistory(
-        currentConversationId!,
-        content,
-        userEmail,
-        "User",
-      );
-
-      // 3. Stream from Poppy AI
-      console.log("🌊 Starting AI stream...");
+      // 2. Save User Message to History AND start AI stream IN PARALLEL
+      // This saves ~200-500ms by not waiting for the history save before streaming
       let fullAIResponse = "";
+      streamBufferRef.current = "";
 
-      await poppyService.streamMessage(
-        currentConversationId!,
-        content,
-        poppyBoardId,
-        poppyChatId,
-        (delta) => {
-          // Append delta to full response
-          fullAIResponse += delta;
-
-          // Update UI in real-time with incremental text
+      // Batched UI update function — coalesces rapid token arrivals into
+      // a single setMessages call per animation frame (~16ms)
+      const flushStreamBuffer = () => {
+        const buffered = streamBufferRef.current;
+        if (buffered) {
           setMessages((prevMessages) =>
             prevMessages.map((msg) =>
               msg._id === aiMessageId
-                ? { ...msg, content: fullAIResponse }
+                ? { ...msg, content: buffered }
                 : msg,
             ),
           );
-
-          // Auto-scroll to bottom on new token - use setTimeout for reliability
-          setTimeout(() => {
+          // Only auto-scroll if user is at bottom
+          if (isUserAtBottomRef.current) {
             scrollViewRef.current?.scrollToEnd({ animated: false });
-          }, 10);
-        },
+          }
+        }
+        rafIdRef.current = null;
+      };
+
+      const [,] = await Promise.all([
+        // Save user message (fire-and-forget, don't block streaming)
+        chatService.manageHistory(
+          currentConversationId!,
+          content,
+          userEmail,
+          "User",
+        ),
+        // Stream from Poppy AI
+        poppyService.streamMessage(
+          currentConversationId!,
+          content,
+          poppyBoardId,
+          poppyChatId,
+          (delta) => {
+            fullAIResponse += delta;
+            streamBufferRef.current = fullAIResponse;
+
+            // Schedule a batched UI update on the next animation frame
+            if (!rafIdRef.current) {
+              rafIdRef.current = requestAnimationFrame(flushStreamBuffer);
+            }
+          },
+        ),
+      ]);
+
+      // Flush any remaining buffered content
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      // Final UI update with complete response
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) =>
+          msg._id === aiMessageId
+            ? { ...msg, content: fullAIResponse }
+            : msg,
+        ),
       );
 
-      console.log(
-        "✅ Poppy API complete. Full response length:",
-        fullAIResponse.length,
-      );
-
-      // 4. Save Final AI Response to History
+      // 4. Save AI Response to History in background (don't block UI)
       if (fullAIResponse) {
-        console.log("💾 Saving AI response to history DB...");
-        await chatService.manageHistory(
+        chatService.manageHistory(
           currentConversationId!,
           fullAIResponse,
           userEmail,
           "Model",
-        );
-        console.log("✅ AI response saved successfully");
-      } else {
-        console.warn("⚠️ AI response was empty, skipping save");
+        ).catch((err) => console.error("Failed to save AI response:", err));
       }
 
-      // Final scroll to ensure everything is visible
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: false });
-      }, 100);
-
-      // Optional: Reload history to ensure everything is synced
-      // await loadHistory(activeConversationId);
+      // Final scroll only if user is at bottom
+      if (isUserAtBottomRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: false });
+        }, 50);
+      }
     } catch (error) {
-      console.error("❌ Failed to process message flow:", error);
-
-      // Remove the optimistic messages on failure or mark as error
-      // For now, let's keep user message but maybe show error for AI?
+      console.error("Failed to process message flow:", error);
       setMessages((prev) => prev.filter((m) => m._id !== aiMessageId));
-
-      // Ideally show an error toast
-      // Ideally show an error toast
-      // alert('Failed to get response. Please try again.');
     } finally {
       setIsSending(false);
-      // One more scroll after sending is complete
       setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: false });
-      }, 150);
+        if (isUserAtBottomRef.current) {
+          scrollViewRef.current?.scrollToEnd({ animated: false });
+        }
+      }, 50);
     }
   };
 
@@ -945,7 +972,9 @@ export default function AI() {
             <TouchableOpacity
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                openCreateModal();
+                setActiveConversationId(null);
+                setMessages([]);
+                setInputText("");
               }}
               style={{ width: normalize(38), height: normalize(38) }}
               className="items-center justify-center rounded-full relative"
@@ -983,14 +1012,27 @@ export default function AI() {
                 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
-                onContentSizeChange={() => {
-                  // Scroll to bottom immediately when content changes
-                  scrollViewRef.current?.scrollToEnd({ animated: false });
+                onScroll={(e) => {
+                  const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                  // Dismiss keyboard only when scrolling UP
+                  if (isKeyboardVisible && contentOffset.y < lastScrollY.current - 5) {
+                    Keyboard.dismiss();
+                  }
+                  lastScrollY.current = contentOffset.y;
+                  const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+                  const atBottom = distanceFromBottom < 80;
+                  // Update ref for streaming auto-scroll (no re-render)
+                  isUserAtBottomRef.current = atBottom;
+                  if (atBottom !== isAtBottom) {
+                    setIsAtBottom(atBottom);
+                    Animated.timing(scrollToBottomAnim, {
+                      toValue: atBottom ? 0 : 1,
+                      duration: 200,
+                      useNativeDriver: true,
+                    }).start();
+                  }
                 }}
-                onLayout={() => {
-                  // Scroll to bottom on initial layout
-                  scrollViewRef.current?.scrollToEnd({ animated: false });
-                }}
+                scrollEventThrottle={16}
               >
                 {isLoadingMessages ? (
                   <View className="flex-1 items-center justify-center py-20">
@@ -1039,6 +1081,61 @@ export default function AI() {
                   </View>
                 </View>
               </TouchableWithoutFeedback>
+            )}
+
+            {/* Scroll to Bottom Button — ChatGPT style */}
+            {activeConversationId && (
+              <Animated.View
+                pointerEvents={isAtBottom ? "none" : "auto"}
+                style={{
+                  alignItems: "center",
+                  height: 0,
+                  overflow: "visible",
+                  zIndex: 10,
+                  opacity: scrollToBottomAnim,
+                  transform: [{
+                    scale: scrollToBottomAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.8, 1],
+                    }),
+                  }],
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                    setIsAtBottom(true);
+                    Animated.timing(scrollToBottomAnim, {
+                      toValue: 0,
+                      duration: 200,
+                      useNativeDriver: true,
+                    }).start();
+                  }}
+                  activeOpacity={0.7}
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    backgroundColor: "#0A0A0A",
+                    borderWidth: 1,
+                    borderColor: "rgba(255, 255, 255, 0.3)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: -36,
+                  }}
+                >
+                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                    <Path
+                      d="M12 5v14M5 12l7 7 7-7"
+                      stroke="#fff"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </Svg>
+                </TouchableOpacity>
+              </Animated.View>
             )}
 
             {/* Bottom Input Area */}
@@ -1139,7 +1236,7 @@ export default function AI() {
                   style={{ opacity: !inputText.trim() || isSending ? 0.7 : 1 }}
                 >
                   <ImageBackground
-                    source={require("../../assets/images/button-bg.png")}
+                    source={require("../../assets/images/post_without.jpg")}
                     className="w-full h-full items-center justify-center"
                     resizeMode="cover"
                   >
@@ -1311,7 +1408,7 @@ export default function AI() {
       <Modal
         visible={isEditModalVisible}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={closeEditModal}
       >
         <KeyboardAvoidingView
@@ -1365,7 +1462,6 @@ export default function AI() {
                           className="flex-1 h-[44px] px-1 py-0 text-white"
                           selectionColor="#fff"
                           editable={!isEditing}
-                          autoFocus
                           onSubmitEditing={handleEditConversation}
                         />
                       </View>
@@ -1388,7 +1484,7 @@ export default function AI() {
                   }}
                 >
                   <ImageBackground
-                    source={require("../../assets/images/button-bg.png")}
+                    source={require("../../assets/images/post_without.jpg")}
                     className="w-full h-full items-center justify-center"
                     resizeMode="cover"
                   >
@@ -1412,7 +1508,7 @@ export default function AI() {
       <Modal
         visible={isCreateModalVisible}
         transparent={true}
-        animationType="fade"
+        animationType="none"
         onRequestClose={closeCreateModal}
       >
         <KeyboardAvoidingView
@@ -1466,7 +1562,6 @@ export default function AI() {
                           className="flex-1 h-[44px] px-1 py-0 text-white"
                           selectionColor="#fff"
                           editable={!isCreating}
-                          autoFocus
                           onSubmitEditing={handleCreateConversation}
                         />
                       </View>
@@ -1489,7 +1584,7 @@ export default function AI() {
                   }}
                 >
                   <ImageBackground
-                    source={require("../../assets/images/button-bg.png")}
+                    source={require("../../assets/images/post_without.jpg")}
                     className="w-full h-full items-center justify-center"
                     resizeMode="cover"
                   >
