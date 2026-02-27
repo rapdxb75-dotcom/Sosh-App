@@ -14,6 +14,7 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Modal,
+    PanResponder,
     PermissionsAndroid,
     Platform,
     ScrollView,
@@ -212,6 +213,61 @@ const isVideoUrl = (url?: string | null) => {
     return lower.endsWith('.mp4') || lower.endsWith('.mov') || lower.startsWith('data:video');
 };
 
+const INITIAL_TAB_DATA = {
+    Post: {
+        postType: "Single",
+        singleCaption: "",
+        singleTags: [] as string[],
+        carouselCaption: "",
+        carouselTags: [] as string[],
+        selectedPlatforms: {
+            instagram: false,
+            tiktok: true,
+            youtube: false,
+            snapchat: false,
+            x: false,
+            facebook: true,
+        } as Record<string, boolean>,
+        date: null as Date | null,
+        singleMedia: null as string | null,
+        carouselMedia: null as string[] | null,
+        media: null,
+    },
+    Reel: {
+        postType: "Single",
+        caption: "",
+        selectedPlatforms: {
+            instagram: true,
+            tiktok: true,
+            youtube: true,
+            snapchat: false,
+            x: false,
+            facebook: false,
+        } as Record<string, boolean>,
+        date: null as Date | null,
+        media: null as string | null,
+        cover_img: null as string | null,
+        thumbNailOffset: 0 as number,
+        tags: [] as string[],
+    },
+    Story: {
+        postType: "Single", // Single=Photo, Carousel=Video
+        caption: "",
+        selectedPlatforms: {
+            instagram: true,
+            tiktok: true,
+            youtube: true,
+            snapchat: false,
+            x: false,
+            facebook: false,
+        } as Record<string, boolean>,
+        date: null as Date | null,
+        photoMedia: null as string | null,
+        videoMedia: null as string | null,
+        tags: [] as string[],
+    },
+};
+
 export default function CreatePost() {
     const [activeTab, setActiveTab] = useState("Post");
     const { width } = useWindowDimensions();
@@ -234,57 +290,16 @@ export default function CreatePost() {
     const paddingEdge = 4;
     const itemWidth = containerWidth / 3;
 
+    // Instagram-accurate preview dimensions for single media
+    // Post Single: 4:5 portrait | Reel: 9:16 | Story: 9:16
+    const isReelOrStory = activeTab === "Reel" || activeTab === "Story";
+    const previewWidth = containerWidth * (isReelOrStory ? 0.42 : 0.38);
+    const previewHeight = isReelOrStory
+        ? previewWidth * (16 / 9)   // 9:16 tall
+        : previewWidth * (5 / 4);   // 4:5 portrait
+
     // Tab Data State
-    const [tabData, setTabData] = useState({
-        Post: {
-            postType: "Single",
-            caption: "",
-            selectedPlatforms: {
-                instagram: false,
-                tiktok: true,
-                youtube: false,
-                snapchat: false,
-                x: false,
-                facebook: true,
-            } as Record<string, boolean>,
-            date: null as Date | null,
-            singleMedia: null as string | null,
-            carouselMedia: null as string[] | null,
-            media: null,
-            tags: [] as string[],
-        },
-        Reel: {
-            postType: "Single",
-            caption: "",
-            selectedPlatforms: {
-                instagram: true,
-                tiktok: true,
-                youtube: true,
-                snapchat: false,
-                x: false,
-                facebook: false,
-            } as Record<string, boolean>,
-            date: null as Date | null,
-            media: null as string | null,
-            cover_img: null as string | null,
-            tags: [] as string[],
-        },
-        Story: {
-            postType: "Single", // Single=Photo, Carousel=Video
-            caption: "",
-            selectedPlatforms: {
-                instagram: true,
-                tiktok: true,
-                youtube: true,
-                snapchat: false,
-                x: false,
-                facebook: false,
-            } as Record<string, boolean>,
-            date: null as Date | null,
-            media: null as string | null,
-            tags: [] as string[],
-        },
-    });
+    const [tabData, setTabData] = useState(INITIAL_TAB_DATA);
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showCaptionModal, setShowCaptionModal] = useState(false);
@@ -294,11 +309,112 @@ export default function CreatePost() {
     const [tagInputText, setTagInputText] = useState("");
     const [isListening, setIsListening] = useState(false);
 
+    // Cover scrubber — all mutable values in refs so PanResponder never has stale closures
+    const coverVideoRef = useRef<any>(null);
+    const thumbVideoRef = useRef<any>(null);
+    const coverDurationMsRef = useRef(0);
+    const scrubberPositionMsRef = useRef(0);
+    const dragStartPositionMsRef = useRef(0);
+    const isSeekingRef = useRef(false);          // prevent concurrent seeks
+    const [coverDurationMs, setCoverDurationMs] = useState(0);
+    const [scrubberPositionMs, setScrubberPositionMs] = useState(0);
+    const filmStripWidth = useRef(0);
+    const SELECTOR_WIDTH = 76;
+
+    // Safe seek: silently skips if a seek is already in flight
+    const safeSeek = (ms: number) => {
+        if (!coverVideoRef.current || isSeekingRef.current) return;
+        isSeekingRef.current = true;
+
+        const promises = [coverVideoRef.current.setPositionAsync(ms)];
+        if (thumbVideoRef.current) {
+            promises.push(thumbVideoRef.current.setPositionAsync(ms));
+        }
+
+        Promise.all(promises)
+            .catch(() => { })          // suppress "Seeking interrupted"
+            .finally(() => { isSeekingRef.current = false; });
+    };
+
+    const scrubberPan = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            // Snap selector to tapped position
+            onPanResponderGrant: (e) => {
+                const stripW = filmStripWidth.current;
+                const dur = coverDurationMsRef.current;
+                if (!stripW || !dur) return;
+                const maxX = stripW - SELECTOR_WIDTH;
+                const touchX = e.nativeEvent.locationX;
+                const newX = Math.max(0, Math.min(maxX, touchX - SELECTOR_WIDTH / 2));
+                const newMs = (newX / maxX) * dur;
+                scrubberPositionMsRef.current = newMs;
+                dragStartPositionMsRef.current = newMs;
+                setScrubberPositionMs(newMs);
+                safeSeek(newMs);
+            },
+            // Smooth drag
+            onPanResponderMove: (_, gs) => {
+                const stripW = filmStripWidth.current;
+                const dur = coverDurationMsRef.current;
+                if (!stripW || !dur) return;
+                const maxX = stripW - SELECTOR_WIDTH;
+                const startX = (dragStartPositionMsRef.current / dur) * maxX;
+                const newX = Math.max(0, Math.min(maxX, startX + gs.dx));
+                const newMs = (newX / maxX) * dur;
+                scrubberPositionMsRef.current = newMs;
+                setScrubberPositionMs(newMs);
+                safeSeek(newMs);        // skips if previous seek not done yet
+            },
+            // Final precise sync on release based on AV player's actual rest position
+            onPanResponderRelease: async () => {
+                isSeekingRef.current = false;
+                if (!coverVideoRef.current) return;
+                try {
+                    // Force the actual native module to report back where it stopped
+                    const status = await coverVideoRef.current.getStatusAsync();
+                    if (status.isLoaded && typeof status.positionMillis === 'number') {
+                        const actualMs = status.positionMillis;
+                        scrubberPositionMsRef.current = actualMs;
+                        setScrubberPositionMs(actualMs);
+                        if (thumbVideoRef.current) {
+                            thumbVideoRef.current.setPositionAsync(actualMs).catch(() => { });
+                        }
+                    } else {
+                        // Fallback just in case getStatus fails
+                        safeSeek(scrubberPositionMsRef.current);
+                    }
+                } catch (e) {
+                    safeSeek(scrubberPositionMsRef.current);
+                }
+            },
+            onPanResponderTerminate: () => {
+                isSeekingRef.current = false;
+            },
+        })
+    ).current;
+
     // Derived State for Active Tab
     const activeData = tabData[activeTab as keyof typeof tabData];
-    const { postType, caption, selectedPlatforms, date, media, tags } =
-        activeData;
+    const { postType, selectedPlatforms, date, media, tags, thumbNailOffset } =
+        activeData as any;
     const cover_img = (activeData as any).cover_img;
+
+    // caption & tags are per-postType for Post, shared for Reel/Story
+    const caption =
+        activeTab === "Post"
+            ? (postType === "Single"
+                ? (activeData as any).singleCaption
+                : (activeData as any).carouselCaption)
+            : (activeData as any).caption;
+
+    const activeTags: string[] =
+        activeTab === "Post"
+            ? (postType === "Single"
+                ? (activeData as any).singleTags
+                : (activeData as any).carouselTags)
+            : ((activeData as any).tags ?? []);
 
     let currentMedia = media;
     if (activeTab === "Post") {
@@ -306,6 +422,11 @@ export default function CreatePost() {
             postType === "Single"
                 ? (activeData as any).singleMedia
                 : (activeData as any).carouselMedia;
+    } else if (activeTab === "Story") {
+        currentMedia =
+            postType === "Single"
+                ? (activeData as any).photoMedia
+                : (activeData as any).videoMedia;
     }
 
     // Setters
@@ -320,7 +441,13 @@ export default function CreatePost() {
     };
 
     const setPostType = (value: string) => updateActiveTab("postType", value);
-    const setCaption = (value: string) => updateActiveTab("caption", value);
+    const setCaption = (value: string) => {
+        if (activeTab === "Post") {
+            updateActiveTab(postType === "Single" ? "singleCaption" : "carouselCaption", value);
+        } else {
+            updateActiveTab("caption", value);
+        }
+    };
 
     // Setup React Native Voice Listeners
     const activeTabRef = useRef(activeTab);
@@ -431,17 +558,23 @@ export default function CreatePost() {
     const handleAddTag = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const trimmed = tagInputText.trim();
-        if (trimmed && tags && !tags.includes(trimmed)) {
-            updateActiveTab("tags", [...tags, trimmed]);
+        const tagKey = activeTab === "Post"
+            ? (postType === "Single" ? "singleTags" : "carouselTags")
+            : "tags";
+        if (trimmed && activeTags && !activeTags.includes(trimmed)) {
+            updateActiveTab(tagKey, [...activeTags, trimmed]);
             setTagInputText("");
         }
     };
 
     const handleRemoveTag = (tagToRemove: string) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const tagKey = activeTab === "Post"
+            ? (postType === "Single" ? "singleTags" : "carouselTags")
+            : "tags";
         updateActiveTab(
-            "tags",
-            tags.filter((t: string) => t !== tagToRemove),
+            tagKey,
+            activeTags.filter((t: string) => t !== tagToRemove),
         );
     };
 
@@ -568,11 +701,12 @@ export default function CreatePost() {
             if (activeTab === "Reel") {
                 await createPostService.createReel(
                     caption,
-                    tags,
+                    activeTags,
                     activePlatforms,
                     !date,
                     mediaPayload as any,
-                    date
+                    date,
+                    thumbNailOffset || 0
                 );
             } else if (activeTab === "Story") {
                 const email = await storageService.getEmail();
@@ -585,14 +719,14 @@ export default function CreatePost() {
             } else if (activeTab === "Post" && isCarousel) {
                 await createPostService.createCarousel(
                     caption,
-                    tags,
+                    activeTags,
                     activePlatforms,
                     Array.isArray(mediaPayload) ? mediaPayload : [mediaPayload]
                 );
             } else {
                 await createPostService.createPost(
                     caption,
-                    tags,
+                    activeTags,
                     activePlatforms,
                     !date,
                     isCarousel,
@@ -611,6 +745,10 @@ export default function CreatePost() {
                 text1: "Post Generated",
                 text2: "Your post has been created successfully",
             });
+
+            // Clear all fields upon successful publish
+            setTabData(INITIAL_TAB_DATA);
+            setTagInputText("");
         } catch (error) {
             console.error("Post generation error:", error);
             addNotification({
@@ -700,8 +838,10 @@ export default function CreatePost() {
             mediaTypes = ImagePicker.MediaTypeOptions.Videos;
         } else if (activeTab === "Story") {
             if (postType === "Carousel") {
-                // Video logic mapping
                 mediaTypes = ImagePicker.MediaTypeOptions.Videos;
+                targetKey = "videoMedia";
+            } else {
+                targetKey = "photoMedia";
             }
         }
 
@@ -999,16 +1139,20 @@ export default function CreatePost() {
                                                                     );
                                                                 })()
                                                             ) : (
-                                                                <View>
-                                                                    <TouchableOpacity
-                                                                        onPress={() => pickMedia(false)}
-                                                                        activeOpacity={0.9}
+                                                                <View style={{ padding: 14, alignItems: 'center' }}>
+                                                                    <View
+                                                                        style={{
+                                                                            width: previewWidth,
+                                                                            height: previewHeight,
+                                                                            borderRadius: 16,
+                                                                            overflow: 'hidden',
+                                                                        }}
                                                                     >
                                                                         {isVideoUrl(currentMedia) ? (
                                                                             <Video
                                                                                 source={{ uri: currentMedia as string }}
-                                                                                style={{ width: '100%', height: 160 }}
-                                                                                resizeMode={ResizeMode.CONTAIN}
+                                                                                style={{ width: '100%', height: '100%' }}
+                                                                                resizeMode={ResizeMode.COVER}
                                                                                 shouldPlay
                                                                                 isLooping
                                                                                 isMuted
@@ -1016,24 +1160,26 @@ export default function CreatePost() {
                                                                         ) : (
                                                                             <Image
                                                                                 source={{ uri: currentMedia as string }}
-                                                                                className="w-full h-40"
-                                                                                resizeMode="contain"
+                                                                                style={{ width: '100%', height: '100%' }}
+                                                                                resizeMode="cover"
                                                                             />
                                                                         )}
-                                                                    </TouchableOpacity>
-                                                                    <TouchableOpacity
-                                                                        onPress={() =>
-                                                                            updateActiveTab(
-                                                                                activeTab === "Post"
-                                                                                    ? "singleMedia"
-                                                                                    : "media",
-                                                                                null,
-                                                                            )
-                                                                        }
-                                                                        className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full"
-                                                                    >
-                                                                        <X color="white" size={16} />
-                                                                    </TouchableOpacity>
+                                                                        <TouchableOpacity
+                                                                            style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.8)', padding: 6, borderRadius: 100 }}
+                                                                            onPress={() =>
+                                                                                updateActiveTab(
+                                                                                    activeTab === "Post"
+                                                                                        ? "singleMedia"
+                                                                                        : activeTab === "Story"
+                                                                                            ? postType === "Single" ? "photoMedia" : "videoMedia"
+                                                                                            : "media",
+                                                                                    null,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <X color="white" size={12} />
+                                                                        </TouchableOpacity>
+                                                                    </View>
                                                                 </View>
                                                             )}
                                                         </View>
@@ -1046,7 +1192,7 @@ export default function CreatePost() {
                                                             <Text className="text-white font-inter text-sm">
                                                                 Select {activeTab === "Reel" ? "video" : "media"}{" "}
                                                                 <Text className="text-white/40">
-                                                                    {postType === "Carousel" ? "(up to 10)" : ""}
+                                                                    {postType === "Carousel" && activeTab !== "Story" ? "(up to 10)" : ""}
                                                                 </Text>
                                                             </Text>
                                                         </TouchableOpacity>
@@ -1232,9 +1378,9 @@ export default function CreatePost() {
                                             </View>
 
                                             {/* Render Added Tags */}
-                                            {tags && tags.length > 0 && (
+                                            {activeTags && activeTags.length > 0 && (
                                                 <View className="flex-row flex-wrap gap-2 mb-6 mt-[-8px]">
-                                                    {tags.map((tag: string, index: number) => (
+                                                    {activeTags.map((tag: string, index: number) => (
                                                         <View
                                                             key={index}
                                                             className="flex-row items-center bg-[#FFFFFF1A] px-3 py-2.5 rounded-full"
@@ -1606,62 +1752,18 @@ export default function CreatePost() {
                                     style={coverModalStyles.closeBtn}
                                     onPress={() => setShowCoverModal(false)}
                                 >
-                                    <View
-                                        style={{
-                                            width: 27,
-                                            height: 27,
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                        }}
-                                    >
+                                    <View style={{ width: 27, height: 27, alignItems: "center", justifyContent: "center" }}>
                                         <Svg width={27} height={27}>
                                             <Defs>
-                                                <SvgLinearGradient
-                                                    id="closeBtnGrad"
-                                                    x1="0%"
-                                                    y1="0%"
-                                                    x2="100%"
-                                                    y2="100%"
-                                                >
-                                                    <Stop
-                                                        offset="0%"
-                                                        stopColor="#FFFFFF"
-                                                        stopOpacity="1"
-                                                    />
-                                                    <Stop
-                                                        offset="50%"
-                                                        stopColor="#000000"
-                                                        stopOpacity="1"
-                                                    />
-                                                    <Stop
-                                                        offset="100%"
-                                                        stopColor="#FFFFFF"
-                                                        stopOpacity="1"
-                                                    />
+                                                <SvgLinearGradient id="closeBtnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                    <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                                                    <Stop offset="50%" stopColor="#000000" stopOpacity="1" />
+                                                    <Stop offset="100%" stopColor="#FFFFFF" stopOpacity="1" />
                                                 </SvgLinearGradient>
                                             </Defs>
-                                            <Circle
-                                                cx={13.5}
-                                                cy={13.5}
-                                                r={13}
-                                                stroke="url(#closeBtnGrad)"
-                                                strokeWidth={1}
-                                                fill="transparent"
-                                            />
+                                            <Circle cx={13.5} cy={13.5} r={13} stroke="url(#closeBtnGrad)" strokeWidth={1} fill="transparent" />
                                         </Svg>
-                                        <View
-                                            style={{
-                                                position: "absolute",
-                                                width: 23,
-                                                height: 23,
-                                                borderRadius: 11.5,
-                                                backgroundColor: "#0A0A0A",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                top: 2,
-                                                left: 2,
-                                            }}
-                                        >
+                                        <View style={{ position: "absolute", width: 23, height: 23, borderRadius: 11.5, backgroundColor: "#0A0A0A", alignItems: "center", justifyContent: "center", top: 2, left: 2 }}>
                                             <X color="white" size={14} />
                                         </View>
                                     </View>
@@ -1669,24 +1771,27 @@ export default function CreatePost() {
                                 <Text style={coverModalStyles.title}>Edit cover</Text>
                             </View>
 
-                            {/* Preview */}
+                            {/* Preview — shows the current scrub position */}
                             <View style={coverModalStyles.previewContainer}>
-                                {isVideoUrl(cover_img || media) ? (
+                                {currentMedia ? (
                                     <Video
-                                        source={{ uri: cover_img || media }}
+                                        ref={coverVideoRef}
+                                        source={{ uri: currentMedia as string }}
                                         style={coverModalStyles.previewImage}
-                                        resizeMode={ResizeMode.COVER}
-                                        shouldPlay
-                                        isLooping
+                                        resizeMode={ResizeMode.CONTAIN}
+                                        shouldPlay={false}
                                         isMuted
+                                        onLoad={(status: any) => {
+                                            const dur = status?.durationMillis ?? 0;
+                                            coverDurationMsRef.current = dur;
+                                            setCoverDurationMs(dur);
+                                            // Start playing after load
+                                            coverVideoRef.current?.playAsync();
+                                        }}
                                     />
                                 ) : (
                                     <ExpoImage
-                                        source={
-                                            cover_img || media
-                                                ? { uri: cover_img || media }
-                                                : require("../../assets/images/cover_img.png")
-                                        }
+                                        source={cover_img ? { uri: cover_img } : require("../../assets/images/cover_img.png")}
                                         style={coverModalStyles.previewImage}
                                         contentFit="cover"
                                         cachePolicy="memory-disk"
@@ -1699,52 +1804,50 @@ export default function CreatePost() {
 
                             {/* Bottom Controls */}
                             <View style={coverModalStyles.bottomSection}>
-                                <View style={coverModalStyles.filmStrip}>
-                                    {/* Placeholder for video frames */}
-                                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                                        <View
-                                            key={i}
-                                            style={{
-                                                flex: 1,
-                                                backgroundColor: "rgba(255,255,255,0.05)",
-                                                marginHorizontal: 1,
-                                                borderRadius: 4,
-                                            }}
-                                        />
-                                    ))}
-                                    {/* Selected frame indicator highlight */}
+                                {/* Film strip with draggable selector — PanResponder on whole strip */}
+                                <View
+                                    style={coverModalStyles.filmStrip}
+                                    onLayout={(e) => { filmStripWidth.current = e.nativeEvent.layout.width; }}
+                                    {...scrubberPan.panHandlers}
+                                >
+                                    {/* Film strip track — just a solid background now */}
+                                    <View style={{ flex: 1, backgroundColor: "#2A2A2A", borderRadius: 16 }} />
+
+                                    {/* Selector window — matches screenshot with video preview inside */}
                                     <View
                                         style={{
                                             position: "absolute",
-                                            right: 40,
-                                            top: -12,
-                                            bottom: -12,
-                                            width: 72,
-                                            borderWidth: 2,
+                                            top: -14,
+                                            bottom: -14,
+                                            left: coverDurationMs && filmStripWidth.current
+                                                ? Math.max(0, Math.min(
+                                                    filmStripWidth.current - SELECTOR_WIDTH,
+                                                    (scrubberPositionMs / coverDurationMs) * (filmStripWidth.current - SELECTOR_WIDTH)
+                                                ))
+                                                : 0,
+                                            width: SELECTOR_WIDTH,
+                                            borderWidth: 3,
                                             borderColor: "white",
                                             borderRadius: 16,
-                                            backgroundColor: "#000",
-                                            overflow: "hidden",
+                                            backgroundColor: "black",
                                             zIndex: 10,
+                                            pointerEvents: "none",
+                                            overflow: "hidden"
                                         }}
                                     >
-                                        {isVideoUrl(cover_img || media) ? (
+                                        {currentMedia ? (
                                             <Video
-                                                source={{ uri: cover_img || media }}
-                                                style={{ width: "100%", height: "100%" }}
+                                                ref={thumbVideoRef}
+                                                source={{ uri: currentMedia as string }}
+                                                style={{ width: "100%", height: "100%", borderRadius: 13 }}
                                                 resizeMode={ResizeMode.COVER}
-                                                shouldPlay
-                                                isLooping
+                                                shouldPlay={false}
                                                 isMuted
                                             />
                                         ) : (
                                             <ExpoImage
-                                                source={
-                                                    cover_img || media
-                                                        ? { uri: cover_img || media }
-                                                        : require("../../assets/images/cover_img.png")
-                                                }
-                                                style={{ width: "100%", height: "100%" }}
+                                                source={cover_img ? { uri: cover_img } : require("../../assets/images/cover_img.png")}
+                                                style={{ width: "100%", height: "100%", borderRadius: 13 }}
                                                 contentFit="cover"
                                                 cachePolicy="memory-disk"
                                             />
@@ -1755,9 +1858,7 @@ export default function CreatePost() {
                                 <TouchableOpacity onPress={pickCoverImage}>
                                     <Text style={coverModalStyles.uploadText}>
                                         or{" "}
-                                        <Text style={coverModalStyles.uploadLink}>
-                                            Upload image
-                                        </Text>
+                                        <Text style={coverModalStyles.uploadLink}>Upload image</Text>
                                     </Text>
                                 </TouchableOpacity>
 
@@ -1765,6 +1866,8 @@ export default function CreatePost() {
                                     style={coverModalStyles.doneBtn}
                                     onPress={() => {
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        // Save the scrubbed position as the thumbnail offset
+                                        updateActiveTab("thumbNailOffset", scrubberPositionMs);
                                         setShowCoverModal(false);
                                     }}
                                 >

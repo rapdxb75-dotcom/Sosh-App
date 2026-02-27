@@ -1,11 +1,13 @@
 import { BlurView } from "expo-blur";
-import { AlertCircle, CheckCircle, Info, Trash2, X } from "lucide-react-native";
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { AlertCircle, Info, Trash2, X } from "lucide-react-native";
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { normalize } from "../../constants/Fonts";
 import {
   NotificationType,
   useNotification,
 } from "../../context/NotificationContext";
+
+const markIcon = require("../../assets/icons/mark.png");
 
 export default function NotificationModal() {
   const {
@@ -19,7 +21,7 @@ export default function NotificationModal() {
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
       case "success":
-        return <CheckCircle size={22} color="#34C759" strokeWidth={2.5} />;
+        return <Image source={markIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />;
       case "error":
         return <AlertCircle size={22} color="#FF3B30" strokeWidth={2.5} />;
       default:
