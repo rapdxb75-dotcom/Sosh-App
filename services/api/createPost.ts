@@ -45,7 +45,13 @@ const createPostService = {
             const formData = new FormData();
 
             formData.append("captionPromt", captionPrompt);
-            formData.append("tags", tags.join(","));
+            tags.forEach((tag) => {
+                const formattedTag = tag.startsWith('@') ? tag : `@${tag}`;
+                formData.append("tags", formattedTag);
+            });
+            if (tags.length === 1) {
+                formData.append("tags", "");
+            }
             formData.append("publishnow", String(publishNow));
             formData.append("isCarousel", String(isCarousel));
             formData.append("max_tokens", "1024");
@@ -108,7 +114,8 @@ const createPostService = {
         selectedPlatforms: string[],
         publishNow: boolean,
         mediaPayload: any,
-        scheduleDate: Date | null
+        scheduleDate: Date | null,
+        thumbNailOffset: number
     ) => {
         try {
             const token = await storageService.getToken();
@@ -116,10 +123,21 @@ const createPostService = {
             const formData = new FormData();
 
             formData.append("captionPromt", captionPrompt);
-            formData.append("tags", tags.join(","));
+            tags.forEach((tag) => {
+                const formattedTag = tag.startsWith('@') ? tag : `@${tag}`;
+                formData.append("tags", formattedTag);
+            });
+            if (tags.length === 1) {
+                formData.append("tags", "");
+            }
             formData.append("publishnow", String(publishNow));
             formData.append("isReel", "true");
             formData.append("max_tokens", "1024");
+
+            // Send timestamp in milliseconds
+            if (thumbNailOffset > 0) {
+                formData.append("thumbNailOffset", String(Math.floor(thumbNailOffset)));
+            }
 
             // Append platforms
             selectedPlatforms.forEach((platform) => {
@@ -230,7 +248,13 @@ const createPostService = {
 
             formData.append("captionPromt", captionPrompt);
             formData.append("max_tokens", "1024");
-            formData.append("userTags", tags.join(","));
+            tags.forEach((tag) => {
+                const formattedTag = tag.startsWith('@') ? tag : `@${tag}`;
+                formData.append("userTags", formattedTag);
+            });
+            if (tags.length === 1) {
+                formData.append("userTags", "");
+            }
 
             // Append platforms with capital P as per API spec
             selectedPlatforms.forEach((platform) => {

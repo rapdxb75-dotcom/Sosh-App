@@ -2,7 +2,7 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect } from "expo-router";
 import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -16,6 +16,7 @@ import {
   Stop,
   LinearGradient as SvgGradient
 } from "react-native-svg";
+import { useSelector } from "react-redux";
 import {
   VictoryArea,
   VictoryAxis,
@@ -23,6 +24,8 @@ import {
   VictoryGroup
 } from "victory-native";
 import Header from "../../components/common/Header";
+import { listenToUserData } from "../../services/firebase";
+import { RootState } from "../../store/store";
 
 // --- Types ---
 
@@ -74,6 +77,22 @@ const PLATFORMS: PlatformData[] = [
     followers: "+ 120 subscribers",
     growth: "+12.5% this month",
     metrics: { views: 45000, likes: 2100, comments: 750, shares: 320 },
+  },
+  {
+    id: "twitter",
+    name: "Twitter",
+    icon: require("../../assets/icons/twitter.png"),
+    followers: "+ 21 followers",
+    growth: "+4.5% this month",
+    metrics: { views: 8000, likes: 1200, comments: 340, shares: 210 },
+  },
+  {
+    id: "snapchat",
+    name: "Snapchat",
+    icon: require("../../assets/icons/snapchat.png"),
+    followers: "+ 18 followers",
+    growth: "+5.1% this month",
+    metrics: { views: 12000, likes: 950, comments: 200, shares: 150 },
   },
 ];
 
@@ -206,12 +225,12 @@ const PlatformCard = ({
 
   const formatCompactNumber = (number: number) => {
     if (number >= 1000000) {
-      return (number / 1000000).toFixed(1) + 'M';
+      return parseFloat((number / 1000000).toFixed(2)) + 'M';
     }
     if (number >= 1000) {
-      return (number / 1000).toFixed(1) + 'K';
+      return parseFloat((number / 1000).toFixed(2)) + 'K';
     }
-    return number.toString();
+    return Number.isInteger(number) ? number.toString() : parseFloat(number.toFixed(2)).toString();
   };
 
   const getMultiplierForTab = (tab: string) => {
@@ -227,10 +246,14 @@ const PlatformCard = ({
   };
 
   const multiplier = getMultiplierForTab(engagementTab);
-  const totalEngagement = platform.metrics.likes * multiplier.likes + platform.metrics.comments * multiplier.comments + platform.metrics.shares * multiplier.shares;
-  const likesPercent = Math.round(((platform.metrics.likes * multiplier.likes) / totalEngagement) * 100) || 19;
-  const commentsPercent = Math.round(((platform.metrics.comments * multiplier.comments) / totalEngagement) * 100) || 32;
-  const sharesPercent = Math.round(((platform.metrics.shares * multiplier.shares) / totalEngagement) * 100) || 29;
+  const likesVal = platform.metrics.likes * multiplier.likes;
+  const commentsVal = platform.metrics.comments * multiplier.comments;
+  const sharesVal = platform.metrics.shares * multiplier.shares;
+
+  const totalEngagement = likesVal + commentsVal + sharesVal;
+  const likesPercent = totalEngagement > 0 ? Math.round((likesVal / totalEngagement) * 100) : 0;
+  const commentsPercent = totalEngagement > 0 ? Math.round((commentsVal / totalEngagement) * 100) : 0;
+  const sharesPercent = totalEngagement > 0 ? Math.round((sharesVal / totalEngagement) * 100) : 0;
 
   return (
     <View
@@ -599,11 +622,131 @@ export default function Analysis() {
   const [expandedPlatform, setExpandedPlatform] = useState("");
   const scrollRef = useRef<ScrollView>(null);
 
+  const globalEmail = useSelector((state: RootState) => state.user.email);
+  const [platformsData, setPlatformsData] = useState<PlatformData[]>([]);
+
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
     }, [])
   );
+
+  useEffect(() => {
+    if (!globalEmail) return;
+
+    const unsubscribe = listenToUserData(
+      globalEmail,
+      (userData) => {
+        if (userData && userData.analytics) {
+          const analytics = userData.analytics;
+          const platforms: PlatformData[] = [];
+
+          if (analytics.instagram) {
+            platforms.push({
+              id: "instagram",
+              name: "Instagram",
+              icon: require("../../assets/icons/instagram.png"),
+              followers: `+ ${analytics.instagram.followersCount || 0} followers`,
+              growth: "+8.2% this month",
+              metrics: {
+                views: analytics.instagram.viewsCount || 0,
+                likes: analytics.instagram.likesCount || 0,
+                comments: analytics.instagram.commentsCount || 0,
+                shares: 0,
+              },
+            });
+          }
+
+          if (analytics.tiktok) {
+            platforms.push({
+              id: "tiktok",
+              name: "TikTok",
+              icon: require("../../assets/icons/tiktok.png"),
+              followers: `+ ${analytics.tiktok.followerCount || 0} followers`,
+              growth: "+8.2% this month",
+              metrics: {
+                views: analytics.tiktok.viewCountTotal || 0,
+                likes: analytics.tiktok.likeCountTotal || 0,
+                comments: analytics.tiktok.commentCountTotal || 0,
+                shares: analytics.tiktok.shareCountTotal || 0,
+              },
+            });
+          }
+
+          if (analytics.facebook) {
+            platforms.push({
+              id: "facebook",
+              name: "Facebook",
+              icon: require("../../assets/icons/facebook.png"),
+              followers: `+ ${analytics.facebook.followersCount || 0} followers`,
+              growth: "+2.1% this month",
+              metrics: {
+                views: (analytics.facebook.pageVideoViews || 0) + (analytics.facebook.pageMediaView || 0),
+                likes: analytics.facebook.likesCount || 0,
+                comments: analytics.facebook.pagePostEngagements || 0,
+                shares: 0,
+              },
+            });
+          }
+
+          if (analytics.youtube) {
+            platforms.push({
+              id: "youtube",
+              name: "YouTube",
+              icon: require("../../assets/icons/youtube.png"),
+              followers: `+ ${analytics.youtube.subscriberCount || 0} subscribers`,
+              growth: "+12.5% this month",
+              metrics: {
+                views: analytics.youtube.viewCount || 0,
+                likes: analytics.youtube.likes || 0,
+                comments: analytics.youtube.comments || 0,
+                shares: analytics.youtube.shares || 0,
+              },
+            });
+          }
+
+          if (analytics.twitter) {
+            platforms.push({
+              id: "twitter",
+              name: "Twitter",
+              icon: require("../../assets/icons/twitter.png"),
+              followers: `+ ${analytics.twitter.followersCount || 0} followers`,
+              growth: "+4.5% this month",
+              metrics: {
+                views: 0,
+                likes: analytics.twitter.likeCount || 0,
+                comments: 0,
+                shares: 0,
+              },
+            });
+          }
+
+          if (analytics.snapchat) {
+            platforms.push({
+              id: "snapchat",
+              name: "Snapchat",
+              icon: require("../../assets/icons/snapchat.png"),
+              followers: `+ ${analytics.snapchat.subscribers || 0} subscribers`,
+              growth: "+5.1% this month",
+              metrics: {
+                views: analytics.snapchat.views || 0,
+                likes: analytics.snapchat.favorites || analytics.snapchat.interactions || 0,
+                comments: analytics.snapchat.replies || 0,
+                shares: analytics.snapchat.shares || 0,
+              },
+            });
+          }
+
+          setPlatformsData(platforms);
+        } else {
+          setPlatformsData(PLATFORMS);
+        }
+      },
+      (error) => console.error("Firebase fetch error:", error)
+    );
+
+    return () => unsubscribe();
+  }, [globalEmail]);
 
   return (
     <View className="flex-1">
@@ -628,7 +771,7 @@ export default function Analysis() {
             Platform Breakdown
           </Text>
 
-          {PLATFORMS.map((platform) => (
+          {(platformsData.length > 0 ? platformsData : PLATFORMS).map((platform) => (
             <PlatformCard
               key={platform.id}
               platform={platform}

@@ -1,6 +1,8 @@
-import { AlertCircle, CheckCircle, Info } from "lucide-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { AlertCircle, Info } from "lucide-react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { ToastConfig } from "react-native-toast-message";
+
+const markIcon = require("../../assets/icons/mark.png");
 
 const ToastMessage = ({
     type,
@@ -14,7 +16,7 @@ const ToastMessage = ({
     const getIcon = () => {
         switch (type) {
             case "success":
-                return <CheckCircle size={22} color="#34C759" strokeWidth={2.5} />;
+                return <Image source={markIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />;
             case "error":
                 return <AlertCircle size={22} color="#FF3B30" strokeWidth={2.5} />;
             case "info":
