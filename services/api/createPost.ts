@@ -207,6 +207,61 @@ const createPostService = {
             console.error("Create Story API Error:", error);
             throw error;
         }
+    },
+
+    /**
+     * Create a carousel post via webhook
+     * @param captionPrompt Post caption
+     * @param tags Array of tags
+     * @param selectedPlatforms Array of platform names
+     * @param mediaPayloads Array of binary media payloads
+     * @returns Promise with API response
+     */
+    createCarousel: async (
+        captionPrompt: string,
+        tags: string[],
+        selectedPlatforms: string[],
+        mediaPayloads: any[]
+    ) => {
+        try {
+            const token = await storageService.getToken();
+
+            const formData = new FormData();
+
+            formData.append("captionPromt", captionPrompt);
+            formData.append("max_tokens", "1024");
+            formData.append("userTags", tags.join(","));
+
+            // Append platforms with capital P as per API spec
+            selectedPlatforms.forEach((platform) => {
+                formData.append("Platforms", platform);
+            });
+
+            if (selectedPlatforms.length === 1) {
+                formData.append("Platforms", "");
+            }
+
+            // Append multiple media files
+            mediaPayloads.forEach((media) => {
+                formData.append("mediaUrl", media);
+            });
+
+            const response = await apiClient.post<CreatePostResponse>(
+                "/create-carousels",
+                formData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data"
+                    }
+                }
+            );
+
+            return response.data;
+        } catch (error) {
+            console.error("Create Carousel API Error:", error);
+            throw error;
+        }
     }
 };
 

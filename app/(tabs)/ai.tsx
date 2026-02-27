@@ -390,26 +390,56 @@ export default function AI() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const scrollToBottomAnim = useRef(new Animated.Value(0)).current;
+  const textBeforeVoiceRef = useRef('');
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulse animation for mic button while listening
+  useEffect(() => {
+    if (isListening) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.25,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isListening]);
 
   // Setup React Native Voice Listeners
   useEffect(() => {
     if (!Voice) return; // Skip in Expo Go
 
-    // Final recognised results — commit to input
+    // Final recognised results — append to existing text
     Voice.onSpeechResults = (event: any) => {
       if (event.value && event.value.length > 0) {
-        setInputText(event.value[0]); // most accurate result
+        const prefix = textBeforeVoiceRef.current;
+        const separator = prefix.length > 0 ? ' ' : '';
+        setInputText(prefix + separator + event.value[0]);
       }
     };
 
-    // Partial results — show live feedback while user is still speaking
+    // Partial results — show live feedback (append to existing)
     Voice.onSpeechPartialResults = (event: any) => {
       if (event.value && event.value.length > 0) {
-        setInputText(event.value[0]);
+        const prefix = textBeforeVoiceRef.current;
+        const separator = prefix.length > 0 ? ' ' : '';
+        setInputText(prefix + separator + event.value[0]);
       }
     };
 
-    // Speech ended (naturally or via stop) — always reset listening state
+    // Speech ended (naturally or via stop) — reset listening state
     Voice.onSpeechEnd = () => {
       setIsListening(false);
     };
@@ -419,8 +449,7 @@ export default function AI() {
       setIsListening(false);
     };
 
-    // Only remove listeners on unmount, do NOT destroy the module —
-    // destroying it makes Voice unusable for the lifetime of the app.
+    // Only remove listeners on unmount, do NOT destroy the module
     return () => {
       if (Voice) {
         Voice.removeAllListeners();
@@ -452,6 +481,8 @@ export default function AI() {
           return;
         }
       }
+      // Save current text so speech appends to it
+      textBeforeVoiceRef.current = inputText.trim();
       setIsListening(true);
       await Voice.start('en-IN');
     } catch (e) {
@@ -1199,29 +1230,38 @@ export default function AI() {
                         onChangeText={setInputText}
                         onFocus={() => setIsKeyboardVisible(true)}
                         onBlur={() => setIsKeyboardVisible(false)}
-                        placeholder={isListening ? "Listening... Speak clearly" : "Type your message..."}
-                        placeholderTextColor={isListening ? "#ff4444" : "rgba(255,255,255,0.6)"}
-                        className={`flex-1 h-[44px] px-1 py-0 ${isListening ? 'text-[#ff4444]' : 'text-white'}`}
+                        placeholder={isListening ? "Listening..." : "Type your message..."}
+                        placeholderTextColor="rgba(255,255,255,0.6)"
+                        className="flex-1 h-[44px] px-1 py-0 text-white"
                         style={{ textAlignVertical: "center", paddingTop: Platform.OS === 'ios' ? 12 : 0 }}
                         selectionColor="#fff"
-                        editable={!isListening}
                         multiline={true}
                       />
-                      <TouchableOpacity
-                        className={`w-10 h-10 items-center justify-center rounded-full relative ${isListening ? 'bg-red-500' : 'bg-black/30'}`}
-                        onPress={isListening ? stopListening : startListening}
-                      >
-                        {!isListening && <GradientRingSVG />}
-                        {isListening ? (
-                          <View className="w-3 h-3 bg-white rounded-sm" style={{ borderRadius: 3 }} />
-                        ) : (
-                          <Image
-                            source={require("../../assets/icons/voice.png")}
-                            className="w-5 h-5"
-                            resizeMode="contain"
-                          />
-                        )}
-                      </TouchableOpacity>
+                      <Animated.View style={{ transform: [{ scale: isListening ? pulseAnim : 1 }] }}>
+                        <TouchableOpacity
+                          style={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: isListening ? '#ef4444' : 'rgba(0,0,0,0.3)',
+                            position: 'relative',
+                          }}
+                          onPress={isListening ? stopListening : startListening}
+                        >
+                          {!isListening && <GradientRingSVG />}
+                          {isListening ? (
+                            <View style={{ width: 12, height: 12, backgroundColor: '#fff', borderRadius: 3 }} />
+                          ) : (
+                            <Image
+                              source={require("../../assets/icons/voice.png")}
+                              className="w-5 h-5"
+                              resizeMode="contain"
+                            />
+                          )}
+                        </TouchableOpacity>
+                      </Animated.View>
                     </View>
                   </BlurView>
                 </View>
@@ -1311,7 +1351,7 @@ export default function AI() {
               </Text>
             </TouchableOpacity>
 
-            <View className="flex-1">
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} bounces={true}>
               {isLoadingConversations ? (
                 <View className="items-center justify-center py-8">
                   <ActivityIndicator size="large" color="#fff" />
@@ -1353,7 +1393,7 @@ export default function AI() {
                   </Text>
                 </View>
               )}
-            </View>
+            </ScrollView>
           </Animated.View>
 
           {/* Delete Confirmation Overlay (Global Sibling) */}
