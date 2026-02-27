@@ -5,11 +5,9 @@ import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useCallback, useRef, useState } from "react";
 import {
   Image,
-  Modal,
   ScrollView,
   Text,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   useWindowDimensions,
   View
 } from "react-native";
@@ -83,50 +81,71 @@ const PLATFORMS: PlatformData[] = [
 
 const FILTER_OPTIONS = ["last 30 days", "last 90 days", "YTD", "All time"];
 
-const DropdownModal = ({
+const InlineDropdown = ({
   visible,
   onClose,
   options,
   onSelect,
   selectedValue,
-  title
 }: {
   visible: boolean;
   onClose: () => void;
   options: string[];
   onSelect: (option: string) => void;
   selectedValue: string;
-  title: string;
-}) => (
-  <Modal visible={visible} transparent={true} animationType="fade" onRequestClose={onClose}>
-    <TouchableWithoutFeedback onPress={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-        <TouchableWithoutFeedback>
-          <View className="bg-[#1A1A1A] w-[80%] max-w-[300px] rounded-[20px] p-4 border border-white/10 shadow-xl">
-            <Text className="text-white/60 font-inter text-sm mb-3 px-2 font-medium">{title}</Text>
-            {options.map((option) => (
-              <TouchableOpacity
-                key={option}
-                onPress={() => {
-                  onSelect(option);
-                  onClose();
-                }}
-                className={`flex-row items-center justify-between p-3 rounded-xl mb-1 ${selectedValue === option ? 'bg-white/10' : ''}`}
-              >
-                <Text className={`font-inter ${selectedValue === option ? 'text-white font-medium' : 'text-white/70'}`}>
-                  {option}
-                </Text>
-                {selectedValue === option && (
-                  <View className="w-2 h-2 rounded-full bg-[#04C4FF]" />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableWithoutFeedback>
+}) => {
+  if (!visible) return null;
+  return (
+    <View style={{ position: 'absolute', top: 22, left: 0, zIndex: 100 }}>
+      <View
+        style={{
+          backgroundColor: '#2A2A2A',
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.15)',
+          paddingVertical: 2,
+          minWidth: 120,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        }}
+      >
+        {options.map((option) => (
+          <TouchableOpacity
+            key={option}
+            onPress={() => {
+              onSelect(option);
+              onClose();
+            }}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              backgroundColor: selectedValue === option ? 'rgba(255,255,255,0.1)' : 'transparent',
+            }}
+          >
+            <Text
+              style={{
+                color: selectedValue === option ? '#fff' : 'rgba(255,255,255,0.6)',
+                fontSize: 11,
+                fontWeight: selectedValue === option ? '600' : '400',
+              }}
+            >
+              {option}
+            </Text>
+            {selectedValue === option && (
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#04C4FF' }} />
+            )}
+          </TouchableOpacity>
+        ))}
       </View>
-    </TouchableWithoutFeedback>
-  </Modal>
-);
+    </View>
+  );
+};
 
 const PlatformCard = ({
   platform,
@@ -151,9 +170,17 @@ const PlatformCard = ({
 
   const handleViewsFilterSelect = (filterVal: string) => {
     setViewsFilter(filterVal);
-    if (filterVal === "last 30 days") setViewsTab("W1");
-    else if (filterVal === "last 90 days") setViewsTab("M1");
-    else setViewsTab(filterVal);
+    setEngagementFilter(filterVal);
+    if (filterVal === "last 30 days") {
+      setViewsTab("W1");
+      setEngagementTab("W1");
+    } else if (filterVal === "last 90 days") {
+      setViewsTab("M1");
+      setEngagementTab("M1");
+    } else {
+      setViewsTab(filterVal);
+      setEngagementTab(filterVal);
+    }
   };
 
   const handleEngagementFilterSelect = (filterVal: string) => {
@@ -164,6 +191,12 @@ const PlatformCard = ({
   };
 
   const chartData = dummyChartData[viewsTab] || dummyChartData["W1"];
+
+  const chartTickValues = viewsFilter === "last 90 days"
+    ? [1, 2, 3, 4]
+    : viewsFilter === "YTD"
+      ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      : [1, 2, 3, 4, 5, 6, 7];
 
   const formatFilterDisplay = (baseText: string, filterVal: string) => {
     if (filterVal === "last 30 days") return `${baseText} 30 days`;
@@ -272,15 +305,27 @@ const PlatformCard = ({
           {isExpanded && (
             <View className="mt-8">
               {/* Views Section */}
-              <TouchableOpacity
-                className="flex-row items-center"
-                onPress={() => setIsViewsDropdownOpen(true)}
-              >
-                <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
-                  {formatFilterDisplay("Views", viewsFilter)}
-                </Text>
-                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
-              </TouchableOpacity>
+              <View style={{ position: 'relative', zIndex: isViewsDropdownOpen ? 100 : 1 }}>
+                <TouchableOpacity
+                  className="flex-row items-center"
+                  onPress={() => {
+                    setIsViewsDropdownOpen(!isViewsDropdownOpen);
+                    setIsEngagementDropdownOpen(false);
+                  }}
+                >
+                  <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
+                    {formatFilterDisplay("Views", viewsFilter)}
+                  </Text>
+                  <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+                </TouchableOpacity>
+                <InlineDropdown
+                  visible={isViewsDropdownOpen}
+                  onClose={() => setIsViewsDropdownOpen(false)}
+                  options={FILTER_OPTIONS}
+                  onSelect={handleViewsFilterSelect}
+                  selectedValue={viewsFilter}
+                />
+              </View>
 
               <View className="flex-row items-center justify-between mb-2 mt-2">
                 <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
@@ -317,7 +362,7 @@ const PlatformCard = ({
                   padding={{ top: 10, bottom: 30, left: 20, right: 20 }}
                 >
                   <VictoryAxis
-                    tickValues={[1, 2, 3, 4, 5, 6, 7]}
+                    tickValues={chartTickValues}
                     style={{
                       axis: { stroke: "transparent" },
                       ticks: { stroke: "transparent" },
@@ -374,15 +419,27 @@ const PlatformCard = ({
               </View>
 
               {/* Engagement Section */}
-              <TouchableOpacity
-                className="flex-row items-center mt-8"
-                onPress={() => setIsEngagementDropdownOpen(true)}
-              >
-                <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
-                  {formatFilterDisplay("Engagement", engagementFilter)}
-                </Text>
-                <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
-              </TouchableOpacity>
+              <View className="mt-8" style={{ position: 'relative', zIndex: isEngagementDropdownOpen ? 100 : 1 }}>
+                <TouchableOpacity
+                  className="flex-row items-center"
+                  onPress={() => {
+                    setIsEngagementDropdownOpen(!isEngagementDropdownOpen);
+                    setIsViewsDropdownOpen(false);
+                  }}
+                >
+                  <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
+                    {formatFilterDisplay("Engagement", engagementFilter)}
+                  </Text>
+                  <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+                </TouchableOpacity>
+                <InlineDropdown
+                  visible={isEngagementDropdownOpen}
+                  onClose={() => setIsEngagementDropdownOpen(false)}
+                  options={FILTER_OPTIONS}
+                  onSelect={handleEngagementFilterSelect}
+                  selectedValue={engagementFilter}
+                />
+              </View>
 
               <View className="flex-row items-center justify-between mt-2 mb-6">
                 <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
@@ -447,22 +504,7 @@ const PlatformCard = ({
                 </View>
               </View>
 
-              <DropdownModal
-                visible={isViewsDropdownOpen}
-                onClose={() => setIsViewsDropdownOpen(false)}
-                options={FILTER_OPTIONS}
-                onSelect={handleViewsFilterSelect}
-                selectedValue={viewsFilter}
-                title="Select timeframe for Views"
-              />
-              <DropdownModal
-                visible={isEngagementDropdownOpen}
-                onClose={() => setIsEngagementDropdownOpen(false)}
-                options={FILTER_OPTIONS}
-                onSelect={handleEngagementFilterSelect}
-                selectedValue={engagementFilter}
-                title="Select timeframe for Engagement"
-              />
+
             </View>
           )}
         </View>
@@ -514,36 +556,32 @@ const dummyChartData: Record<string, { x: number; y: number; y2: number }[]> = {
     { x: 2, y: 3.0, y2: 2.5 },
     { x: 3, y: 3.5, y2: 3.0 },
     { x: 4, y: 4.0, y2: 3.5 },
-    { x: 5, y: 3.8, y2: 3.2 },
-    { x: 6, y: 4.5, y2: 3.8 },
-    { x: 7, y: 4.2, y2: 3.5 },
   ],
   M2: [
     { x: 1, y: 2.8, y2: 2.2 },
     { x: 2, y: 3.2, y2: 2.8 },
     { x: 3, y: 3.8, y2: 3.5 },
     { x: 4, y: 4.5, y2: 4.0 },
-    { x: 5, y: 4.2, y2: 3.8 },
-    { x: 6, y: 5.0, y2: 4.5 },
-    { x: 7, y: 4.8, y2: 4.2 },
   ],
   M3: [
     { x: 1, y: 3.0, y2: 2.5 },
     { x: 2, y: 3.5, y2: 3.0 },
     { x: 3, y: 4.2, y2: 3.8 },
     { x: 4, y: 5.0, y2: 4.5 },
-    { x: 5, y: 4.8, y2: 4.2 },
-    { x: 6, y: 5.5, y2: 5.0 },
-    { x: 7, y: 5.2, y2: 4.8 },
   ],
   YTD: [
-    { x: 1, y: 3.5, y2: 3.0 },
-    { x: 2, y: 4.0, y2: 3.5 },
-    { x: 3, y: 4.8, y2: 4.2 },
-    { x: 4, y: 5.5, y2: 5.0 },
-    { x: 5, y: 5.2, y2: 4.8 },
-    { x: 6, y: 6.0, y2: 5.5 },
-    { x: 7, y: 6.5, y2: 6.0 },
+    { x: 1, y: 2.0, y2: 1.5 },
+    { x: 2, y: 2.5, y2: 2.0 },
+    { x: 3, y: 3.0, y2: 2.5 },
+    { x: 4, y: 3.5, y2: 3.0 },
+    { x: 5, y: 4.0, y2: 3.5 },
+    { x: 6, y: 4.5, y2: 4.0 },
+    { x: 7, y: 5.0, y2: 4.5 },
+    { x: 8, y: 5.5, y2: 5.0 },
+    { x: 9, y: 5.2, y2: 4.8 },
+    { x: 10, y: 6.0, y2: 5.5 },
+    { x: 11, y: 6.5, y2: 6.0 },
+    { x: 12, y: 7.0, y2: 6.5 },
   ],
   "All time": [
     { x: 1, y: 4.0, y2: 3.5 },

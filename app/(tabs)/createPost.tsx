@@ -582,12 +582,19 @@ export default function CreatePost() {
                     !date,
                     mediaPayload as any
                 );
+            } else if (activeTab === "Post" && isCarousel) {
+                await createPostService.createCarousel(
+                    caption,
+                    tags,
+                    activePlatforms,
+                    Array.isArray(mediaPayload) ? mediaPayload : [mediaPayload]
+                );
             } else {
                 await createPostService.createPost(
                     caption,
                     tags,
                     activePlatforms,
-                    !date, // publishNow is true if no date is selected
+                    !date,
                     isCarousel,
                     mediaPayload,
                     date
@@ -1298,6 +1305,9 @@ export default function CreatePost() {
                                                     },
                                                 ]
                                                     .filter((p) => {
+                                                        if (activeTab === "Post" && postType === "Carousel") {
+                                                            return ["instagram", "facebook"].includes(p.id);
+                                                        }
                                                         if (activeTab === "Reel") {
                                                             return ["instagram", "tiktok", "youtube", "snapchat", "facebook"].includes(p.id);
                                                         }
