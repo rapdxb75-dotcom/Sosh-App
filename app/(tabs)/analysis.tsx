@@ -4,24 +4,21 @@ import { Stack, useFocusEffect } from "expo-router";
 import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Image,
   ScrollView,
   Text,
   TouchableOpacity,
   useWindowDimensions,
-  View
+  View,
 } from "react-native";
-import {
-  Defs,
-  Stop,
-  LinearGradient as SvgGradient
-} from "react-native-svg";
+import { Defs, Stop, LinearGradient as SvgGradient } from "react-native-svg";
 import { useSelector } from "react-redux";
 import {
   VictoryArea,
   VictoryAxis,
   VictoryChart,
-  VictoryGroup
+  VictoryGroup,
 } from "victory-native";
 import Header from "../../components/common/Header";
 import { listenToUserData } from "../../services/firebase";
@@ -45,57 +42,6 @@ interface PlatformData {
 
 // --- Constants ---
 
-const PLATFORMS: PlatformData[] = [
-  {
-    id: "instagram",
-    name: "Instagram",
-    icon: require("../../assets/icons/instagram.png"),
-    followers: "+ 14 followers",
-    growth: "+8.2% this month",
-    metrics: { views: 10032, likes: 1982, comments: 452, shares: 120 },
-  },
-  {
-    id: "tiktok",
-    name: "TikTok",
-    icon: require("../../assets/icons/tiktok.png"),
-    followers: "+ 37 followers",
-    growth: "+8.2% this month",
-    metrics: { views: 10032, likes: 1982, comments: 10032, shares: 1982 },
-  },
-  {
-    id: "facebook",
-    name: "Facebook",
-    icon: require("../../assets/icons/facebook.png"),
-    followers: "+ 5 followers",
-    growth: "+2.1% this month",
-    metrics: { views: 5432, likes: 892, comments: 120, shares: 45 },
-  },
-  {
-    id: "youtube",
-    name: "YouTube",
-    icon: require("../../assets/icons/youtube.png"),
-    followers: "+ 120 subscribers",
-    growth: "+12.5% this month",
-    metrics: { views: 45000, likes: 2100, comments: 750, shares: 320 },
-  },
-  {
-    id: "twitter",
-    name: "Twitter",
-    icon: require("../../assets/icons/twitter.png"),
-    followers: "+ 21 followers",
-    growth: "+4.5% this month",
-    metrics: { views: 8000, likes: 1200, comments: 340, shares: 210 },
-  },
-  {
-    id: "snapchat",
-    name: "Snapchat",
-    icon: require("../../assets/icons/snapchat.png"),
-    followers: "+ 18 followers",
-    growth: "+5.1% this month",
-    metrics: { views: 12000, likes: 950, comments: 200, shares: 150 },
-  },
-];
-
 // --- Components ---
 
 const FILTER_OPTIONS = ["last 30 days", "last 90 days", "YTD", "All time"];
@@ -115,16 +61,16 @@ const InlineDropdown = ({
 }) => {
   if (!visible) return null;
   return (
-    <View style={{ position: 'absolute', top: 22, left: 0, zIndex: 100 }}>
+    <View style={{ position: "absolute", top: 22, left: 0, zIndex: 100 }}>
       <View
         style={{
-          backgroundColor: '#2A2A2A',
+          backgroundColor: "#2A2A2A",
           borderRadius: 8,
           borderWidth: 1,
-          borderColor: 'rgba(255,255,255,0.15)',
+          borderColor: "rgba(255,255,255,0.15)",
           paddingVertical: 2,
           minWidth: 120,
-          shadowColor: '#000',
+          shadowColor: "#000",
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.3,
           shadowRadius: 8,
@@ -139,29 +85,141 @@ const InlineDropdown = ({
               onClose();
             }}
             style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
               paddingHorizontal: 10,
               paddingVertical: 6,
-              backgroundColor: selectedValue === option ? 'rgba(255,255,255,0.1)' : 'transparent',
+              backgroundColor:
+                selectedValue === option
+                  ? "rgba(255,255,255,0.1)"
+                  : "transparent",
             }}
           >
             <Text
               style={{
-                color: selectedValue === option ? '#fff' : 'rgba(255,255,255,0.6)',
+                color:
+                  selectedValue === option ? "#fff" : "rgba(255,255,255,0.6)",
                 fontSize: 11,
-                fontWeight: selectedValue === option ? '600' : '400',
+                fontWeight: selectedValue === option ? "600" : "400",
               }}
             >
               {option}
             </Text>
             {selectedValue === option && (
-              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#04C4FF' }} />
+              <View
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: 2.5,
+                  backgroundColor: "#04C4FF",
+                }}
+              />
             )}
           </TouchableOpacity>
         ))}
       </View>
+    </View>
+  );
+};
+
+const PlatformSkeletonCard = () => {
+  const [pulseAnim] = useState(new Animated.Value(0.3));
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.7,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <View
+      className="mb-4"
+      style={{
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.45,
+        shadowRadius: 24,
+        elevation: 8,
+      }}
+    >
+      <BlurView
+        intensity={14}
+        tint="dark"
+        className="border border-white/10 rounded-[20px] overflow-hidden"
+        style={{ backgroundColor: "#FFFFFF1A" }}
+      >
+        <View className="p-5">
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center">
+              <Animated.View
+                className="rounded-xl mr-3 mb-4"
+                style={{
+                  width: 35,
+                  height: 35,
+                  backgroundColor: "rgba(255,255,255,0.2)",
+                  opacity: pulseAnim,
+                }}
+              />
+              <View>
+                <View className="flex-row items-center mb-1">
+                  <Animated.View
+                    style={{
+                      width: 100,
+                      height: 20,
+                      borderRadius: 4,
+                      backgroundColor: "rgba(255,255,255,0.2)",
+                      marginRight: 8,
+                      opacity: pulseAnim,
+                    }}
+                  />
+                  <Animated.View
+                    style={{
+                      width: 80,
+                      height: 14,
+                      borderRadius: 4,
+                      backgroundColor: "rgba(255,255,255,0.1)",
+                      opacity: pulseAnim,
+                    }}
+                  />
+                </View>
+                <Animated.View
+                  className="mt-2.5 self-start justify-center"
+                  style={{
+                    width: 120,
+                    height: 28,
+                    borderRadius: 8,
+                    backgroundColor: "rgba(255,255,255,0.1)",
+                    opacity: pulseAnim,
+                  }}
+                />
+              </View>
+            </View>
+            <Animated.View
+              className="items-center justify-center"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 100,
+                backgroundColor: "rgba(255,255,255,0.1)",
+                marginBottom: 16,
+                opacity: pulseAnim,
+              }}
+            />
+          </View>
+        </View>
+      </BlurView>
     </View>
   );
 };
@@ -181,11 +239,22 @@ const PlatformCard = ({
   const [viewsFilter, setViewsFilter] = useState("last 30 days");
   const [isViewsDropdownOpen, setIsViewsDropdownOpen] = useState(false);
   const [engagementFilter, setEngagementFilter] = useState("last 30 days");
-  const [isEngagementDropdownOpen, setIsEngagementDropdownOpen] = useState(false);
+  const [isEngagementDropdownOpen, setIsEngagementDropdownOpen] =
+    useState(false);
   const [viewsTab, setViewsTab] = useState("W1");
 
-  const viewsTabsOptions = viewsFilter === "last 30 days" ? ["W1", "W2", "W3", "W4"] : viewsFilter === "last 90 days" ? ["M1", "M2", "M3"] : [];
-  const engagementTabsOptions = engagementFilter === "last 30 days" ? ["W1", "W2", "W3", "W4"] : engagementFilter === "last 90 days" ? ["M1", "M2", "M3"] : [];
+  const viewsTabsOptions =
+    viewsFilter === "last 30 days"
+      ? ["W1", "W2", "W3", "W4"]
+      : viewsFilter === "last 90 days"
+        ? ["M1", "M2", "M3"]
+        : [];
+  const engagementTabsOptions =
+    engagementFilter === "last 30 days"
+      ? ["W1", "W2", "W3", "W4"]
+      : engagementFilter === "last 90 days"
+        ? ["M1", "M2", "M3"]
+        : [];
 
   const handleViewsFilterSelect = (filterVal: string) => {
     setViewsFilter(filterVal);
@@ -211,11 +280,12 @@ const PlatformCard = ({
 
   const chartData = dummyChartData[viewsTab] || dummyChartData["W1"];
 
-  const chartTickValues = viewsFilter === "last 90 days"
-    ? [1, 2, 3, 4]
-    : viewsFilter === "YTD"
-      ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-      : [1, 2, 3, 4, 5, 6, 7];
+  const chartTickValues =
+    viewsFilter === "last 90 days"
+      ? [1, 2, 3, 4]
+      : viewsFilter === "YTD"
+        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        : [1, 2, 3, 4, 5, 6, 7];
 
   const formatFilterDisplay = (baseText: string, filterVal: string) => {
     if (filterVal === "last 30 days") return `${baseText} 30 days`;
@@ -225,23 +295,35 @@ const PlatformCard = ({
 
   const formatCompactNumber = (number: number) => {
     if (number >= 1000000) {
-      return parseFloat((number / 1000000).toFixed(2)) + 'M';
+      return parseFloat((number / 1000000).toFixed(2)) + "M";
     }
     if (number >= 1000) {
-      return parseFloat((number / 1000).toFixed(2)) + 'K';
+      return parseFloat((number / 1000).toFixed(2)) + "K";
     }
-    return Number.isInteger(number) ? number.toString() : parseFloat(number.toFixed(2)).toString();
+    return Number.isInteger(number)
+      ? number.toString()
+      : parseFloat(number.toFixed(2)).toString();
   };
 
   const getMultiplierForTab = (tab: string) => {
     switch (tab) {
-      case 'W1': case 'M1': return { likes: 1, comments: 1, shares: 1 };
-      case 'W2': case 'M2': return { likes: 1.2, comments: 0.8, shares: 1.1 };
-      case 'W3': case 'M3': return { likes: 1.9, comments: 1.3, shares: 1.8 };
-      case 'W4': return { likes: 1.1, comments: 0.9, shares: 1.4 };
-      case 'YTD': return { likes: 3.5, comments: 2.0, shares: 1.8 };
-      case 'All time': return { likes: 10.5, comments: 5.0, shares: 4.8 };
-      default: return { likes: 1, comments: 1, shares: 1 };
+      case "W1":
+      case "M1":
+        return { likes: 1, comments: 1, shares: 1 };
+      case "W2":
+      case "M2":
+        return { likes: 1.2, comments: 0.8, shares: 1.1 };
+      case "W3":
+      case "M3":
+        return { likes: 1.9, comments: 1.3, shares: 1.8 };
+      case "W4":
+        return { likes: 1.1, comments: 0.9, shares: 1.4 };
+      case "YTD":
+        return { likes: 3.5, comments: 2.0, shares: 1.8 };
+      case "All time":
+        return { likes: 10.5, comments: 5.0, shares: 4.8 };
+      default:
+        return { likes: 1, comments: 1, shares: 1 };
     }
   };
 
@@ -251,9 +333,12 @@ const PlatformCard = ({
   const sharesVal = platform.metrics.shares * multiplier.shares;
 
   const totalEngagement = likesVal + commentsVal + sharesVal;
-  const likesPercent = totalEngagement > 0 ? Math.round((likesVal / totalEngagement) * 100) : 0;
-  const commentsPercent = totalEngagement > 0 ? Math.round((commentsVal / totalEngagement) * 100) : 0;
-  const sharesPercent = totalEngagement > 0 ? Math.round((sharesVal / totalEngagement) * 100) : 0;
+  const likesPercent =
+    totalEngagement > 0 ? Math.round((likesVal / totalEngagement) * 100) : 0;
+  const commentsPercent =
+    totalEngagement > 0 ? Math.round((commentsVal / totalEngagement) * 100) : 0;
+  const sharesPercent =
+    totalEngagement > 0 ? Math.round((sharesVal / totalEngagement) * 100) : 0;
 
   return (
     <View
@@ -297,7 +382,7 @@ const PlatformCard = ({
                     gap: 10,
                     borderRadius: 8,
                     padding: 4,
-                    backgroundColor: "#098F3E1F"
+                    backgroundColor: "#098F3E1F",
                   }}
                 >
                   <TrendingUp size={12} color="#00FF94" />
@@ -309,7 +394,14 @@ const PlatformCard = ({
             </View>
             <TouchableOpacity
               className="items-center justify-center"
-              style={{ width: 40, height: 40, borderRadius: 100, padding: 4, backgroundColor: '#FFFFFF1A', marginBottom: 16 }}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 100,
+                padding: 4,
+                backgroundColor: "#FFFFFF1A",
+                marginBottom: 16,
+              }}
               onPress={() => {
                 if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -328,7 +420,12 @@ const PlatformCard = ({
           {isExpanded && (
             <View className="mt-8">
               {/* Views Section */}
-              <View style={{ position: 'relative', zIndex: isViewsDropdownOpen ? 100 : 1 }}>
+              <View
+                style={{
+                  position: "relative",
+                  zIndex: isViewsDropdownOpen ? 100 : 1,
+                }}
+              >
                 <TouchableOpacity
                   className="flex-row items-center"
                   onPress={() => {
@@ -336,7 +433,10 @@ const PlatformCard = ({
                     setIsEngagementDropdownOpen(false);
                   }}
                 >
-                  <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
+                  <Text
+                    className="text-white/40 text-[14px] font-inter font-semibold mr-1"
+                    style={{ letterSpacing: -0.89 }}
+                  >
                     {formatFilterDisplay("Views", viewsFilter)}
                   </Text>
                   <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
@@ -359,8 +459,13 @@ const PlatformCard = ({
                     <TouchableOpacity
                       key={tab}
                       onPress={() => {
-                        if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        if (
+                          typeof Haptics !== "undefined" &&
+                          Haptics.impactAsync
+                        ) {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light
+                          );
                         }
                         setViewsTab(tab);
                       }}
@@ -378,7 +483,9 @@ const PlatformCard = ({
               </View>
 
               {/* Area Chart */}
-              <View style={{ height: 180, marginHorizontal: -20, marginBottom: 10 }}>
+              <View
+                style={{ height: 180, marginHorizontal: -20, marginBottom: 10 }}
+              >
                 <VictoryChart
                   width={screenWidth - 40}
                   height={180}
@@ -435,14 +542,24 @@ const PlatformCard = ({
                       y2="100%"
                     >
                       <Stop offset="0%" stopColor="#F59E0B" stopOpacity="0.3" />
-                      <Stop offset="92.05%" stopColor="rgba(42, 157, 144, 0.1)" stopOpacity="0.1" />
+                      <Stop
+                        offset="92.05%"
+                        stopColor="rgba(42, 157, 144, 0.1)"
+                        stopOpacity="0.1"
+                      />
                     </SvgGradient>
                   </Defs>
                 </VictoryChart>
               </View>
 
               {/* Engagement Section */}
-              <View className="mt-8" style={{ position: 'relative', zIndex: isEngagementDropdownOpen ? 100 : 1 }}>
+              <View
+                className="mt-8"
+                style={{
+                  position: "relative",
+                  zIndex: isEngagementDropdownOpen ? 100 : 1,
+                }}
+              >
                 <TouchableOpacity
                   className="flex-row items-center"
                   onPress={() => {
@@ -450,7 +567,10 @@ const PlatformCard = ({
                     setIsViewsDropdownOpen(false);
                   }}
                 >
-                  <Text className="text-white/40 text-[14px] font-inter font-semibold mr-1" style={{ letterSpacing: -0.89 }}>
+                  <Text
+                    className="text-white/40 text-[14px] font-inter font-semibold mr-1"
+                    style={{ letterSpacing: -0.89 }}
+                  >
                     {formatFilterDisplay("Engagement", engagementFilter)}
                   </Text>
                   <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
@@ -473,8 +593,13 @@ const PlatformCard = ({
                     <TouchableOpacity
                       key={tab}
                       onPress={() => {
-                        if (typeof Haptics !== "undefined" && Haptics.impactAsync) {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        if (
+                          typeof Haptics !== "undefined" &&
+                          Haptics.impactAsync
+                        ) {
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light
+                          );
                         }
                         setEngagementTab(tab);
                       }}
@@ -494,7 +619,10 @@ const PlatformCard = ({
               {/* Horizontal Bars Container */}
               <View className="relative mt-2 mb-2">
                 {/* Background Grid Lines */}
-                <View className="absolute left-0 top-[-8px] bottom-[-8px] flex-row justify-between z-0" style={{ width: '97%' }}>
+                <View
+                  className="absolute left-0 top-[-8px] bottom-[-8px] flex-row justify-between z-0"
+                  style={{ width: "97%" }}
+                >
                   <View className="w-px h-full bg-[#FFFFFF1A]" />
                   <View className="w-px h-full bg-[#FFFFFF1A]" />
                   <View className="w-px h-full bg-[#FFFFFF1A]" />
@@ -505,29 +633,48 @@ const PlatformCard = ({
                 {/* Bars */}
                 <View className="gap-3 z-10 w-full relative">
                   <View className="flex-row items-center relative gap-3">
-                    <View className="bg-[#F59E0B] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, likesPercent)}%` }}>
-                      <Text className="text-white text-[13px] font-medium font-inter">Likes</Text>
+                    <View
+                      className="bg-[#F59E0B] rounded-[8px] h-10 flex-row items-center px-4"
+                      style={{ width: `${Math.max(30, likesPercent)}%` }}
+                    >
+                      <Text className="text-white text-[13px] font-medium font-inter">
+                        Likes
+                      </Text>
                     </View>
-                    <Text className="text-white text-[12px] font-inter">{likesPercent}%</Text>
+                    <Text className="text-white text-[12px] font-inter">
+                      {likesPercent}%
+                    </Text>
                   </View>
 
                   <View className="flex-row items-center relative gap-3">
-                    <View className="bg-[#04C4FF] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, commentsPercent)}%` }}>
-                      <Text className="text-white text-[13px] font-medium font-inter">Comments</Text>
+                    <View
+                      className="bg-[#04C4FF] rounded-[8px] h-10 flex-row items-center px-4"
+                      style={{ width: `${Math.max(30, commentsPercent)}%` }}
+                    >
+                      <Text className="text-white text-[13px] font-medium font-inter">
+                        Comments
+                      </Text>
                     </View>
-                    <Text className="text-white text-[12px] font-inter">{commentsPercent}%</Text>
+                    <Text className="text-white text-[12px] font-inter">
+                      {commentsPercent}%
+                    </Text>
                   </View>
 
                   <View className="flex-row items-center relative gap-3">
-                    <View className="bg-[#FE5802] rounded-[8px] h-10 flex-row items-center px-4" style={{ width: `${Math.max(30, sharesPercent)}%` }}>
-                      <Text className="text-white text-[13px] font-medium font-inter">Shares</Text>
+                    <View
+                      className="bg-[#FE5802] rounded-[8px] h-10 flex-row items-center px-4"
+                      style={{ width: `${Math.max(30, sharesPercent)}%` }}
+                    >
+                      <Text className="text-white text-[13px] font-medium font-inter">
+                        Shares
+                      </Text>
                     </View>
-                    <Text className="text-white text-[12px] font-inter">{sharesPercent}%</Text>
+                    <Text className="text-white text-[12px] font-inter">
+                      {sharesPercent}%
+                    </Text>
                   </View>
                 </View>
               </View>
-
-
             </View>
           )}
         </View>
@@ -624,6 +771,7 @@ export default function Analysis() {
 
   const globalEmail = useSelector((state: RootState) => state.user.email);
   const [platformsData, setPlatformsData] = useState<PlatformData[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
@@ -632,117 +780,112 @@ export default function Analysis() {
   );
 
   useEffect(() => {
-    if (!globalEmail) return;
+    if (!globalEmail) {
+      setLoading(false);
+      return;
+    }
 
     const unsubscribe = listenToUserData(
       globalEmail,
       (userData) => {
-        if (userData && userData.analytics) {
-          const analytics = userData.analytics;
-          const platforms: PlatformData[] = [];
-
-          if (analytics.instagram) {
-            platforms.push({
+        if (userData) {
+          const analytics = userData.analytics || {};
+          const platforms: PlatformData[] = [
+            {
               id: "instagram",
               name: "Instagram",
               icon: require("../../assets/icons/instagram.png"),
-              followers: `+ ${analytics.instagram.followersCount || 0} followers`,
-              growth: "+8.2% this month",
+              followers: `+ ${analytics.instagram?.followersCount || 0} followers`,
+              growth: "0% this month",
               metrics: {
-                views: analytics.instagram.viewsCount || 0,
-                likes: analytics.instagram.likesCount || 0,
-                comments: analytics.instagram.commentsCount || 0,
+                views: analytics.instagram?.viewsCount || 0,
+                likes: analytics.instagram?.likesCount || 0,
+                comments: analytics.instagram?.commentsCount || 0,
                 shares: 0,
               },
-            });
-          }
-
-          if (analytics.tiktok) {
-            platforms.push({
+            },
+            {
               id: "tiktok",
               name: "TikTok",
               icon: require("../../assets/icons/tiktok.png"),
-              followers: `+ ${analytics.tiktok.followerCount || 0} followers`,
-              growth: "+8.2% this month",
+              followers: `+ ${analytics.tiktok?.followerCount || 0} followers`,
+              growth: "0% this month",
               metrics: {
-                views: analytics.tiktok.viewCountTotal || 0,
-                likes: analytics.tiktok.likeCountTotal || 0,
-                comments: analytics.tiktok.commentCountTotal || 0,
-                shares: analytics.tiktok.shareCountTotal || 0,
+                views: analytics.tiktok?.viewCountTotal || 0,
+                likes: analytics.tiktok?.likeCountTotal || 0,
+                comments: analytics.tiktok?.commentCountTotal || 0,
+                shares: analytics.tiktok?.shareCountTotal || 0,
               },
-            });
-          }
-
-          if (analytics.facebook) {
-            platforms.push({
+            },
+            {
               id: "facebook",
               name: "Facebook",
               icon: require("../../assets/icons/facebook.png"),
-              followers: `+ ${analytics.facebook.followersCount || 0} followers`,
-              growth: "+2.1% this month",
+              followers: `+ ${analytics.facebook?.followersCount || 0} followers`,
+              growth: "0% this month",
               metrics: {
-                views: (analytics.facebook.pageVideoViews || 0) + (analytics.facebook.pageMediaView || 0),
-                likes: analytics.facebook.likesCount || 0,
-                comments: analytics.facebook.pagePostEngagements || 0,
+                views:
+                  (analytics.facebook?.pageVideoViews || 0) +
+                  (analytics.facebook?.pageMediaView || 0),
+                likes: analytics.facebook?.likesCount || 0,
+                comments: analytics.facebook?.pagePostEngagements || 0,
                 shares: 0,
               },
-            });
-          }
-
-          if (analytics.youtube) {
-            platforms.push({
+            },
+            {
               id: "youtube",
               name: "YouTube",
               icon: require("../../assets/icons/youtube.png"),
-              followers: `+ ${analytics.youtube.subscriberCount || 0} subscribers`,
-              growth: "+12.5% this month",
+              followers: `+ ${analytics.youtube?.subscriberCount || 0} subscribers`,
+              growth: "0% this month",
               metrics: {
-                views: analytics.youtube.viewCount || 0,
-                likes: analytics.youtube.likes || 0,
-                comments: analytics.youtube.comments || 0,
-                shares: analytics.youtube.shares || 0,
+                views: analytics.youtube?.viewCount || 0,
+                likes: analytics.youtube?.likes || 0,
+                comments: analytics.youtube?.comments || 0,
+                shares: analytics.youtube?.shares || 0,
               },
-            });
-          }
-
-          if (analytics.twitter) {
-            platforms.push({
+            },
+            {
               id: "twitter",
               name: "Twitter",
               icon: require("../../assets/icons/twitter.png"),
-              followers: `+ ${analytics.twitter.followersCount || 0} followers`,
-              growth: "+4.5% this month",
+              followers: `+ ${analytics.twitter?.followersCount || 0} followers`,
+              growth: "0% this month",
               metrics: {
                 views: 0,
-                likes: analytics.twitter.likeCount || 0,
+                likes: analytics.twitter?.likeCount || 0,
                 comments: 0,
                 shares: 0,
               },
-            });
-          }
-
-          if (analytics.snapchat) {
-            platforms.push({
+            },
+            {
               id: "snapchat",
               name: "Snapchat",
               icon: require("../../assets/icons/snapchat.png"),
-              followers: `+ ${analytics.snapchat.subscribers || 0} subscribers`,
-              growth: "+5.1% this month",
+              followers: `+ ${analytics.snapchat?.subscribers || 0} subscribers`,
+              growth: "0% this month",
               metrics: {
-                views: analytics.snapchat.views || 0,
-                likes: analytics.snapchat.favorites || analytics.snapchat.interactions || 0,
-                comments: analytics.snapchat.replies || 0,
-                shares: analytics.snapchat.shares || 0,
+                views: analytics.snapchat?.views || 0,
+                likes:
+                  analytics.snapchat?.favorites ||
+                  analytics.snapchat?.interactions ||
+                  0,
+                comments: analytics.snapchat?.replies || 0,
+                shares: analytics.snapchat?.shares || 0,
               },
-            });
-          }
+            },
+          ];
 
           setPlatformsData(platforms);
         } else {
-          setPlatformsData(PLATFORMS);
+          setPlatformsData([]);
         }
+        setLoading(false);
       },
-      (error) => console.error("Firebase fetch error:", error)
+      (error) => {
+        console.error("Firebase fetch error:", error);
+        setLoading(false);
+      }
     );
 
     return () => unsubscribe();
@@ -771,19 +914,27 @@ export default function Analysis() {
             Platform Breakdown
           </Text>
 
-          {(platformsData.length > 0 ? platformsData : PLATFORMS).map((platform) => (
-            <PlatformCard
-              key={platform.id}
-              platform={platform}
-              isExpanded={expandedPlatform === platform.id}
-              onToggle={() =>
-                setExpandedPlatform(
-                  expandedPlatform === platform.id ? "" : platform.id,
-                )
-              }
-              screenWidth={width}
-            />
-          ))}
+          {loading ? (
+            <>
+              {[1, 2, 3, 4].map((key) => (
+                <PlatformSkeletonCard key={key} />
+              ))}
+            </>
+          ) : (
+            platformsData.map((platform) => (
+              <PlatformCard
+                key={platform.id}
+                platform={platform}
+                isExpanded={expandedPlatform === platform.id}
+                onToggle={() =>
+                  setExpandedPlatform(
+                    expandedPlatform === platform.id ? "" : platform.id
+                  )
+                }
+                screenWidth={width}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </View>

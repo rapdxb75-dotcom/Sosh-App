@@ -1,17 +1,21 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 import { Plus, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
-  PermissionsAndroid,
   Platform,
   ScrollView,
   StyleSheet,
@@ -39,13 +43,6 @@ import { useNotification } from "../../context/NotificationContext";
 import chatService, { Conversation, Message } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
 import { RootState } from "../../store/store";
-
-let Voice: any = null;
-try {
-  Voice = require('@react-native-voice/voice').default;
-} catch (e) {
-  console.log("React Native Voice is not available in Expo Go. Please use a development build.");
-}
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
@@ -390,8 +387,9 @@ export default function AI() {
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const scrollToBottomAnim = useRef(new Animated.Value(0)).current;
-  const textBeforeVoiceRef = useRef('');
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const lastResultIndex = useRef<number>(0);
+  const lastProcessedResult = useRef<number>(0);
 
   // Pulse animation for mic button while listening
   useEffect(() => {
@@ -408,7 +406,7 @@ export default function AI() {
             duration: 600,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulse.start();
       return () => pulse.stop();
@@ -417,88 +415,96 @@ export default function AI() {
     }
   }, [isListening]);
 
-  // Setup React Native Voice Listeners
-  useEffect(() => {
-    if (!Voice) return; // Skip in Expo Go
+  // Event: Process speech results
+  useSpeechRecognitionEvent("result", (event) => {
+    if (isListening) {
+      let interim = "";
+      let final = "";
 
-    // Final recognised results — append to existing text
-    Voice.onSpeechResults = (event: any) => {
-      if (event.value && event.value.length > 0) {
-        const prefix = textBeforeVoiceRef.current;
-        const separator = prefix.length > 0 ? ' ' : '';
-        setInputText(prefix + separator + event.value[0]);
-      }
-    };
+      const startIdx = Math.max(0, lastProcessedResult.current);
 
-    // Partial results — show live feedback (append to existing)
-    Voice.onSpeechPartialResults = (event: any) => {
-      if (event.value && event.value.length > 0) {
-        const prefix = textBeforeVoiceRef.current;
-        const separator = prefix.length > 0 ? ' ' : '';
-        setInputText(prefix + separator + event.value[0]);
-      }
-    };
+      for (let i = startIdx; i < event.results.length; i++) {
+        const result = event.results[i];
+        const text = result?.transcript || "";
 
-    // Speech ended (naturally or via stop) — reset listening state
-    Voice.onSpeechEnd = () => {
-      setIsListening(false);
-    };
-
-    Voice.onSpeechError = (error: any) => {
-      console.log('Voice Error:', error);
-      setIsListening(false);
-    };
-
-    // Only remove listeners on unmount, do NOT destroy the module
-    return () => {
-      if (Voice) {
-        Voice.removeAllListeners();
-      }
-    };
-  }, []);
-
-  const startListening = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (!Voice) {
-      Toast.show({
-        type: "error",
-        text1: "Not Supported",
-        text2: "Voice search requires a Custom Development Build.",
-      });
-      return;
-    }
-    try {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Toast.show({
-            type: "error",
-            text1: "Permission Denied",
-            text2: "Microphone access is required for voice search."
-          });
-          return;
+        if (text) {
+          if ((result as any).isFinal === true) {
+            final += text;
+            lastProcessedResult.current = i + 1;
+          } else {
+            interim += text;
+          }
         }
       }
-      // Save current text so speech appends to it
-      textBeforeVoiceRef.current = inputText.trim();
+
+      setInputText((prev) => {
+        const base = prev.substring(0, lastResultIndex.current);
+
+        if (final) {
+          const sep = base && base.trim() ? " " : "";
+          const newText = base + sep + final;
+          lastResultIndex.current = newText.length;
+          return newText;
+        } else if (interim) {
+          const sep = base && base.trim() && interim.trim() ? " " : "";
+          return base + sep + interim;
+        }
+
+        return prev;
+      });
+    }
+  });
+
+  // Event: Recognition ended
+  useSpeechRecognitionEvent("end", () => {
+    setIsListening(false);
+  });
+
+  // Event: Error occurred
+  useSpeechRecognitionEvent("error", (event) => {
+    Alert.alert("Error", event.error || "Speech recognition failed");
+    setIsListening(false);
+  });
+
+  const startListening = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const { status } =
+        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please enable microphone access");
+        return;
+      }
+
+      await ExpoSpeechRecognitionModule.start({
+        lang: Platform.OS === "ios" ? "en-US" : undefined,
+        interimResults: true,
+        maxAlternatives: 1,
+        continuous: true,
+        requiresOnDeviceRecognition: Platform.OS === "ios",
+        addsPunctuation: true,
+        contextualStrings: [],
+      });
+
       setIsListening(true);
-      await Voice.start('en-IN');
-    } catch (e) {
-      console.log('Start Voice Error:', e);
-      setIsListening(false);
+      lastResultIndex.current = inputText.length;
+      lastProcessedResult.current = 0;
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to start recording");
     }
   };
 
   const stopListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!Voice) return;
     try {
-      await Voice.stop();
+      await ExpoSpeechRecognitionModule.stop();
       setIsListening(false);
-    } catch (e) {
-      console.log('Stop Voice Error:', e);
+      lastResultIndex.current = inputText.length;
+      lastProcessedResult.current = 0;
+    } catch (error) {
+      console.log("Stop Voice Error:", error);
       setIsListening(false);
     }
   };
@@ -534,12 +540,19 @@ export default function AI() {
       const data = await chatService.getConversations(userEmail);
 
       const validData = Array.isArray(data)
-        ? data.filter((c: any) => c && typeof c === 'object' && c._id && String(c._id).trim() !== '')
+        ? data.filter(
+            (c: any) =>
+              c &&
+              typeof c === "object" &&
+              c._id &&
+              String(c._id).trim() !== "",
+          )
         : [];
 
       const sortedData = validData.sort((a, b) => {
         return (
-          new Date(b._createTime || 0).getTime() - new Date(a._createTime || 0).getTime()
+          new Date(b._createTime || 0).getTime() -
+          new Date(a._createTime || 0).getTime()
         );
       });
       setConversations(sortedData);
@@ -804,9 +817,7 @@ export default function AI() {
         if (buffered) {
           setMessages((prevMessages) =>
             prevMessages.map((msg) =>
-              msg._id === aiMessageId
-                ? { ...msg, content: buffered }
-                : msg,
+              msg._id === aiMessageId ? { ...msg, content: buffered } : msg,
             ),
           );
           // Only auto-scroll if user is at bottom
@@ -851,20 +862,20 @@ export default function AI() {
       // Final UI update with complete response
       setMessages((prevMessages) =>
         prevMessages.map((msg) =>
-          msg._id === aiMessageId
-            ? { ...msg, content: fullAIResponse }
-            : msg,
+          msg._id === aiMessageId ? { ...msg, content: fullAIResponse } : msg,
         ),
       );
 
       // 4. Save AI Response to History in background (don't block UI)
       if (fullAIResponse) {
-        chatService.manageHistory(
-          currentConversationId!,
-          fullAIResponse,
-          userEmail,
-          "Model",
-        ).catch((err) => console.error("Failed to save AI response:", err));
+        chatService
+          .manageHistory(
+            currentConversationId!,
+            fullAIResponse,
+            userEmail,
+            "Model",
+          )
+          .catch((err) => console.error("Failed to save AI response:", err));
       }
 
       // Final scroll only if user is at bottom
@@ -1044,13 +1055,20 @@ export default function AI() {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
                 onScroll={(e) => {
-                  const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                  const { contentOffset, contentSize, layoutMeasurement } =
+                    e.nativeEvent;
                   // Dismiss keyboard only when scrolling UP
-                  if (isKeyboardVisible && contentOffset.y < lastScrollY.current - 5) {
+                  if (
+                    isKeyboardVisible &&
+                    contentOffset.y < lastScrollY.current - 5
+                  ) {
                     Keyboard.dismiss();
                   }
                   lastScrollY.current = contentOffset.y;
-                  const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+                  const distanceFromBottom =
+                    contentSize.height -
+                    layoutMeasurement.height -
+                    contentOffset.y;
                   const atBottom = distanceFromBottom < 80;
                   // Update ref for streaming auto-scroll (no re-render)
                   isUserAtBottomRef.current = atBottom;
@@ -1090,7 +1108,10 @@ export default function AI() {
               </ScrollView>
             ) : (
               // Show greeting when no conversation is active
-              <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <TouchableWithoutFeedback
+                onPress={Keyboard.dismiss}
+                accessible={false}
+              >
                 <View className="flex-1 items-center justify-center">
                   <View className="items-center">
                     <Text
@@ -1124,12 +1145,14 @@ export default function AI() {
                   overflow: "visible",
                   zIndex: 10,
                   opacity: scrollToBottomAnim,
-                  transform: [{
-                    scale: scrollToBottomAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1],
-                    }),
-                  }],
+                  transform: [
+                    {
+                      scale: scrollToBottomAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.8, 1],
+                      }),
+                    },
+                  ],
                 }}
               >
                 <TouchableOpacity
@@ -1230,29 +1253,47 @@ export default function AI() {
                         onChangeText={setInputText}
                         onFocus={() => setIsKeyboardVisible(true)}
                         onBlur={() => setIsKeyboardVisible(false)}
-                        placeholder={isListening ? "Listening..." : "Type your message..."}
+                        placeholder={
+                          isListening ? "Listening..." : "Type your message..."
+                        }
                         placeholderTextColor="rgba(255,255,255,0.6)"
                         className="flex-1 h-[44px] px-1 py-0 text-white"
-                        style={{ textAlignVertical: "center", paddingTop: Platform.OS === 'ios' ? 12 : 0 }}
+                        style={{
+                          textAlignVertical: "center",
+                          paddingTop: Platform.OS === "ios" ? 12 : 0,
+                        }}
                         selectionColor="#fff"
                         multiline={true}
                       />
-                      <Animated.View style={{ transform: [{ scale: isListening ? pulseAnim : 1 }] }}>
+                      <Animated.View
+                        style={{
+                          transform: [{ scale: isListening ? pulseAnim : 1 }],
+                        }}
+                      >
                         <TouchableOpacity
                           style={{
                             width: 40,
                             height: 40,
                             borderRadius: 20,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: isListening ? '#ef4444' : 'rgba(0,0,0,0.3)',
-                            position: 'relative',
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: isListening
+                              ? "#ef4444"
+                              : "rgba(0,0,0,0.3)",
+                            position: "relative",
                           }}
                           onPress={isListening ? stopListening : startListening}
                         >
                           {!isListening && <GradientRingSVG />}
                           {isListening ? (
-                            <View style={{ width: 12, height: 12, backgroundColor: '#fff', borderRadius: 3 }} />
+                            <View
+                              style={{
+                                width: 12,
+                                height: 12,
+                                backgroundColor: "#fff",
+                                borderRadius: 3,
+                              }}
+                            />
                           ) : (
                             <Image
                               source={require("../../assets/icons/voice.png")}
@@ -1351,7 +1392,11 @@ export default function AI() {
               </Text>
             </TouchableOpacity>
 
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} bounces={true}>
+            <ScrollView
+              style={{ flex: 1 }}
+              showsVerticalScrollIndicator={false}
+              bounces={true}
+            >
               {isLoadingConversations ? (
                 <View className="items-center justify-center py-8">
                   <ActivityIndicator size="large" color="#fff" />
@@ -1407,7 +1452,10 @@ export default function AI() {
                 onPress={() => !isDeleting && setIsDeleteModalVisible(false)}
                 style={StyleSheet.absoluteFill}
               />
-              <View className="bg-[#1A1A1A] w-full max-w-xs p-6 rounded-2xl border border-white/10 z-10 elevation-5" style={{ zIndex: 100 }}>
+              <View
+                className="bg-[#1A1A1A] w-full max-w-xs p-6 rounded-2xl border border-white/10 z-10 elevation-5"
+                style={{ zIndex: 100 }}
+              >
                 <Text className="text-white text-lg font-bold font-inter text-center mb-2">
                   Delete Chat?
                 </Text>
@@ -1462,7 +1510,10 @@ export default function AI() {
               onPress={Keyboard.dismiss}
               className="absolute inset-0"
             />
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
               <View
                 style={{ width: Math.min(width * 0.85, 350) }}
                 className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
@@ -1562,7 +1613,10 @@ export default function AI() {
               onPress={Keyboard.dismiss}
               className="absolute inset-0"
             />
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <TouchableWithoutFeedback
+              onPress={Keyboard.dismiss}
+              accessible={false}
+            >
               <View
                 style={{ width: Math.min(width * 0.85, 350) }}
                 className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
