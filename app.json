@@ -11,7 +11,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.social.aiautomation",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app needs access to the microphone for voice recognition",
+        "NSSpeechRecognitionUsageDescription": "This app needs speech recognition access to convert your voice to text"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,9 +28,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.social.aiautomation",
       "googleServicesFile": "./google-services.json",
-      "permissions": [
-        "android.permission.RECORD_AUDIO"
-      ]
+      "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
       "output": "static",
@@ -55,7 +57,8 @@
           "microphonePermission": "This app needs access to microphone",
           "speechRecognitionPermission": "This app needs speech recognition access"
         }
-      ]
+      ],
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true,

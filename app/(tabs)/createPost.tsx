@@ -39,6 +39,9 @@ import { useNotification } from "../../context/NotificationContext";
 import createPostService from "../../services/api/createPost";
 import poppyService from "../../services/api/poppy";
 import storageService from "../../services/storage";
+import { listenToUserData } from "../../services/firebase";
+import { useSelector } from "react-redux";
+import { RootState } from "../../store/store";
 
 let Voice: any = null;
 try {
@@ -268,11 +271,61 @@ const INITIAL_TAB_DATA = {
     },
 };
 
+interface SocialMediaData {
+    [key: string]: string[] | undefined;
+  }
+  
 export default function CreatePost() {
     const [activeTab, setActiveTab] = useState("Post");
     const { width } = useWindowDimensions();
     const { addNotification } = useNotification();
     const scrollViewRef = useRef<ScrollView>(null);
+
+    // Get user email from Redux
+  const globalEmail = useSelector((state: RootState) => state.user.email);
+
+  // Social media connections state
+  const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
+
+  // Fetch connected social media accounts from Firebase
+  useEffect(() => {
+    if (!globalEmail) {
+      return;
+    }
+
+    const unsubscribe = listenToUserData(
+      globalEmail,
+      (userData) => {
+        if (userData) {
+          const socialData: SocialMediaData = {};
+          const platformKeys = [
+            "instagram",
+            "tiktok",
+            "youtube",
+            "snapchat",
+            "twitter",
+            "facebook",
+          ];
+          platformKeys.forEach((key) => {
+            const data = userData[key];
+            if (data && Array.isArray(data) && data.length > 0) {
+              socialData[key] = data;
+            }
+          });
+          setSocialMediaData(socialData);
+        }
+      },
+      (error) => {
+        console.error("Firebase listener error in createPost:", error);
+      }
+    );
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [globalEmail]);
 
     // Scroll to top whenever this screen comes into focus
     useFocusEffect(
@@ -1450,20 +1503,77 @@ export default function CreatePost() {
                                                         icon: require("../../assets/icons/facebook.png"),
                                                     },
                                                 ]
-                                                    .filter((p) => {
-                                                        if (activeTab === "Post" && postType === "Carousel") {
-                                                            return ["instagram", "facebook"].includes(p.id);
-                                                        }
-                                                        if (activeTab === "Reel") {
-                                                            return ["instagram", "tiktok", "youtube", "snapchat", "facebook"].includes(p.id);
-                                                        }
-                                                        if (activeTab === "Story") {
-                                                            return ["instagram", "snapchat", "facebook"].includes(p.id);
-                                                        }
-                                                        return true;
-                                                    })
-                                                    .map((platform) => {
-                                                        const isSelected = selectedPlatforms[platform.id];
+                                                                .filter((p) => {
+                          // Check if platform key exists for Twitter (stored as 'twitter' in backend)
+                          const platformKey = p.id === "x" ? "twitter" : p.id;
+
+                          // Only show connected accounts
+                          const isConnected =
+                            socialMediaData[platformKey] &&
+                            Array.isArray(socialMediaData[platformKey]) &&
+                            socialMediaData[platformKey]!.length > 0;
+
+                          if (!isConnected) return false;
+
+                          // Platform-specific content type restrictions
+                          if (activeTab === "Post") {
+                            if (postType === "Single") {
+                              // Single Post: disable YouTube and Snapchat
+                              return !["youtube", "snapchat"].includes(p.id);
+                            } else if (postType === "Carousel") {
+                              // Carousel: Only Instagram, Facebook, X (Twitter)
+                              return ["instagram", "facebook", "x"].includes(
+                                p.id
+                              );
+                            }
+                          }
+
+                          if (activeTab === "Reel") {
+                            // Reel: All except X (Twitter)
+                            return p.id !== "x";
+                          }
+
+                          if (activeTab === "Story") {
+                            // Story: Only Instagram, Facebook, Snapchat
+                            return [
+                              "instagram",
+                              "facebook",
+                              "snapchat",
+                            ].includes(p.id);
+                          }
+
+                          return true;
+                        })
+                        .map((platform) => {
+                          const isSelected = selectedPlatforms[platform.id];
+
+                          // Determine if platform should be disabled due to content constraints
+                          let isDisabled = false;
+
+                          if (
+                            activeTab === "Post" &&
+                            postType === "Carousel" &&
+                            currentMedia &&
+                            Array.isArray(currentMedia)
+                          ) {
+                            // Facebook doesn't support carousel with videos
+                            if (platform.id === "facebook") {
+                              const hasVideo = currentMedia.some((url) =>
+                                isVideoUrl(url)
+                              );
+                              if (hasVideo) {
+                                isDisabled = true;
+                              }
+                            }
+
+                            // Twitter (X) only supports max 4 media items
+                            if (
+                              platform.id === "x" &&
+                              currentMedia.length > 4
+                            ) {
+                              isDisabled = true;
+                            }
+                          }
                                                         return (
                                                             <TouchableOpacity
                                                                 key={platform.id}
