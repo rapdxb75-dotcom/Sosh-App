@@ -36,6 +36,7 @@ import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
 import { updateUser } from "../../store/userSlice";
+import { formatNumber } from "../../utils/format";
 
 let ImageCropPicker: any = null;
 try {
@@ -175,6 +176,12 @@ export default function Profile() {
     null,
   );
 
+  const [analytics, setAnalytics] = useState({
+    totalPosts: 0,
+    totalLikes: 0,
+    totalViews: 0,
+  });
+
   // Sync local state when modal opens or global state changes
   useEffect(() => {
     if (editModalVisible) {
@@ -194,6 +201,18 @@ export default function Profile() {
       globalEmail,
       (userData) => {
         if (userData) {
+          // Extract analytics data
+          if (userData?.totalAnalytics) {
+            const { totalPosts, totalLikes, totalViews } = userData.totalAnalytics;
+            setAnalytics({
+              totalPosts: totalPosts || 0,
+              totalLikes: totalLikes || 0,
+              totalViews: totalViews || 0,
+            });
+          } else {
+            setAnalytics({ totalPosts: 0, totalLikes: 0, totalViews: 0 });
+          }
+
           // Extract social media data
           const socialData: SocialMediaData = {};
           SOCIAL_PLATFORMS.forEach((platform) => {
@@ -627,10 +646,22 @@ export default function Profile() {
 
                 {/* Stats Grid */}
                 <View className="flex-row flex-wrap gap-3 p-2">
-                  <StatItem label="Sosh Views" value="2.9M" />
-                  <StatItem label="Sosh Likes" value="62K" />
-                  <StatItem label="Platforms" value="6" />
-                  <StatItem label="Sosh Posts" value="58" />
+                  <StatItem
+                    label="Sosh Views"
+                    value={analytics.totalViews > 0 ? formatNumber(analytics.totalViews) : "0"}
+                  />
+                  <StatItem
+                    label="Sosh Likes"
+                    value={analytics.totalLikes > 0 ? formatNumber(analytics.totalLikes) : "0"}
+                  />
+                  <StatItem
+                    label="Platforms"
+                    value={SOCIAL_PLATFORMS.filter(p => isPlatformConnected(p.key)).length.toString()}
+                  />
+                  <StatItem
+                    label="Sosh Posts"
+                    value={analytics.totalPosts > 0 ? formatNumber(analytics.totalPosts) : "0"}
+                  />
                 </View>
               </LinearGradient>
             </BlurView>

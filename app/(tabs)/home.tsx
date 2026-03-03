@@ -1,13 +1,49 @@
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import StatCard from "../../components/home/StatCard";
+import { listenToUserData } from "../../services/firebase";
 import { RootState } from "../../store/store";
+import { formatNumber } from "../../utils/format";
 
 export default function Home() {
   const userName = useSelector((state: RootState) => state.user.userName);
+  const globalEmail = useSelector((state: RootState) => state.user.email);
+
   const insets = useSafeAreaInsets();
+
+  const [analytics, setAnalytics] = useState({
+    totalFollowers: 0,
+    totalLikes: 0,
+    totalViews: 0,
+  });
+
+  useEffect(() => {
+    if (!globalEmail) return;
+
+    const unsubscribe = listenToUserData(
+      globalEmail,
+      (userData) => {
+        if (userData?.totalAnalytics) {
+          const { totalFollowers, totalLikes, totalViews } = userData.totalAnalytics;
+          setAnalytics({
+            totalFollowers: totalFollowers || 0,
+            totalLikes: totalLikes || 0,
+            totalViews: totalViews || 0,
+          });
+        } else {
+          setAnalytics({ totalFollowers: 0, totalLikes: 0, totalViews: 0 });
+        }
+      },
+      (error) => {
+        console.error("Firebase fetch error in Home:", error);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [globalEmail]);
 
   // Calculate dynamic bottom padding: 
   // Base BottomNav indent is Math.max(insets.bottom + 10, 40)
@@ -44,8 +80,8 @@ export default function Home() {
             <View style={{ flex: 1.1 }} className="mb-3">
               <StatCard
                 title="Followers"
-                value="54.5K"
-                trend="+8.2% this month"
+                value={formatNumber(analytics.totalFollowers)}
+                trend="+0% this month"
                 fullWidth
               />
             </View>
@@ -53,10 +89,18 @@ export default function Home() {
             {/* Likes and Views Grid */}
             <View style={{ flex: 1.9 }} className="flex-row gap-3">
               <View className="flex-1">
-                <StatCard title="Likes" value="1.6M" trend="+8.2% this month" />
+                <StatCard
+                  title="Likes"
+                  value={formatNumber(analytics.totalLikes)}
+                  trend="+0% this month"
+                />
               </View>
               <View className="flex-1">
-                <StatCard title="Views" value="76.8M" trend="+8.2% this month" />
+                <StatCard
+                  title="Views"
+                  value={formatNumber(analytics.totalViews)}
+                  trend="+0% this month"
+                />
               </View>
             </View>
           </View>

@@ -876,7 +876,12 @@ export default function Analysis() {
             },
           ];
 
-          setPlatformsData(platforms);
+          const connectedPlatforms = platforms.filter((platform) => {
+            const data = userData[platform.id];
+            return data && Array.isArray(data) && data.length > 0;
+          });
+
+          setPlatformsData(connectedPlatforms);
         } else {
           setPlatformsData([]);
         }
@@ -920,6 +925,12 @@ export default function Analysis() {
                 <PlatformSkeletonCard key={key} />
               ))}
             </>
+          ) : platformsData.length === 0 ? (
+            <View className="items-center justify-center py-10 mt-10">
+              <Text className="text-white/60 text-center font-inter text-base leading-6">
+                No connected accounts!{"\n"}Please connect them in your profile.
+              </Text>
+            </View>
           ) : (
             platformsData.map((platform) => (
               <PlatformCard
