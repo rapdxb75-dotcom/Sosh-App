@@ -25,15 +25,41 @@ import {
   TouchableWithoutFeedback,
   useWindowDimensions,
   View,
+=======
+import {
+    ExpoSpeechRecognitionModule,
+    useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+import { Plus, X } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    ImageBackground,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    useWindowDimensions,
+    View,
+>>>>>>> Stashed changes
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
-  Circle,
-  Defs,
-  Path,
-  Rect,
-  Stop,
-  LinearGradient as SvgLinearGradient,
+    Circle,
+    Defs,
+    Path,
+    Rect,
+    Stop,
+    LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -394,6 +420,7 @@ export default function AI() {
   // Pulse animation for mic button while listening
   useEffect(() => {
     if (isListening) {
+      pulseAnim.setValue(1);
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -409,9 +436,14 @@ export default function AI() {
         ]),
       );
       pulse.start();
-      return () => pulse.stop();
+      return () => {
+        pulse.stop();
+        pulseAnim.setValue(1);
+      };
     } else {
-      pulseAnim.setValue(1);
+      pulseAnim.stopAnimation(() => {
+        pulseAnim.setValue(1);
+      });
     }
   }, [isListening]);
 
@@ -1271,6 +1303,16 @@ export default function AI() {
                         }}
                       >
                         <TouchableOpacity
+=======
+                      <TouchableOpacity
+                        onPress={isListening ? stopListening : startListening}
+                        style={{
+                          width: 40,
+                          height: 40,
+                        }}
+                      >
+                        <Animated.View
+>>>>>>> Stashed changes
                           style={{
                             width: 40,
                             height: 40,
@@ -1301,8 +1343,8 @@ export default function AI() {
                               resizeMode="contain"
                             />
                           )}
-                        </TouchableOpacity>
-                      </Animated.View>
+                        </Animated.View>
+                      </TouchableOpacity>
                     </View>
                   </BlurView>
                 </View>
@@ -1489,8 +1531,6 @@ export default function AI() {
           )}
         </View>
       </Modal>
-
-
 
       {/* Edit Conversation Modal */}
       <Modal

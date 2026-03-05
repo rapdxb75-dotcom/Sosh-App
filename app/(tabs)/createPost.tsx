@@ -6,37 +6,37 @@ import { Image as ExpoImage } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
 import {
-    ExpoSpeechRecognitionModule,
-    useSpeechRecognitionEvent,
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import { Plus, Upload, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    ImageBackground,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    PanResponder,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { DraggableGrid } from "react-native-draggable-grid";
 import Svg, {
-    Circle,
-    Defs,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -564,6 +564,7 @@ export default function CreatePost() {
   // Pulse animation for mic button while listening
   useEffect(() => {
     if (isListening) {
+      pulseAnim.setValue(1);
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -579,9 +580,14 @@ export default function CreatePost() {
         ]),
       );
       pulse.start();
-      return () => pulse.stop();
+      return () => {
+        pulse.stop();
+        pulseAnim.setValue(1);
+      };
     } else {
-      pulseAnim.setValue(1);
+      pulseAnim.stopAnimation(() => {
+        pulseAnim.setValue(1);
+      });
     }
   }, [isListening]);
 
@@ -1482,22 +1488,26 @@ export default function CreatePost() {
                                   isListening ? stopListening : startListening
                                 }
                               >
-                                {isListening ? (
-                                  <View
-                                    style={{
-                                      width: 14,
-                                      height: 14,
-                                      backgroundColor: "#ff4444",
-                                      borderRadius: 2,
-                                    }}
-                                  />
-                                ) : (
-                                  <Image
-                                    source={require("../../assets/icons/caption_mike.png")}
-                                    style={{ width: 30, height: 30 }}
-                                    resizeMode="contain"
-                                  />
-                                )}
+                                <Animated.View
+                                  style={{ transform: [{ scale: pulseAnim }] }}
+                                >
+                                  {isListening ? (
+                                    <View
+                                      style={{
+                                        width: 14,
+                                        height: 14,
+                                        backgroundColor: "#ff4444",
+                                        borderRadius: 2,
+                                      }}
+                                    />
+                                  ) : (
+                                    <Image
+                                      source={require("../../assets/icons/caption_mike.png")}
+                                      style={{ width: 30, height: 30 }}
+                                      resizeMode="contain"
+                                    />
+                                  )}
+                                </Animated.View>
                               </TouchableOpacity>
                             </BlurView>
                           </View>
@@ -1806,14 +1816,14 @@ export default function CreatePost() {
               </TouchableOpacity>
 
               {/* Separator */}
-              <View className="flex-row items-center w-full mb-6 px-2">
+              {/* <View className="flex-row items-center w-full mb-6 px-2">
                 <View className="flex-1 h-[1px] bg-white/80" />
                 <Text className="text-white mx-4 font-inter text-base">or</Text>
                 <View className="flex-1 h-[1px] bg-white/80" />
-              </View>
+              </View> */}
 
               {/* Post Without Viewing Button */}
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 className="w-full h-14 overflow-hidden rounded-full mb-10"
                 onPress={() =>
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
@@ -1829,7 +1839,7 @@ export default function CreatePost() {
                     Post without viewing
                   </Text>
                 </ImageBackground>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           )}
         </View>
