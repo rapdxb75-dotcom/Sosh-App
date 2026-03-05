@@ -4,20 +4,20 @@ import { jwtDecode } from "jwt-decode";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
-  ImageBackground,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Image,
+    ImageBackground,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Svg, {
-  Defs,
-  Rect,
-  Stop,
-  LinearGradient as SvgLinearGradient,
+    Defs,
+    Rect,
+    Stop,
+    LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useDispatch } from "react-redux";
@@ -26,8 +26,8 @@ import { useNotification } from "../../context/NotificationContext";
 import authService from "../../services/api/auth";
 import chatService from "../../services/api/chat";
 import {
-  getCurrentUserData,
-  initializeFirebase,
+    getCurrentUserData,
+    initializeFirebase,
 } from "../../services/firebase";
 import storageService from "../../services/storage";
 import { setUserData } from "../../store/userSlice";
@@ -40,7 +40,6 @@ export default function LoginForm() {
   const [errors, setErrors] = useState({ email: "", password: "" });
 
   const [loading, setLoading] = useState(false);
-  const [containerHeight, setContainerHeight] = useState(0);
 
   const { addNotification } = useNotification();
   const dispatch = useDispatch();
@@ -235,14 +234,7 @@ export default function LoginForm() {
         }}
         className="w-full rounded-[20px] bg-[#FFFFFF1A] overflow-hidden mb-7"
       >
-        <BlurView
-          intensity={20}
-          tint="light"
-          className="p-6 gap-4"
-          onLayout={(event) =>
-            setContainerHeight(event.nativeEvent.layout.height)
-          }
-        >
+        <BlurView intensity={20} tint="light" className="p-6 gap-4">
           {/* Gradient Border SVG Overlay (Taller to hide bottom stroke) */}
           <View style={StyleSheet.absoluteFill} pointerEvents="none">
             <Svg height="120%" width="100%">
@@ -270,7 +262,7 @@ export default function LoginForm() {
                 x="0.5"
                 y="0.5"
                 width="99.7%"
-                height={containerHeight > 0 ? containerHeight * 1.2 : "85%"}
+                height="100%"
                 rx="20"
                 ry="20"
                 stroke="url(#loginBorderGrad)"
