@@ -1,5 +1,5 @@
-import { AlertCircle, Info } from "lucide-react-native";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Check, Info, X } from "lucide-react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { ToastConfig } from "react-native-toast-message";
 
 const markIcon = require("../../assets/icons/mark.png");
@@ -14,20 +14,27 @@ const ToastMessage = ({
     text2?: string;
 }) => {
     const getIcon = () => {
-        switch (type) {
-            case "success":
-                return <Image source={markIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />;
-            case "error":
-                return <AlertCircle size={22} color="#FF3B30" strokeWidth={2.5} />;
-            case "info":
-            default:
-                return <Info size={22} color="#0A84FF" strokeWidth={2.5} />;
+        let bgColor = "#0A84FF";
+        let icon = <Info size={16} color="#FFFFFF" strokeWidth={3} />;
+
+        if (type === "success") {
+            bgColor = "#34C759";
+            icon = <Check size={16} color="#FFFFFF" strokeWidth={3} />;
+        } else if (type === "error") {
+            bgColor = "#FF3B30";
+            icon = <X size={16} color="#FFFFFF" strokeWidth={3} />;
         }
+
+        return (
+            <View style={{ backgroundColor: bgColor, width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" }}>
+                {icon}
+            </View>
+        );
     };
 
     return (
         <View style={styles.container} className="flex-row items-start p-4 rounded-[24px] border border-white/5 bg-[#2C2C2E]/95 shadow-sm">
-            <View className="mr-4 mt-1 bg-white/5 p-2 rounded-full">
+            <View className="mr-4 mt-1">
                 {getIcon()}
             </View>
             <View className="flex-1 mt-1 justify-center">

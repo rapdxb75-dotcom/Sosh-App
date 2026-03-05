@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
-import { AlertCircle, Info, Trash2, X } from "lucide-react-native";
-import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Check, Info, Trash2, X } from "lucide-react-native";
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { normalize } from "../../constants/Fonts";
 import {
   NotificationType,
@@ -19,14 +19,22 @@ export default function NotificationModal() {
   } = useNotification();
 
   const getNotificationIcon = (type: NotificationType) => {
-    switch (type) {
-      case "success":
-        return <Image source={markIcon} style={{ width: 22, height: 22 }} resizeMode="contain" />;
-      case "error":
-        return <AlertCircle size={22} color="#FF3B30" strokeWidth={2.5} />;
-      default:
-        return <Info size={22} color="#0A84FF" strokeWidth={2.5} />;
+    let bgColor = "#0A84FF";
+    let icon = <Info size={16} color="#FFFFFF" strokeWidth={3} />;
+
+    if (type === "success") {
+      bgColor = "#34C759";
+      icon = <Check size={16} color="#FFFFFF" strokeWidth={3} />;
+    } else if (type === "error") {
+      bgColor = "#FF3B30";
+      icon = <X size={16} color="#FFFFFF" strokeWidth={3} />;
     }
+
+    return (
+      <View style={{ backgroundColor: bgColor, width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" }}>
+        {icon}
+      </View>
+    );
   };
 
   return (
@@ -103,7 +111,7 @@ export default function NotificationModal() {
                   key={notif.id}
                   className="flex-row items-start p-4 mb-3 rounded-[24px] border border-white/5 bg-[#2C2C2E]/80 shadow-sm"
                 >
-                  <View className="mr-4 mt-1 bg-white/5 p-2 rounded-full">
+                  <View className="mr-4 mt-1">
                     {getNotificationIcon(notif.type)}
                   </View>
 

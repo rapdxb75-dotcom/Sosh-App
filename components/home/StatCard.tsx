@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { TrendingUp } from "lucide-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Svg, {
   Defs,
   Rect,
@@ -9,11 +9,14 @@ import Svg, {
 } from "react-native-svg";
 import { Colors } from "../../constants/Colors";
 
+import NumberLoading from "../../components/common/NumberLoading";
+
 interface StatCardProps {
   title: string;
   value: string;
   trend: string;
   fullWidth?: boolean;
+  isLoading?: boolean;
 }
 
 export default function StatCard({
@@ -21,7 +24,11 @@ export default function StatCard({
   value,
   trend,
   fullWidth,
+  isLoading,
 }: StatCardProps) {
+  const { width } = useWindowDimensions();
+  const isSmallDevice = width < 390;
+
   const shadowStyle = {
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
@@ -52,17 +59,27 @@ export default function StatCard({
           {fullWidth ? (
             // Full Width Layout: Title -> 26px Gap -> Content
             <View className="flex-row items-end justify-between mt-[26px]">
-              <Text
-                style={{ fontFamily: "Questrial_400Regular" }}
-                className="text-white text-[54px]"
-                adjustsFontSizeToFit
-                numberOfLines={1}
-              >
-                {value}
-              </Text>
+              {isLoading ? (
+                <NumberLoading
+                  length={3}
+                  style={{ fontFamily: "Questrial_400Regular" }}
+                  className={`text-white ${isSmallDevice ? "text-[44px]" : "text-[54px]"}`}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                />
+              ) : (
+                <Text
+                  style={{ fontFamily: "Questrial_400Regular" }}
+                  className={`text-white ${isSmallDevice ? "text-[44px]" : "text-[54px]"}`}
+                  adjustsFontSizeToFit
+                  numberOfLines={1}
+                >
+                  {value}
+                </Text>
+              )}
               <View className="flex-row items-center gap-1 mb-2">
-                <TrendingUp color={Colors.white} size={19} strokeWidth={2} />
-                <Text className="font-inter font-semibold text-[13px] leading-5 tracking-[0px] text-right text-white/60">
+                <TrendingUp color={Colors.white} size={isSmallDevice ? 16 : 19} strokeWidth={2} />
+                <Text className={`font-inter font-semibold leading-5 tracking-[0px] text-right text-white/60 ${isSmallDevice ? "text-[11px]" : "text-[13px]"}`}>
                   {trend}
                 </Text>
               </View>
@@ -71,14 +88,24 @@ export default function StatCard({
             // Half Width Layout: Vertical Stack with justify-between
             <>
               <View className="flex-1">
-                <Text
-                  style={{ fontFamily: "Questrial_400Regular" }}
-                  className="text-white text-[54px] mt-2"
-                  adjustsFontSizeToFit
-                  numberOfLines={1}
-                >
-                  {value}
-                </Text>
+                {isLoading ? (
+                  <NumberLoading
+                    length={2}
+                    style={{ fontFamily: "Questrial_400Regular" }}
+                    className="text-white text-[54px] mt-2"
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                  />
+                ) : (
+                  <Text
+                    style={{ fontFamily: "Questrial_400Regular" }}
+                    className="text-white text-[54px] mt-2"
+                    adjustsFontSizeToFit
+                    numberOfLines={1}
+                  >
+                    {value}
+                  </Text>
+                )}
               </View>
 
               <View>

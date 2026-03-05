@@ -25,32 +25,6 @@ import {
   TouchableWithoutFeedback,
   useWindowDimensions,
   View,
-=======
-import {
-    ExpoSpeechRecognitionModule,
-    useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
-import { Plus, X } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    ImageBackground,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    useWindowDimensions,
-    View,
->>>>>>> Stashed changes
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
@@ -1303,16 +1277,6 @@ export default function AI() {
                         }}
                       >
                         <TouchableOpacity
-=======
-                      <TouchableOpacity
-                        onPress={isListening ? stopListening : startListening}
-                        style={{
-                          width: 40,
-                          height: 40,
-                        }}
-                      >
-                        <Animated.View
->>>>>>> Stashed changes
                           style={{
                             width: 40,
                             height: 40,
@@ -1343,8 +1307,8 @@ export default function AI() {
                               resizeMode="contain"
                             />
                           )}
-                        </Animated.View>
-                      </TouchableOpacity>
+                        </TouchableOpacity>
+                      </Animated.View>
                     </View>
                   </BlurView>
                 </View>

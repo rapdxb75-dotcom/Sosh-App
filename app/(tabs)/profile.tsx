@@ -29,9 +29,11 @@ import Svg, {
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
+import NumberLoading from "../../components/common/NumberLoading";
+import RefreshButton from "../../components/common/RefreshButton";
 import { useNotification } from "../../context/NotificationContext";
 import userService from "../../services/api/user";
-import { listenToUserData } from "../../services/firebase";
+import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
@@ -181,6 +183,7 @@ export default function Profile() {
     totalLikes: 0,
     totalViews: 0,
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   // Sync local state when modal opens or global state changes
   useEffect(() => {
@@ -200,6 +203,7 @@ export default function Profile() {
     const unsubscribe = listenToUserData(
       globalEmail,
       (userData) => {
+        setIsLoading(false);
         if (userData) {
           // Extract analytics data
           if (userData?.totalAnalytics) {
@@ -236,6 +240,35 @@ export default function Profile() {
       }
     };
   }, [globalEmail]);
+
+  const handleRefresh = async () => {
+    if (!globalEmail) return;
+    try {
+      const userData = await getCurrentUserData(globalEmail);
+      if (userData) {
+        // Extract analytics data
+        if (userData?.totalAnalytics) {
+          const { totalPosts, totalLikes, totalViews } = userData.totalAnalytics;
+          setAnalytics({
+            totalPosts: totalPosts || 0,
+            totalLikes: totalLikes || 0,
+            totalViews: totalViews || 0,
+          });
+        }
+        // Extract social media data
+        const socialData: SocialMediaData = {};
+        SOCIAL_PLATFORMS.forEach((platform) => {
+          const data = userData[platform.key];
+          if (data && Array.isArray(data) && data.length > 0) {
+            socialData[platform.key] = data;
+          }
+        });
+        setSocialMediaData(socialData);
+      }
+    } catch (error) {
+      console.error("Manual refresh error:", error);
+    }
+  };
 
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -531,9 +564,12 @@ export default function Profile() {
         </View>
 
         <View className="w-full px-5">
-          <Text className="page-title text-white mb-4 mt-8">
-            Your{"\n"}Account
-          </Text>
+          <View className="flex-row items-end justify-between mb-4 mt-8">
+            <Text className="page-title text-white">
+              Your{"\n"}Account
+            </Text>
+            <RefreshButton onRefresh={handleRefresh} size={22} style={{ marginBottom: 8 }} />
+          </View>
 
           {/* Profile Card with Gradient Border Overlay */}
           <View
@@ -644,23 +680,26 @@ export default function Profile() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Stats Grid */}
                 <View className="flex-row flex-wrap gap-3 p-2">
                   <StatItem
                     label="Sosh Views"
                     value={analytics.totalViews > 0 ? formatNumber(analytics.totalViews) : "0"}
+                    isLoading={isLoading}
                   />
                   <StatItem
                     label="Sosh Likes"
                     value={analytics.totalLikes > 0 ? formatNumber(analytics.totalLikes) : "0"}
+                    isLoading={isLoading}
                   />
                   <StatItem
                     label="Platforms"
                     value={SOCIAL_PLATFORMS.filter(p => isPlatformConnected(p.key)).length.toString()}
+                    isLoading={isLoading}
                   />
                   <StatItem
                     label="Sosh Posts"
                     value={analytics.totalPosts > 0 ? formatNumber(analytics.totalPosts) : "0"}
+                    isLoading={isLoading}
                   />
                 </View>
               </LinearGradient>
@@ -911,16 +950,24 @@ export default function Profile() {
   );
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
+function StatItem({ label, value, isLoading }: { label: string; value: string; isLoading?: boolean }) {
   return (
     <View className="stat-item flex-1 min-w-[45%]">
       <Text className="stat-item-label">{label}</Text>
-      <Text
-        style={{ fontFamily: "Questrial_400Regular" }}
-        className="text-white text-[34px] leading-[34px] tracking-[0px] mt-1"
-      >
-        {value}
-      </Text>
+      {isLoading ? (
+        <NumberLoading
+          length={2}
+          style={{ fontFamily: "Questrial_400Regular" }}
+          className="text-white text-[34px] leading-[34px] tracking-[0px] mt-1"
+        />
+      ) : (
+        <Text
+          style={{ fontFamily: "Questrial_400Regular" }}
+          className="text-white text-[34px] leading-[34px] tracking-[0px] mt-1"
+        >
+          {value}
+        </Text>
+      )}
     </View>
   );
 }

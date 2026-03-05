@@ -3,8 +3,9 @@ import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import Header from "../../components/common/Header";
+import RefreshButton from "../../components/common/RefreshButton";
 import StatCard from "../../components/home/StatCard";
-import { listenToUserData } from "../../services/firebase";
+import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import { RootState } from "../../store/store";
 import { formatNumber } from "../../utils/format";
 
@@ -19,6 +20,7 @@ export default function Home() {
     totalLikes: 0,
     totalViews: 0,
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!globalEmail) return;
@@ -26,6 +28,7 @@ export default function Home() {
     const unsubscribe = listenToUserData(
       globalEmail,
       (userData) => {
+        setIsLoading(false);
         if (userData?.totalAnalytics) {
           const { totalFollowers, totalLikes, totalViews } = userData.totalAnalytics;
           setAnalytics({
@@ -44,6 +47,23 @@ export default function Home() {
 
     return () => unsubscribe();
   }, [globalEmail]);
+
+  const handleRefresh = async () => {
+    if (!globalEmail) return;
+    try {
+      const userData = await getCurrentUserData(globalEmail);
+      if (userData?.totalAnalytics) {
+        const { totalFollowers, totalLikes, totalViews } = userData.totalAnalytics;
+        setAnalytics({
+          totalFollowers: totalFollowers || 0,
+          totalLikes: totalLikes || 0,
+          totalViews: totalViews || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Manual refresh error:", error);
+    }
+  };
 
   // Calculate dynamic bottom padding: 
   // Base BottomNav indent is Math.max(insets.bottom + 10, 40)
@@ -67,11 +87,14 @@ export default function Home() {
             Hello{"\n"}
             {userName},{"\n"}lets create
           </Text>
-          <View className="flex-row items-center gap-2 mb-10">
-            <View className="w-2 h-2 rounded-full bg-green-500" />
-            <Text className="font-inter font-semibold text-[15px] leading-5 tracking-[-0.15px] text-[#FFFFFF99] ">
-              Live Data • Updated just now
-            </Text>
+          <View className="flex-row items-center justify-between mb-10 w-full pr-1">
+            <View className="flex-row items-center gap-2">
+              <View className="w-2 h-2 rounded-full bg-green-500" />
+              <Text className="font-inter font-semibold text-[15px] leading-5 tracking-[-0.15px] text-[#FFFFFF99] ">
+                Live Data • Updated just now
+              </Text>
+            </View>
+            <RefreshButton onRefresh={handleRefresh} />
           </View>
 
           {/* Stats Flex Container */}
@@ -83,6 +106,7 @@ export default function Home() {
                 value={formatNumber(analytics.totalFollowers)}
                 trend="+0% this month"
                 fullWidth
+                isLoading={isLoading}
               />
             </View>
 
@@ -93,6 +117,7 @@ export default function Home() {
                   title="Likes"
                   value={formatNumber(analytics.totalLikes)}
                   trend="+0% this month"
+                  isLoading={isLoading}
                 />
               </View>
               <View className="flex-1">
@@ -100,6 +125,7 @@ export default function Home() {
                   title="Views"
                   value={formatNumber(analytics.totalViews)}
                   trend="+0% this month"
+                  isLoading={isLoading}
                 />
               </View>
             </View>
