@@ -25,41 +25,15 @@ import {
   TouchableWithoutFeedback,
   useWindowDimensions,
   View,
-=======
-import {
-    ExpoSpeechRecognitionModule,
-    useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
-import { Plus, X } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    ImageBackground,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    useWindowDimensions,
-    View,
->>>>>>> Stashed changes
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
-    Circle,
-    Defs,
-    Path,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Path,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -1297,13 +1271,6 @@ export default function AI() {
                         selectionColor="#fff"
                         multiline={true}
                       />
-                      <Animated.View
-                        style={{
-                          transform: [{ scale: isListening ? pulseAnim : 1 }],
-                        }}
-                      >
-                        <TouchableOpacity
-=======
                       <TouchableOpacity
                         onPress={isListening ? stopListening : startListening}
                         style={{
@@ -1312,7 +1279,6 @@ export default function AI() {
                         }}
                       >
                         <Animated.View
->>>>>>> Stashed changes
                           style={{
                             width: 40,
                             height: 40,
@@ -1323,8 +1289,8 @@ export default function AI() {
                               ? "#ef4444"
                               : "rgba(0,0,0,0.3)",
                             position: "relative",
+                            transform: [{ scale: pulseAnim }],
                           }}
-                          onPress={isListening ? stopListening : startListening}
                         >
                           {!isListening && <GradientRingSVG />}
                           {isListening ? (
