@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import StatCard from "../../components/home/StatCard";
-import { listenToUserData } from "../../services/firebase";
+import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import { RootState } from "../../store/store";
 import { formatNumber } from "../../utils/format";
 
@@ -19,6 +19,32 @@ export default function Home() {
     totalLikes: 0,
     totalViews: 0,
   });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!globalEmail) return;
+    setRefreshing(true);
+    try {
+      // Fetch fresh data and add minimum delay so spinner is visible
+      const [userData] = await Promise.all([
+        getCurrentUserData(globalEmail),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
+      console.log("Pull to refresh - userData:", userData);
+      if (userData?.totalAnalytics) {
+        const { totalFollowers, totalLikes, totalViews } = userData.totalAnalytics;
+        setAnalytics({
+          totalFollowers: totalFollowers || 0,
+          totalLikes: totalLikes || 0,
+          totalViews: totalViews || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Pull to refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [globalEmail]);
 
   useEffect(() => {
     if (!globalEmail) return;
@@ -54,14 +80,28 @@ export default function Home() {
 
   return (
     <View className="flex-1">
-      <View
-        style={{ flex: 1, paddingBottom: bottomPadding }}
-      >
-        {/* Header */}
-        <View className="w-full">
-          <Header />
-        </View>
+      {/* Header - Static */}
+      <View className="w-full">
+        <Header />
+      </View>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flex: 1, paddingBottom: bottomPadding }}
+        bounces={true}
+        overScrollMode="always"
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            colors={["#FFFFFF"]}
+            progressBackgroundColor="#1C1C1E"
+          />
+        }
+      >
         <View className="w-full px-5 flex-1">
           <Text className="page-title text-white mb-4 mt-8">
             Hello{"\n"}
@@ -105,7 +145,7 @@ export default function Home() {
             </View>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

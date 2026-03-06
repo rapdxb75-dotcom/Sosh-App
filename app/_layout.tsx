@@ -6,7 +6,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
-import { ImageBackground, View } from "react-native";
+import { Image, ImageBackground, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { Provider, useSelector } from "react-redux";
 import { toastConfig } from "../components/common/CustomToast";
@@ -105,7 +105,22 @@ export default function RootLayout() {
   }, [loaded, error]);
 
   if (!loaded && !error) {
-    return null;
+    return (
+      <View style={{ flex: 1, backgroundColor: "#000" }}>
+        <StatusBar style="light" translucent backgroundColor="transparent" />
+        <ImageBackground
+          source={require("../assets/images/background.png")}
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+          resizeMode="cover"
+        >
+          <Image
+            source={require("../assets/images/logo.png")}
+            style={{ width: 80, height: 80 }}
+            resizeMode="contain"
+          />
+        </ImageBackground>
+      </View>
+    );
   }
 
   return (

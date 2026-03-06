@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
+  RefreshControl,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -21,7 +22,7 @@ import {
   VictoryGroup,
 } from "victory-native";
 import Header from "../../components/common/Header";
-import { listenToUserData } from "../../services/firebase";
+import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import { RootState } from "../../store/store";
 
 // --- Types ---
@@ -772,6 +773,119 @@ export default function Analysis() {
   const globalEmail = useSelector((state: RootState) => state.user.email);
   const [platformsData, setPlatformsData] = useState<PlatformData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const buildPlatformsData = (userData: any): PlatformData[] => {
+    const analytics = userData.analytics || {};
+    const platforms: PlatformData[] = [
+      {
+        id: "instagram",
+        name: "Instagram",
+        icon: require("../../assets/icons/instagram.png"),
+        followers: `+ ${analytics.instagram?.followersCount || 0} followers`,
+        growth: "0% this month",
+        metrics: {
+          views: analytics.instagram?.viewsCount || 0,
+          likes: analytics.instagram?.likesCount || 0,
+          comments: analytics.instagram?.commentsCount || 0,
+          shares: 0,
+        },
+      },
+      {
+        id: "tiktok",
+        name: "TikTok",
+        icon: require("../../assets/icons/tiktok.png"),
+        followers: `+ ${analytics.tiktok?.followerCount || 0} followers`,
+        growth: "0% this month",
+        metrics: {
+          views: analytics.tiktok?.viewCountTotal || 0,
+          likes: analytics.tiktok?.likeCountTotal || 0,
+          comments: analytics.tiktok?.commentCountTotal || 0,
+          shares: analytics.tiktok?.shareCountTotal || 0,
+        },
+      },
+      {
+        id: "facebook",
+        name: "Facebook",
+        icon: require("../../assets/icons/facebook.png"),
+        followers: `+ ${analytics.facebook?.followersCount || 0} followers`,
+        growth: "0% this month",
+        metrics: {
+          views:
+            (analytics.facebook?.pageVideoViews || 0) +
+            (analytics.facebook?.pageMediaView || 0),
+          likes: analytics.facebook?.likesCount || 0,
+          comments: analytics.facebook?.pagePostEngagements || 0,
+          shares: 0,
+        },
+      },
+      {
+        id: "youtube",
+        name: "YouTube",
+        icon: require("../../assets/icons/youtube.png"),
+        followers: `+ ${analytics.youtube?.subscriberCount || 0} subscribers`,
+        growth: "0% this month",
+        metrics: {
+          views: analytics.youtube?.viewCount || 0,
+          likes: analytics.youtube?.likes || 0,
+          comments: analytics.youtube?.comments || 0,
+          shares: analytics.youtube?.shares || 0,
+        },
+      },
+      {
+        id: "twitter",
+        name: "Twitter",
+        icon: require("../../assets/icons/twitter.png"),
+        followers: `+ ${analytics.twitter?.followersCount || 0} followers`,
+        growth: "0% this month",
+        metrics: {
+          views: 0,
+          likes: analytics.twitter?.likeCount || 0,
+          comments: 0,
+          shares: 0,
+        },
+      },
+      {
+        id: "snapchat",
+        name: "Snapchat",
+        icon: require("../../assets/icons/snapchat.png"),
+        followers: `+ ${analytics.snapchat?.subscribers || 0} subscribers`,
+        growth: "0% this month",
+        metrics: {
+          views: analytics.snapchat?.views || 0,
+          likes:
+            analytics.snapchat?.favorites ||
+            analytics.snapchat?.interactions ||
+            0,
+          comments: analytics.snapchat?.replies || 0,
+          shares: analytics.snapchat?.shares || 0,
+        },
+      },
+    ];
+
+    return platforms.filter((platform) => {
+      const data = userData[platform.id];
+      return data && Array.isArray(data) && data.length > 0;
+    });
+  };
+
+  const handleRefresh = useCallback(async () => {
+    if (!globalEmail) return;
+    setRefreshing(true);
+    try {
+      const [userData] = await Promise.all([
+        getCurrentUserData(globalEmail),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
+      if (userData) {
+        setPlatformsData(buildPlatformsData(userData));
+      }
+    } catch (error) {
+      console.error("Pull to refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [globalEmail]);
 
   useFocusEffect(
     useCallback(() => {
@@ -789,99 +903,7 @@ export default function Analysis() {
       globalEmail,
       (userData) => {
         if (userData) {
-          const analytics = userData.analytics || {};
-          const platforms: PlatformData[] = [
-            {
-              id: "instagram",
-              name: "Instagram",
-              icon: require("../../assets/icons/instagram.png"),
-              followers: `+ ${analytics.instagram?.followersCount || 0} followers`,
-              growth: "0% this month",
-              metrics: {
-                views: analytics.instagram?.viewsCount || 0,
-                likes: analytics.instagram?.likesCount || 0,
-                comments: analytics.instagram?.commentsCount || 0,
-                shares: 0,
-              },
-            },
-            {
-              id: "tiktok",
-              name: "TikTok",
-              icon: require("../../assets/icons/tiktok.png"),
-              followers: `+ ${analytics.tiktok?.followerCount || 0} followers`,
-              growth: "0% this month",
-              metrics: {
-                views: analytics.tiktok?.viewCountTotal || 0,
-                likes: analytics.tiktok?.likeCountTotal || 0,
-                comments: analytics.tiktok?.commentCountTotal || 0,
-                shares: analytics.tiktok?.shareCountTotal || 0,
-              },
-            },
-            {
-              id: "facebook",
-              name: "Facebook",
-              icon: require("../../assets/icons/facebook.png"),
-              followers: `+ ${analytics.facebook?.followersCount || 0} followers`,
-              growth: "0% this month",
-              metrics: {
-                views:
-                  (analytics.facebook?.pageVideoViews || 0) +
-                  (analytics.facebook?.pageMediaView || 0),
-                likes: analytics.facebook?.likesCount || 0,
-                comments: analytics.facebook?.pagePostEngagements || 0,
-                shares: 0,
-              },
-            },
-            {
-              id: "youtube",
-              name: "YouTube",
-              icon: require("../../assets/icons/youtube.png"),
-              followers: `+ ${analytics.youtube?.subscriberCount || 0} subscribers`,
-              growth: "0% this month",
-              metrics: {
-                views: analytics.youtube?.viewCount || 0,
-                likes: analytics.youtube?.likes || 0,
-                comments: analytics.youtube?.comments || 0,
-                shares: analytics.youtube?.shares || 0,
-              },
-            },
-            {
-              id: "twitter",
-              name: "Twitter",
-              icon: require("../../assets/icons/twitter.png"),
-              followers: `+ ${analytics.twitter?.followersCount || 0} followers`,
-              growth: "0% this month",
-              metrics: {
-                views: 0,
-                likes: analytics.twitter?.likeCount || 0,
-                comments: 0,
-                shares: 0,
-              },
-            },
-            {
-              id: "snapchat",
-              name: "Snapchat",
-              icon: require("../../assets/icons/snapchat.png"),
-              followers: `+ ${analytics.snapchat?.subscribers || 0} subscribers`,
-              growth: "0% this month",
-              metrics: {
-                views: analytics.snapchat?.views || 0,
-                likes:
-                  analytics.snapchat?.favorites ||
-                  analytics.snapchat?.interactions ||
-                  0,
-                comments: analytics.snapchat?.replies || 0,
-                shares: analytics.snapchat?.shares || 0,
-              },
-            },
-          ];
-
-          const connectedPlatforms = platforms.filter((platform) => {
-            const data = userData[platform.id];
-            return data && Array.isArray(data) && data.length > 0;
-          });
-
-          setPlatformsData(connectedPlatforms);
+          setPlatformsData(buildPlatformsData(userData));
         } else {
           setPlatformsData([]);
         }
@@ -900,6 +922,9 @@ export default function Analysis() {
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
 
+      {/* Header - Static */}
+      <Header />
+
       <ScrollView
         ref={scrollRef}
         className="flex-1"
@@ -907,9 +932,17 @@ export default function Analysis() {
           paddingBottom: 160,
         }}
         showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            colors={["#FFFFFF"]}
+            progressBackgroundColor="#1C1C1E"
+          />
+        }
       >
-        <Header />
-
         <View className="px-5">
           <Text className="page-title text-white mb-4 mt-8">
             Your{"\n"}Analytics
