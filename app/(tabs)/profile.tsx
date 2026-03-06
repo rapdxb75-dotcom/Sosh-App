@@ -11,6 +11,7 @@ import {
   Keyboard,
   Linking,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,7 +32,7 @@ import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import { useNotification } from "../../context/NotificationContext";
 import userService from "../../services/api/user";
-import { listenToUserData } from "../../services/firebase";
+import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
@@ -175,12 +176,48 @@ export default function Profile() {
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
     null,
   );
+  // Track platforms that opened auth URL and are waiting for Firebase confirmation
+  const [pendingConnections, setPendingConnections] = useState<string[]>([]);
 
   const [analytics, setAnalytics] = useState({
     totalPosts: 0,
     totalLikes: 0,
     totalViews: 0,
   });
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!globalEmail) return;
+    setRefreshing(true);
+    try {
+      const [userData] = await Promise.all([
+        getCurrentUserData(globalEmail),
+        new Promise((resolve) => setTimeout(resolve, 1000)),
+      ]);
+      if (userData) {
+        if (userData?.totalAnalytics) {
+          const { totalPosts, totalLikes, totalViews } = userData.totalAnalytics;
+          setAnalytics({
+            totalPosts: totalPosts || 0,
+            totalLikes: totalLikes || 0,
+            totalViews: totalViews || 0,
+          });
+        }
+        const socialData: SocialMediaData = {};
+        SOCIAL_PLATFORMS.forEach((platform) => {
+          const data = userData[platform.key];
+          if (data && Array.isArray(data) && data.length > 0) {
+            socialData[platform.key] = data;
+          }
+        });
+        setSocialMediaData(socialData);
+      }
+    } catch (error) {
+      console.error("Pull to refresh error:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [globalEmail]);
 
   // Sync local state when modal opens or global state changes
   useEffect(() => {
@@ -457,6 +494,8 @@ export default function Profile() {
     return null;
   };
 
+
+
   const handleConnectSocialMedia = async (
     platform: string,
     platformName: string,
@@ -471,6 +510,7 @@ export default function Profile() {
           text1: "Error",
           text2: "User email not found",
         });
+        setConnectingPlatform(null);
         return;
       }
 
@@ -481,6 +521,7 @@ export default function Profile() {
           text1: "Error",
           text2: "Authentication token not found",
         });
+        setConnectingPlatform(null);
         return;
       }
 
@@ -497,6 +538,15 @@ export default function Profile() {
         response[0].url
       ) {
         await Linking.openURL(response[0].url);
+        // Keep loader active — move platform to pendingConnections
+        // Firebase listener will detect when data arrives and clear this
+        setPendingConnections((prev: string[]) => {
+          if (prev.indexOf(platform) !== -1) return prev;
+          return [...prev, platform];
+        });
+        setConnectingPlatform(null);
+      } else {
+        setConnectingPlatform(null);
       }
     } catch (error: any) {
       Toast.show({
@@ -504,32 +554,86 @@ export default function Profile() {
         text1: "Connection Failed",
         text2: error.message || `Failed to connect ${platformName}`,
       });
-    } finally {
+      addNotification({
+        type: "error",
+        title: "Connection Failed",
+        message: error.message || `Failed to connect ${platformName}`,
+      });
       setConnectingPlatform(null);
     }
   };
 
+  // Clear pending connections when Firebase confirms the account is connected
+  useEffect(() => {
+    if (pendingConnections.length === 0) return;
+    const stillPending: string[] = [];
+    pendingConnections.forEach((platformKey: string) => {
+      if (isPlatformConnected(platformKey as SocialPlatformKey)) {
+        // Show success toast
+        let platformName = platformKey;
+        for (let i = 0; i < SOCIAL_PLATFORMS.length; i++) {
+          if (SOCIAL_PLATFORMS[i].key === platformKey) {
+            platformName = SOCIAL_PLATFORMS[i].name;
+            break;
+          }
+        }
+        Toast.show({
+          type: "success",
+          text1: `${platformName} Connected!`,
+          text2: `Your ${platformName} account is now linked`,
+          visibilityTime: 3000,
+        });
+        addNotification({
+          type: "success",
+          title: `${platformName} Connected`,
+          message: `Your ${platformName} account has been linked successfully.`,
+        });
+      } else {
+        stillPending.push(platformKey);
+      }
+    });
+    if (stillPending.length !== pendingConnections.length) {
+      setPendingConnections(stillPending);
+    }
+  }, [socialMediaData]);
+
   const handleConnectPress = (platformKey: SocialPlatformKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const platform = SOCIAL_PLATFORMS.find((p) => p.key === platformKey);
-    if (platform) {
-      handleConnectSocialMedia(platformKey, platform.name);
+    let platformName = "";
+    for (let i = 0; i < SOCIAL_PLATFORMS.length; i++) {
+      if (SOCIAL_PLATFORMS[i].key === platformKey) {
+        platformName = SOCIAL_PLATFORMS[i].name;
+        break;
+      }
+    }
+    if (platformName) {
+      handleConnectSocialMedia(platformKey, platformName);
     }
   };
 
   return (
     <View className="flex-1">
+      {/* Header - Static */}
+      <View className="w-full">
+        <Header />
+      </View>
+
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#FFFFFF"
+            colors={["#FFFFFF"]}
+            progressBackgroundColor="#1C1C1E"
+          />
+        }
       >
-        {/* Header */}
-        <View className="w-full">
-          <Header />
-        </View>
-
         <View className="w-full px-5">
           <Text className="page-title text-white mb-4 mt-8">
             Your{"\n"}Account
@@ -681,6 +785,7 @@ export default function Profile() {
               connectedUsername={getPlatformUsername(platform.key)}
               isConnected={isPlatformConnected(platform.key)}
               isConnecting={connectingPlatform === platform.key}
+              isPending={pendingConnections.indexOf(platform.key) !== -1}
               onConnect={() => handleConnectPress(platform.key)}
               onDisconnect={() =>
                 handleDisconnectPress(platform.name, platform.key)
@@ -932,6 +1037,7 @@ function ConnectedAccountItem({
   connectedUsername,
   isConnected,
   isConnecting,
+  isPending,
   onConnect,
   onDisconnect,
 }: {
@@ -941,11 +1047,14 @@ function ConnectedAccountItem({
   connectedUsername?: string | null;
   isConnected: boolean;
   isConnecting?: boolean;
+  isPending?: boolean;
   onConnect?: () => void;
   onDisconnect?: () => void;
 }) {
+  const isLoading = isConnecting || isPending;
+
   const handlePress = () => {
-    if (isConnecting) return;
+    if (isLoading) return;
     if (isConnected) {
       onDisconnect?.();
     } else {
@@ -985,8 +1094,8 @@ function ConnectedAccountItem({
 
       <TouchableOpacity
         onPress={handlePress}
-        disabled={isConnecting}
-        className={`btn-toggle ${isConnected ? "btn-toggle-disconnect" : "btn-toggle-connect"} ${isConnecting ? "opacity-70" : ""}`}
+        disabled={isLoading}
+        className={`btn-toggle ${isConnected ? "btn-toggle-disconnect" : "btn-toggle-connect"} ${isLoading ? "opacity-70" : ""}`}
       >
         <View className="flex-row items-center gap-1">
           {/* Fixed 14×14 slot — matches icon size so button never resizes */}
@@ -998,7 +1107,7 @@ function ConnectedAccountItem({
               justifyContent: "center",
             }}
           >
-            {isConnecting ? (
+            {isLoading ? (
               <ActivityIndicator
                 size="small"
                 color="#ffffff"

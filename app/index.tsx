@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Image, ImageBackground } from "react-native";
 import { initializeFirebase } from "../services/firebase";
 import storageService from "../services/storage";
 
@@ -26,16 +26,18 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: "#000",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
+      <ImageBackground
+        source={require("../assets/images/background.png")}
+        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        resizeMode="cover"
       >
-        <ActivityIndicator size="large" color="#00DC82" />
-      </View>
+        <Image
+          source={require("../assets/images/logo.png")}
+          style={{ width: 80, height: 80, marginBottom: 32 }}
+          resizeMode="contain"
+        />
+        <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" />
+      </ImageBackground>
     );
   }
 

@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { TrendingUp } from "lucide-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Svg, {
   Defs,
   Rect,
@@ -22,6 +22,9 @@ export default function StatCard({
   trend,
   fullWidth,
 }: StatCardProps) {
+  const { width } = useWindowDimensions();
+  const isSmallDevice = width < 380;
+  const valueFontSize = isSmallDevice ? 40 : 54;
   const shadowStyle = {
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
@@ -53,16 +56,19 @@ export default function StatCard({
             // Full Width Layout: Title -> 26px Gap -> Content
             <View className="flex-row items-end justify-between mt-[26px]">
               <Text
-                style={{ fontFamily: "Questrial_400Regular" }}
-                className="text-white text-[54px]"
+                style={{ fontFamily: "Questrial_400Regular", fontSize: valueFontSize }}
+                className="text-white"
                 adjustsFontSizeToFit
                 numberOfLines={1}
               >
                 {value}
               </Text>
               <View className="flex-row items-center gap-1 mb-2">
-                <TrendingUp color={Colors.white} size={19} strokeWidth={2} />
-                <Text className="font-inter font-semibold text-[13px] leading-5 tracking-[0px] text-right text-white/60">
+                <TrendingUp color={Colors.white} size={isSmallDevice ? 15 : 19} strokeWidth={2} />
+                <Text
+                  style={{ fontSize: isSmallDevice ? 11 : 13 }}
+                  className="font-inter font-semibold leading-5 tracking-[0px] text-right text-white/60"
+                >
                   {trend}
                 </Text>
               </View>
@@ -72,8 +78,8 @@ export default function StatCard({
             <>
               <View className="flex-1">
                 <Text
-                  style={{ fontFamily: "Questrial_400Regular" }}
-                  className="text-white text-[54px] mt-2"
+                  style={{ fontFamily: "Questrial_400Regular", fontSize: isSmallDevice ? 36 : 54 }}
+                  className="text-white mt-2"
                   adjustsFontSizeToFit
                   numberOfLines={1}
                 >
@@ -84,8 +90,11 @@ export default function StatCard({
               <View>
                 <View className="h-[2px] bg-white w-[100%] mb-2 opacity-50" />
                 <View className="flex-row items-center gap-1 justify-start">
-                  <TrendingUp color={Colors.white} size={19} strokeWidth={2} />
-                  <Text className="font-inter font-semibold text-[13px] leading-5 tracking-[0px] text-left text-white/60">
+                  <TrendingUp color={Colors.white} size={isSmallDevice ? 15 : 19} strokeWidth={2} />
+                  <Text
+                    style={{ fontSize: isSmallDevice ? 11 : 13 }}
+                    className="font-inter font-semibold leading-5 tracking-[0px] text-left text-white/60"
+                  >
                     {trend}
                   </Text>
                 </View>

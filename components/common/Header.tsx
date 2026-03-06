@@ -70,7 +70,7 @@ const ringStyles = StyleSheet.create({
 
 /* ---------- Header Component ---------- */
 export default function Header() {
-  const { showNotifications, notifications } = useNotification();
+  const { showNotifications, notifications, addNotification } = useNotification();
   const profilePic = useSelector(
     (state: RootState) => state.user.profilePicture,
   );
@@ -80,6 +80,11 @@ export default function Header() {
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    addNotification({
+      type: "neutral",
+      title: "Logged Out",
+      message: "You have been logged out successfully.",
+    });
     dispatch(clearUserData());
     await storageService.logout();
     setShowDropdown(false);
