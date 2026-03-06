@@ -1,5 +1,7 @@
 const POPPY_API_KEY = "zKNHI3ZmmGQTWTRnlllJM6ozIEpuTCNgATdGo8o2ic";
 
+import { updatePoppyTokenCredits } from "../firebase";
+
 class PoppyService {
   /**
    * Generate AI caption for post/reel/story
@@ -75,7 +77,7 @@ class PoppyService {
    * @param prompt The user's message
    * @param boardId The board ID from user's aiAdditions
    * @param chatId The chat node ID from user's aiAdditions
-   * @param model The Claude model to use from user's aiAdditions
+   * @param userEmail User email to update poppyToken credits
    * @param onChunk Callback function for each text chunk received
    * @returns Promise<string> The complete response text
    */
@@ -84,6 +86,7 @@ class PoppyService {
     prompt: string,
     boardId: string,
     chatId: string,
+    userEmail: string,
     onChunk: (delta: string) => void,
   ): Promise<string> {
     const url = `https://api.getpoppy.ai/api/conversation/${conversationId}?board_id=${boardId}&chat_id=${chatId}&api_key=${POPPY_API_KEY}`;
@@ -98,6 +101,7 @@ class PoppyService {
 
         let fullText = "";
         let processedLength = 0; // Track how much we've already processed
+        let creditsUsed = 0; // Track credits from usage event
 
         // Handle progressive streaming as data arrives
         xhr.onprogress = () => {
@@ -120,6 +124,12 @@ class PoppyService {
                 if (eventData.type === "text-delta" && eventData.delta) {
                   fullText += eventData.delta;
                   onChunk(eventData.delta); // Send delta immediately as it arrives
+                }
+
+                // Capture credits usage
+                if (eventData.type === "usage" && eventData.credits_used) {
+                  creditsUsed = eventData.credits_used;
+                  console.log(`💳 Poppy credits used: ${creditsUsed}`);
                 }
               } catch (parseError) {
                 // Skip invalid JSON lines silently
@@ -150,6 +160,15 @@ class PoppyService {
                         fullText += eventData.delta;
                         onChunk(eventData.delta);
                       }
+
+                      // Capture credits usage from final response
+                      if (
+                        eventData.type === "usage" &&
+                        eventData.credits_used
+                      ) {
+                        creditsUsed = eventData.credits_used;
+                        console.log(`💳 Poppy credits used: ${creditsUsed}`);
+                      }
                     } catch (parseError) {
                       // Skip invalid lines
                     }
@@ -161,6 +180,19 @@ class PoppyService {
                 "✅ Streaming complete. Total text length:",
                 fullText.length,
               );
+
+              // Update Firebase with credits used
+              if (creditsUsed > 0 && userEmail) {
+                updatePoppyTokenCredits(userEmail, creditsUsed).catch(
+                  (error) => {
+                    console.error(
+                      "Failed to update poppyToken credits:",
+                      error,
+                    );
+                  },
+                );
+              }
+
               resolve(fullText);
             } else {
               console.error(
@@ -185,6 +217,7 @@ class PoppyService {
             prompt,
             streaming: true,
             save_history: true,
+            include_usage: true, // Exclude usage details to reduce response size
           }),
         );
       });

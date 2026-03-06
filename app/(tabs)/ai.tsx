@@ -2,38 +2,38 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
 import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
+    ExpoSpeechRecognitionModule,
+    useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import { Plus, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  Image,
-  ImageBackground,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  useWindowDimensions,
-  View,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    Image,
+    ImageBackground,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
-  Circle,
-  Defs,
-  Path,
-  Rect,
-  Stop,
-  LinearGradient as SvgLinearGradient,
+    Circle,
+    Defs,
+    Path,
+    Rect,
+    Stop,
+    LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -848,6 +848,7 @@ export default function AI() {
           content,
           poppyBoardId,
           poppyChatId,
+          userEmail,
           (delta) => {
             fullAIResponse += delta;
             streamBufferRef.current = fullAIResponse;

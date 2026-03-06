@@ -1,25 +1,25 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect } from "expo-router";
-import { ChevronDown, Minus, Plus, TrendingUp } from "lucide-react-native";
+import { Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Animated,
-  Image,
-  RefreshControl,
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
+    Animated,
+    Image,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { Defs, Stop, LinearGradient as SvgGradient } from "react-native-svg";
 import { useSelector } from "react-redux";
 import {
-  VictoryArea,
-  VictoryAxis,
-  VictoryChart,
-  VictoryGroup,
+    VictoryArea,
+    VictoryAxis,
+    VictoryChart,
+    VictoryGroup,
 } from "victory-native";
 import Header from "../../components/common/Header";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
@@ -140,7 +140,7 @@ const PlatformSkeletonCard = () => {
           duration: 800,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -236,48 +236,44 @@ const PlatformCard = ({
   onToggle: () => void;
   screenWidth: number;
 }) => {
-  const [engagementTab, setEngagementTab] = useState("W1");
-  const [viewsFilter, setViewsFilter] = useState("last 30 days");
-  const [isViewsDropdownOpen, setIsViewsDropdownOpen] = useState(false);
-  const [engagementFilter, setEngagementFilter] = useState("last 30 days");
-  const [isEngagementDropdownOpen, setIsEngagementDropdownOpen] =
-    useState(false);
-  const [viewsTab, setViewsTab] = useState("W1");
+  const [engagementTab, setEngagementTab] = useState("M1");
+  // const [viewsFilter, setViewsFilter] = useState("last 30 days");
+  // const [isViewsDropdownOpen, setIsViewsDropdownOpen] = useState(false);
+  // const [engagementFilter, setEngagementFilter] = useState("last 30 days");
+  // const [isEngagementDropdownOpen, setIsEngagementDropdownOpen] =
+  //   useState(false);
+  // const viewsFilter = "last 30 days"; // Hardcoded to 30 days
+  // const engagementFilter = "last 30 days"; // Hardcoded to 30 days
+  const viewsFilter = "last 90 days"; // Hardcoded to 90 days
+  const engagementFilter = "last 90 days"; // Hardcoded to 90 days
+  const [viewsTab, setViewsTab] = useState("M1");
 
-  const viewsTabsOptions =
-    viewsFilter === "last 30 days"
-      ? ["W1", "W2", "W3", "W4"]
-      : viewsFilter === "last 90 days"
-        ? ["M1", "M2", "M3"]
-        : [];
-  const engagementTabsOptions =
-    engagementFilter === "last 30 days"
-      ? ["W1", "W2", "W3", "W4"]
-      : engagementFilter === "last 90 days"
-        ? ["M1", "M2", "M3"]
-        : [];
+  // Hardcoded to 90 days, so always use M1, M2, M3 tabs
+  const viewsTabsOptions = ["M1", "M2", "M3"];
+  const engagementTabsOptions = ["M1", "M2", "M3"];
 
-  const handleViewsFilterSelect = (filterVal: string) => {
-    setViewsFilter(filterVal);
-    setEngagementFilter(filterVal);
-    if (filterVal === "last 30 days") {
-      setViewsTab("W1");
-      setEngagementTab("W1");
-    } else if (filterVal === "last 90 days") {
-      setViewsTab("M1");
-      setEngagementTab("M1");
-    } else {
-      setViewsTab(filterVal);
-      setEngagementTab(filterVal);
-    }
-  };
+  // Dropdown handlers commented out - using hardcoded 30 days filter
+  // const handleViewsFilterSelect = (filterVal: string) => {
+  //   setViewsFilter(filterVal);
+  //   setEngagementFilter(filterVal);
+  //   if (filterVal === "last 30 days") {
+  //     setViewsTab("W1");
+  //     setEngagementTab("W1");
+  //   } else if (filterVal === "last 90 days") {
+  //     setViewsTab("M1");
+  //     setEngagementTab("M1");
+  //   } else {
+  //     setViewsTab(filterVal);
+  //     setEngagementTab(filterVal);
+  //   }
+  // };
 
-  const handleEngagementFilterSelect = (filterVal: string) => {
-    setEngagementFilter(filterVal);
-    if (filterVal === "last 30 days") setEngagementTab("W1");
-    else if (filterVal === "last 90 days") setEngagementTab("M1");
-    else setEngagementTab(filterVal);
-  };
+  // const handleEngagementFilterSelect = (filterVal: string) => {
+  //   setEngagementFilter(filterVal);
+  //   if (filterVal === "last 30 days") setEngagementTab("W1");
+  //   else if (filterVal === "last 90 days") setEngagementTab("M1");
+  //   else setEngagementTab(filterVal);
+  // };
 
   const chartData = dummyChartData[viewsTab] || dummyChartData["W1"];
 
@@ -424,23 +420,24 @@ const PlatformCard = ({
               <View
                 style={{
                   position: "relative",
-                  zIndex: isViewsDropdownOpen ? 100 : 1,
+                  zIndex: 1,
                 }}
               >
-                <TouchableOpacity
+                {/* Dropdown functionality commented out - hardcoded to 30 days */}
+                {/* <TouchableOpacity
                   className="flex-row items-center"
                   onPress={() => {
                     setIsViewsDropdownOpen(!isViewsDropdownOpen);
                     setIsEngagementDropdownOpen(false);
                   }}
+                > */}
+                <Text
+                  className="text-white/40 text-[14px] font-inter font-semibold mr-1"
+                  style={{ letterSpacing: -0.89 }}
                 >
-                  <Text
-                    className="text-white/40 text-[14px] font-inter font-semibold mr-1"
-                    style={{ letterSpacing: -0.89 }}
-                  >
-                    {formatFilterDisplay("Views", viewsFilter)}
-                  </Text>
-                  <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+                  {formatFilterDisplay("Views", viewsFilter)}
+                </Text>
+                {/* <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
                 </TouchableOpacity>
                 <InlineDropdown
                   visible={isViewsDropdownOpen}
@@ -448,7 +445,7 @@ const PlatformCard = ({
                   options={FILTER_OPTIONS}
                   onSelect={handleViewsFilterSelect}
                   selectedValue={viewsFilter}
-                />
+                /> */}
               </View>
 
               <View className="flex-row items-center justify-between mb-2 mt-2">
@@ -465,7 +462,7 @@ const PlatformCard = ({
                           Haptics.impactAsync
                         ) {
                           Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light
+                            Haptics.ImpactFeedbackStyle.Light,
                           );
                         }
                         setViewsTab(tab);
@@ -558,23 +555,24 @@ const PlatformCard = ({
                 className="mt-8"
                 style={{
                   position: "relative",
-                  zIndex: isEngagementDropdownOpen ? 100 : 1,
+                  zIndex: 1,
                 }}
               >
-                <TouchableOpacity
+                {/* Dropdown functionality commented out - hardcoded to 30 days */}
+                {/* <TouchableOpacity
                   className="flex-row items-center"
                   onPress={() => {
                     setIsEngagementDropdownOpen(!isEngagementDropdownOpen);
                     setIsViewsDropdownOpen(false);
                   }}
+                > */}
+                <Text
+                  className="text-white/40 text-[14px] font-inter font-semibold mr-1"
+                  style={{ letterSpacing: -0.89 }}
                 >
-                  <Text
-                    className="text-white/40 text-[14px] font-inter font-semibold mr-1"
-                    style={{ letterSpacing: -0.89 }}
-                  >
-                    {formatFilterDisplay("Engagement", engagementFilter)}
-                  </Text>
-                  <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
+                  {formatFilterDisplay("Engagement", engagementFilter)}
+                </Text>
+                {/* <ChevronDown size={14} color="rgba(255,255,255,0.4)" />
                 </TouchableOpacity>
                 <InlineDropdown
                   visible={isEngagementDropdownOpen}
@@ -582,7 +580,7 @@ const PlatformCard = ({
                   options={FILTER_OPTIONS}
                   onSelect={handleEngagementFilterSelect}
                   selectedValue={engagementFilter}
-                />
+                /> */}
               </View>
 
               <View className="flex-row items-center justify-between mt-2 mb-6">
@@ -599,7 +597,7 @@ const PlatformCard = ({
                           Haptics.impactAsync
                         ) {
                           Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light
+                            Haptics.ImpactFeedbackStyle.Light,
                           );
                         }
                         setEngagementTab(tab);
@@ -643,7 +641,7 @@ const PlatformCard = ({
                       </Text>
                     </View>
                     <Text className="text-white text-[12px] font-inter">
-                      {likesPercent}%
+                      {formatCompactNumber(likesVal)}
                     </Text>
                   </View>
 
@@ -657,7 +655,7 @@ const PlatformCard = ({
                       </Text>
                     </View>
                     <Text className="text-white text-[12px] font-inter">
-                      {commentsPercent}%
+                      {formatCompactNumber(commentsVal)}
                     </Text>
                   </View>
 
@@ -671,7 +669,7 @@ const PlatformCard = ({
                       </Text>
                     </View>
                     <Text className="text-white text-[12px] font-inter">
-                      {sharesPercent}%
+                      {formatCompactNumber(sharesVal)}
                     </Text>
                   </View>
                 </View>
@@ -890,7 +888,7 @@ export default function Analysis() {
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -912,7 +910,7 @@ export default function Analysis() {
       (error) => {
         console.error("Firebase fetch error:", error);
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -972,7 +970,7 @@ export default function Analysis() {
                 isExpanded={expandedPlatform === platform.id}
                 onToggle={() =>
                   setExpandedPlatform(
-                    expandedPlatform === platform.id ? "" : platform.id
+                    expandedPlatform === platform.id ? "" : platform.id,
                   )
                 }
                 screenWidth={width}

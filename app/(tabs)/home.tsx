@@ -26,13 +26,14 @@ export default function Home() {
     setRefreshing(true);
     try {
       // Fetch fresh data and add minimum delay so spinner is visible
-      const [userData] = await Promise.all([
+      const [userData]: any = await Promise.all([
         getCurrentUserData(globalEmail),
         new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
       console.log("Pull to refresh - userData:", userData);
       if (userData?.totalAnalytics) {
-        const { totalFollowers, totalLikes, totalViews } = userData.totalAnalytics;
+        const { totalFollowers, totalLikes, totalViews } =
+          userData.totalAnalytics;
         setAnalytics({
           totalFollowers: totalFollowers || 0,
           totalLikes: totalLikes || 0,
@@ -53,7 +54,8 @@ export default function Home() {
       globalEmail,
       (userData) => {
         if (userData?.totalAnalytics) {
-          const { totalFollowers, totalLikes, totalViews } = userData.totalAnalytics;
+          const { totalFollowers, totalLikes, totalViews } =
+            userData.totalAnalytics;
           setAnalytics({
             totalFollowers: totalFollowers || 0,
             totalLikes: totalLikes || 0,
@@ -65,13 +67,13 @@ export default function Home() {
       },
       (error) => {
         console.error("Firebase fetch error in Home:", error);
-      }
+      },
     );
 
     return () => unsubscribe();
   }, [globalEmail]);
 
-  // Calculate dynamic bottom padding: 
+  // Calculate dynamic bottom padding:
   // Base BottomNav indent is Math.max(insets.bottom + 10, 40)
   // Distance from there to top of upload icon = 122px.
   // We want EXACTLY 24px of space above upload icon.

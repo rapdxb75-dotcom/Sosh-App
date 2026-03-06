@@ -1,13 +1,16 @@
 import { initializeApp } from "firebase/app";
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  getFirestore,
-  onSnapshot,
-  query,
-  where,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    getFirestore,
+    increment,
+    onSnapshot,
+    query,
+    setDoc,
+    updateDoc,
+    where,
 } from "firebase/firestore";
 
 // Firebase Configuration
@@ -131,6 +134,50 @@ export const listenToUserData = (
   );
 
   return unsubscribe; // Return unsubscribe function to stop listening
+};
+
+// Update Poppy Token Credits (Cumulative)
+export const updatePoppyTokenCredits = async (
+  userEmail: string,
+  creditsUsed: number,
+) => {
+  try {
+    if (!userEmail || typeof creditsUsed !== "number" || creditsUsed <= 0) {
+      console.log("Invalid parameters for updating poppy credits");
+      return false;
+    }
+
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", userEmail);
+
+    // Use increment to add credits to existing value
+    await updateDoc(userDocRef, {
+      poppyToken: increment(creditsUsed),
+    });
+
+    console.log(
+      `✅ Updated poppyToken: +${creditsUsed} credits for ${userEmail}`,
+    );
+    return true;
+  } catch (error: any) {
+    // If document doesn't exist or field doesn't exist, create it
+    if (error.code === "not-found") {
+      try {
+        const { db } = initializeFirebase();
+        const userDocRef = doc(db, "users", userEmail);
+        await setDoc(userDocRef, { poppyToken: creditsUsed }, { merge: true });
+        console.log(
+          `✅ Created poppyToken field: ${creditsUsed} credits for ${userEmail}`,
+        );
+        return true;
+      } catch (setError) {
+        console.error("Error creating poppyToken field:", setError);
+        return false;
+      }
+    }
+    console.error("Error updating poppyToken:", error);
+    return false;
+  }
 };
 
 export { app, db };
