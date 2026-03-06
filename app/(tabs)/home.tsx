@@ -20,6 +20,7 @@ export default function Home() {
     totalViews: 0,
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const handleRefresh = useCallback(async () => {
     if (!globalEmail) return;
@@ -62,12 +63,19 @@ export default function Home() {
             totalViews: totalViews || 0,
           });
         } else {
-          setAnalytics({ totalFollowers: 0, totalLikes: 0, totalViews: 0 });
+          setAnalytics({
+            totalFollowers: 0,
+            totalLikes: 0,
+            totalViews: 0,
+          });
         }
+
+        setIsLoading(false);
       },
       (error) => {
         console.error("Firebase fetch error in Home:", error);
-      },
+        setIsLoading(false);
+      }
     );
 
     return () => unsubscribe();
@@ -82,7 +90,7 @@ export default function Home() {
 
   return (
     <View className="flex-1">
-      {/* Header - Static */}
+      {/* Header */}
       <View className="w-full">
         <Header />
       </View>
@@ -111,37 +119,41 @@ export default function Home() {
           </Text>
           <View className="flex-row items-center gap-2 mb-10">
             <View className="w-2 h-2 rounded-full bg-green-500" />
-            <Text className="font-inter font-semibold text-[15px] leading-5 tracking-[-0.15px] text-[#FFFFFF99] ">
+            <Text className="font-inter font-semibold text-[15px] leading-5 tracking-[-0.15px] text-[#FFFFFF99]">
               Live Data • Updated just now
             </Text>
           </View>
 
-          {/* Stats Flex Container */}
+          {/* Stats */}
           <View className="flex-1">
-            {/* Followers Card */}
+            {/* Followers */}
             <View style={{ flex: 1.1 }} className="mb-3">
               <StatCard
                 title="Followers"
                 value={formatNumber(analytics.totalFollowers)}
                 trend="+0% this month"
                 fullWidth
+                loading={isLoading}
               />
             </View>
 
-            {/* Likes and Views Grid */}
+            {/* Likes + Views */}
             <View style={{ flex: 1.9 }} className="flex-row gap-3">
               <View className="flex-1">
                 <StatCard
                   title="Likes"
                   value={formatNumber(analytics.totalLikes)}
                   trend="+0% this month"
+                  loading={isLoading}
                 />
               </View>
+
               <View className="flex-1">
                 <StatCard
                   title="Views"
                   value={formatNumber(analytics.totalViews)}
                   trend="+0% this month"
+                  loading={isLoading}
                 />
               </View>
             </View>
