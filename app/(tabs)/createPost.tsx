@@ -1,8 +1,10 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { ResizeMode, Video } from "expo-av";
 import { BlurView } from "expo-blur";
+import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { Image as ExpoImage } from "expo-image";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useFocusEffect } from "expo-router";
 import {
@@ -1081,9 +1083,46 @@ export default function CreatePost() {
         return uri;
       };
 
+      const handleImageConversion = async (uri: string) => {
+        if (!isVideoUrl(uri)) {
+          try {
+            let compressionRatio = 1;
+
+            // Compress image if posting to Instagram and it is > 8MB
+            if (activeTab === "Post" && selectedPlatforms["instagram"]) {
+              const fileInfo = await FileSystem.getInfoAsync(uri);
+              if (fileInfo.exists && fileInfo.size !== undefined) {
+                const sizeInMB = fileInfo.size / (1024 * 1024);
+                if (sizeInMB > 8) {
+                  compressionRatio = Math.max(0.1, Math.min(0.9, 7 / sizeInMB));
+                }
+              }
+            }
+
+            const manipResult = await ImageManipulator.manipulateAsync(
+              uri,
+              [],
+              {
+                compress: compressionRatio,
+                format: ImageManipulator.SaveFormat.JPEG,
+              },
+            );
+            return manipResult.uri;
+          } catch (error) {
+            console.error("Image conversion error:", error);
+            return uri;
+          }
+        }
+        return uri;
+      };
+
       if (allowsMultipleSelection) {
         const newUris = await Promise.all(
-          result.assets.map(async (a) => await handleVideoConversion(a.uri)),
+          result.assets.map(async (a) => {
+            let processedUri = await handleVideoConversion(a.uri);
+            processedUri = await handleImageConversion(processedUri);
+            return processedUri;
+          }),
         );
         if (isAppending && Array.isArray(currentMedia)) {
           updateActiveTab(targetKey, [...currentMedia, ...newUris]);
@@ -1092,7 +1131,8 @@ export default function CreatePost() {
         }
       } else {
         const asset = result.assets[0];
-        const processedUri = await handleVideoConversion(asset.uri);
+        let processedUri = await handleVideoConversion(asset.uri);
+        processedUri = await handleImageConversion(processedUri);
         updateActiveTab(targetKey, processedUri);
       }
     }
