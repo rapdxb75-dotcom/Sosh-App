@@ -1866,7 +1866,7 @@ export default function CreatePost() {
                     <ActivityIndicator size="small" color="#ffffff" />
                   ) : (
                     <Text className="text-white font-semibold text-lg">
-                      Generate post
+                      Post
                     </Text>
                   )}
                 </ImageBackground>

@@ -75,7 +75,7 @@ export default function Home() {
       (error) => {
         console.error("Firebase fetch error in Home:", error);
         setIsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -90,11 +90,6 @@ export default function Home() {
 
   return (
     <View className="flex-1">
-      {/* Header */}
-      <View className="w-full">
-        <Header />
-      </View>
-
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flex: 1, paddingBottom: bottomPadding }}
@@ -109,9 +104,13 @@ export default function Home() {
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
             progressBackgroundColor="#1C1C1E"
+            progressViewOffset={insets.top + 60}
           />
         }
       >
+        {/* Header */}
+        <Header />
+
         <View className="w-full px-5 flex-1">
           <Text className="page-title text-white mb-4 mt-8">
             Hello{"\n"}

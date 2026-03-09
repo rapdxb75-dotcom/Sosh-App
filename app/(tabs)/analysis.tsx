@@ -4,22 +4,23 @@ import { Stack, useFocusEffect } from "expo-router";
 import { Minus, Plus, TrendingUp } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    Animated,
-    Image,
-    RefreshControl,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    useWindowDimensions,
-    View,
+  Animated,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Defs, Stop, LinearGradient as SvgGradient } from "react-native-svg";
 import { useSelector } from "react-redux";
 import {
-    VictoryArea,
-    VictoryAxis,
-    VictoryChart,
-    VictoryGroup,
+  VictoryArea,
+  VictoryAxis,
+  VictoryChart,
+  VictoryGroup,
 } from "victory-native";
 import Header from "../../components/common/Header";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
@@ -765,6 +766,7 @@ const dummyChartData: Record<string, { x: number; y: number; y2: number }[]> = {
 
 export default function Analysis() {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [expandedPlatform, setExpandedPlatform] = useState("");
   const scrollRef = useRef<ScrollView>(null);
 
@@ -920,9 +922,6 @@ export default function Analysis() {
     <View className="flex-1">
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Header - Static */}
-      <Header />
-
       <ScrollView
         ref={scrollRef}
         className="flex-1"
@@ -938,9 +937,13 @@ export default function Analysis() {
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
             progressBackgroundColor="#1C1C1E"
+            progressViewOffset={insets.top + 60}
           />
         }
       >
+        {/* Header - Static */}
+        <Header />
+
         <View className="px-5">
           <Text className="page-title text-white mb-4 mt-8">
             Your{"\n"}Analytics

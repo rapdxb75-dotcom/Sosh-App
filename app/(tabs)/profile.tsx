@@ -20,6 +20,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Circle,
   Defs,
@@ -43,7 +44,9 @@ let ImageCropPicker: any = null;
 try {
   ImageCropPicker = require("react-native-image-crop-picker").default;
 } catch (e) {
-  console.log("react-native-image-crop-picker is not available. Falling back to expo-image-picker.");
+  console.log(
+    "react-native-image-crop-picker is not available. Falling back to expo-image-picker.",
+  );
 }
 
 // Social media platform configuration
@@ -145,11 +148,12 @@ export default function Profile() {
   const dispatch = useDispatch<AppDispatch>();
   const { addNotification } = useNotification();
   const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   useFocusEffect(
     useCallback(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, [])
+    }, []),
   );
 
   // Global User State from Redux
@@ -196,7 +200,8 @@ export default function Profile() {
       ]);
       if (userData) {
         if (userData?.totalAnalytics) {
-          const { totalPosts, totalLikes, totalViews } = userData.totalAnalytics;
+          const { totalPosts, totalLikes, totalViews } =
+            userData.totalAnalytics;
           setAnalytics({
             totalPosts: totalPosts || 0,
             totalLikes: totalLikes || 0,
@@ -240,7 +245,8 @@ export default function Profile() {
         if (userData) {
           // Extract analytics data
           if (userData?.totalAnalytics) {
-            const { totalPosts, totalLikes, totalViews } = userData.totalAnalytics;
+            const { totalPosts, totalLikes, totalViews } =
+              userData.totalAnalytics;
             setAnalytics({
               totalPosts: totalPosts || 0,
               totalLikes: totalLikes || 0,
@@ -486,15 +492,15 @@ export default function Profile() {
   };
 
   // Helper function to get platform username
-  const getPlatformUsername = (platformKey: SocialPlatformKey): string | null => {
+  const getPlatformUsername = (
+    platformKey: SocialPlatformKey,
+  ): string | null => {
     const data = socialMediaData[platformKey];
     if (data && Array.isArray(data) && data.length >= 3) {
       return data[2]; // Username is at index 2
     }
     return null;
   };
-
-
 
   const handleConnectSocialMedia = async (
     platform: string,
@@ -613,13 +619,9 @@ export default function Profile() {
 
   return (
     <View className="flex-1">
-      {/* Header - Static */}
-      <View className="w-full">
-        <Header />
-      </View>
-
       <ScrollView
         ref={scrollRef}
+        className="flex-1"
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
@@ -631,9 +633,13 @@ export default function Profile() {
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
             progressBackgroundColor="#1C1C1E"
+            progressViewOffset={insets.top + 60}
           />
         }
       >
+        {/* Header - Static */}
+        <Header />
+
         <View className="w-full px-5">
           <Text className="page-title text-white mb-4 mt-8">
             Your{"\n"}Account
@@ -709,13 +715,13 @@ export default function Profile() {
                         source={
                           image
                             ? {
-                              uri:
-                                image.startsWith("http") ||
+                                uri:
+                                  image.startsWith("http") ||
                                   image.startsWith("file") ||
                                   image.startsWith("data:")
-                                  ? image
-                                  : `data:image/png;base64,${image}`,
-                            }
+                                    ? image
+                                    : `data:image/png;base64,${image}`,
+                              }
                             : require("../../assets/images/avtar.png")
                         }
                         className="w-[45px] h-[45px] rounded-full"
@@ -752,19 +758,33 @@ export default function Profile() {
                 <View className="flex-row flex-wrap gap-3 p-2">
                   <StatItem
                     label="Sosh Views"
-                    value={analytics.totalViews > 0 ? formatNumber(analytics.totalViews) : "0"}
+                    value={
+                      analytics.totalViews > 0
+                        ? formatNumber(analytics.totalViews)
+                        : "0"
+                    }
                   />
                   <StatItem
                     label="Sosh Likes"
-                    value={analytics.totalLikes > 0 ? formatNumber(analytics.totalLikes) : "0"}
+                    value={
+                      analytics.totalLikes > 0
+                        ? formatNumber(analytics.totalLikes)
+                        : "0"
+                    }
                   />
                   <StatItem
                     label="Platforms"
-                    value={SOCIAL_PLATFORMS.filter(p => isPlatformConnected(p.key)).length.toString()}
+                    value={SOCIAL_PLATFORMS.filter((p) =>
+                      isPlatformConnected(p.key),
+                    ).length.toString()}
                   />
                   <StatItem
                     label="Sosh Posts"
-                    value={analytics.totalPosts > 0 ? formatNumber(analytics.totalPosts) : "0"}
+                    value={
+                      analytics.totalPosts > 0
+                        ? formatNumber(analytics.totalPosts)
+                        : "0"
+                    }
                   />
                 </View>
               </LinearGradient>
@@ -915,7 +935,11 @@ export default function Profile() {
                           x2="100%"
                           y2="100%"
                         >
-                          <Stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+                          <Stop
+                            offset="0%"
+                            stopColor="#FFFFFF"
+                            stopOpacity="1"
+                          />
                           <Stop
                             offset="50%"
                             stopColor="#000000"
@@ -942,13 +966,13 @@ export default function Profile() {
                     source={
                       image
                         ? {
-                          uri:
-                            image.startsWith("http") ||
+                            uri:
+                              image.startsWith("http") ||
                               image.startsWith("file") ||
                               image.startsWith("data:")
-                              ? image
-                              : `data:image/png;base64,${image}`,
-                        }
+                                ? image
+                                : `data:image/png;base64,${image}`,
+                          }
                         : require("../../assets/images/avtar.png")
                     }
                     className="w-[82px] h-[82px] absolute rounded-full"
