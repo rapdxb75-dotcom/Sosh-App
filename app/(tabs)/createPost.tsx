@@ -32,6 +32,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { DraggableGrid } from "react-native-draggable-grid";
+import MovToMp4 from "react-native-mov-to-mp4";
 import Svg, {
   Circle,
   Defs,
@@ -1060,8 +1061,30 @@ export default function CreatePost() {
     });
 
     if (!result.canceled) {
+      const handleVideoConversion = async (uri: string) => {
+        if (Platform.OS === "ios" && uri.toLowerCase().endsWith(".mov")) {
+          try {
+            const filename = Date.now().toString() + ".mp4";
+            let convertedUri = await MovToMp4.convertMovToMp4(
+              uri.replace("file://", ""),
+              filename,
+            );
+            if (!convertedUri.startsWith("file://")) {
+              convertedUri = "file://" + convertedUri;
+            }
+            return convertedUri;
+          } catch (error) {
+            console.error("Video conversion error:", error);
+            return uri;
+          }
+        }
+        return uri;
+      };
+
       if (allowsMultipleSelection) {
-        const newUris = result.assets.map((a) => a.uri);
+        const newUris = await Promise.all(
+          result.assets.map(async (a) => await handleVideoConversion(a.uri)),
+        );
         if (isAppending && Array.isArray(currentMedia)) {
           updateActiveTab(targetKey, [...currentMedia, ...newUris]);
         } else {
@@ -1069,7 +1092,8 @@ export default function CreatePost() {
         }
       } else {
         const asset = result.assets[0];
-        updateActiveTab(targetKey, asset.uri);
+        const processedUri = await handleVideoConversion(asset.uri);
+        updateActiveTab(targetKey, processedUri);
       }
     }
   };

@@ -194,7 +194,7 @@ export default function Profile() {
     if (!globalEmail) return;
     setRefreshing(true);
     try {
-      const [userData] = await Promise.all([
+      const [userData]: any = await Promise.all([
         getCurrentUserData(globalEmail),
         new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
