@@ -924,7 +924,9 @@ export default function Analysis() {
 
       <ScrollView
         ref={scrollRef}
-        className="flex-1"
+        style={{ flex: 1 }}
+        bounces={true}
+        overScrollMode="always"
         contentContainerStyle={{
           paddingBottom: 160,
         }}
@@ -936,8 +938,7 @@ export default function Analysis() {
             onRefresh={handleRefresh}
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
-            progressBackgroundColor="#1C1C1E"
-            progressViewOffset={insets.top + 60}
+            progressViewOffset={insets.top}
           />
         }
       >

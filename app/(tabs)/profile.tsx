@@ -621,8 +621,10 @@ export default function Profile() {
     <View className="flex-1">
       <ScrollView
         ref={scrollRef}
-        className="flex-1"
-        contentContainerStyle={{ paddingBottom: 160 }}
+        style={{ flex: 1 }}
+        bounces={true}
+        overScrollMode="always"
+        contentContainerStyle={{ flex: 1, paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -630,17 +632,16 @@ export default function Profile() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor="#FFFFFF"
-            colors={["#FFFFFF"]}
-            progressBackgroundColor="#1C1C1E"
-            progressViewOffset={insets.top + 60}
+            tintColor="#dbfaff"
+            colors={["#dbfaff"]}
+            progressViewOffset={insets.top + 20}
           />
         }
       >
         {/* Header - Static */}
         <Header />
 
-        <View className="w-full px-5">
+        <View className="w-full px-5 flex-1">
           <Text className="page-title text-white mb-4 mt-8">
             Your{"\n"}Account
           </Text>
