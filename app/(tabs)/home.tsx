@@ -103,7 +103,7 @@ export default function Home() {
             onRefresh={handleRefresh}
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
-            progressViewOffset={insets.top}
+            progressViewOffset={insets.top + 20}
           />
         }
       >

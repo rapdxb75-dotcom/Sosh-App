@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
   Image,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -889,8 +890,11 @@ export default function Analysis() {
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, []),
+      scrollRef.current?.scrollTo({
+        y: Platform.OS === "ios" ? -insets.top : 0,
+        animated: false,
+      });
+    }, [insets.top]),
   );
 
   useEffect(() => {
@@ -932,55 +936,66 @@ export default function Analysis() {
         }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
+        {...(Platform.OS === "ios"
+          ? {
+              contentInset: { top: insets.top },
+              contentOffset: { x: 0, y: -insets.top },
+            }
+          : {})}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
-            progressViewOffset={insets.top}
+            progressViewOffset={insets.top + 20}
           />
         }
       >
-        {/* Header - Static */}
-        <Header />
+        {/* Header */}
+        <View
+          style={Platform.OS === "ios" ? { marginTop: -insets.top } : undefined}
+        >
+          <Header />
 
-        <View className="px-5">
-          <Text className="page-title text-white mb-4 mt-8">
-            Your{"\n"}Analytics
-          </Text>
+          <View className="px-5">
+            <Text className="page-title text-white mb-4 mt-8">
+              Your{"\n"}Analytics
+            </Text>
 
-          <Text className="section-title text-white mb-4 font-semibold">
-            Platform Breakdown
-          </Text>
+            <Text className="section-title text-white mb-4 font-semibold">
+              Platform Breakdown
+            </Text>
 
-          {loading ? (
-            <>
-              {[1, 2, 3, 4].map((key) => (
-                <PlatformSkeletonCard key={key} />
-              ))}
-            </>
-          ) : platformsData.length === 0 ? (
-            <View className="items-center justify-center py-10 mt-10">
-              <Text className="text-white/60 text-center font-inter text-base leading-6">
-                No connected accounts!{"\n"}Please connect them in your profile.
-              </Text>
-            </View>
-          ) : (
-            platformsData.map((platform) => (
-              <PlatformCard
-                key={platform.id}
-                platform={platform}
-                isExpanded={expandedPlatform === platform.id}
-                onToggle={() =>
-                  setExpandedPlatform(
-                    expandedPlatform === platform.id ? "" : platform.id,
-                  )
-                }
-                screenWidth={width}
-              />
-            ))
-          )}
+            {loading ? (
+              <>
+                {[1, 2, 3, 4].map((key) => (
+                  <PlatformSkeletonCard key={key} />
+                ))}
+              </>
+            ) : platformsData.length === 0 ? (
+              <View className="items-center justify-center py-10 mt-10">
+                <Text className="text-white/60 text-center font-inter text-base leading-6">
+                  No connected accounts!{"\n"}Please connect them in your
+                  profile.
+                </Text>
+              </View>
+            ) : (
+              platformsData.map((platform) => (
+                <PlatformCard
+                  key={platform.id}
+                  platform={platform}
+                  isExpanded={expandedPlatform === platform.id}
+                  onToggle={() =>
+                    setExpandedPlatform(
+                      expandedPlatform === platform.id ? "" : platform.id,
+                    )
+                  }
+                  screenWidth={width}
+                />
+              ))
+            )}
+          </View>
         </View>
       </ScrollView>
     </View>
