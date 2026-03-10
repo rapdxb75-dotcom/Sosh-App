@@ -34,6 +34,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { DraggableGrid } from "react-native-draggable-grid";
+import ImageCropPicker from "react-native-image-crop-picker";
 import MovToMp4 from "react-native-mov-to-mp4";
 import Svg, {
   Circle,
@@ -1003,16 +1004,50 @@ export default function CreatePost() {
     updateActiveTab("selectedPlatforms", newPlatforms);
   };
 
+  // Helper function to crop image with specified aspect ratio
+  const cropImage = async (
+    imageUri: string,
+    width: number,
+    height: number,
+  ): Promise<string | null> => {
+    try {
+      const result = await ImageCropPicker.openCropper({
+        path: imageUri,
+        width,
+        height,
+        cropping: true,
+        mediaType: "photo",
+        includeBase64: false,
+      });
+      return result.path;
+    } catch (error: any) {
+      if (error?.code === "E_PICKER_CANCELLED") {
+        return null;
+      }
+      console.error("Image cropping error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Crop Failed",
+        text2: "Unable to crop image. Using original.",
+      });
+      return imageUri;
+    }
+  };
+
   const pickCoverImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [9, 16],
+      allowsEditing: false,
       quality: 1,
     });
 
     if (!result.canceled) {
-      updateActiveTab("cover_img", result.assets[0].uri);
+      const originalUri = result.assets[0].uri;
+      // Crop image with 9:16 aspect ratio for cover
+      const croppedUri = await cropImage(originalUri, 9, 16);
+      if (croppedUri) {
+        updateActiveTab("cover_img", croppedUri);
+      }
     }
   };
 
@@ -1132,6 +1167,34 @@ export default function CreatePost() {
       } else {
         const asset = result.assets[0];
         let processedUri = await handleVideoConversion(asset.uri);
+
+        // Offer cropping for image selections (not videos)
+        if (!isVideoUrl(asset.uri)) {
+          let cropWidth = 1;
+          let cropHeight = 1;
+
+          // Set aspect ratio based on post type
+          if (activeTab === "Post" && postType === "Single") {
+            cropWidth = 4;
+            cropHeight = 5; // Instagram feed aspect ratio
+          } else if (activeTab === "Reel") {
+            cropWidth = 9;
+            cropHeight = 16; // Reel/Story aspect ratio
+          } else if (activeTab === "Story") {
+            cropWidth = 9;
+            cropHeight = 16; // Story aspect ratio
+          }
+
+          const croppedUri = await cropImage(
+            processedUri,
+            cropWidth,
+            cropHeight,
+          );
+          if (croppedUri) {
+            processedUri = croppedUri;
+          }
+        }
+
         processedUri = await handleImageConversion(processedUri);
         updateActiveTab(targetKey, processedUri);
       }

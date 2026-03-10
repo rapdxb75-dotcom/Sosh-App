@@ -11,6 +11,7 @@ import {
   Keyboard,
   Linking,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -152,8 +153,11 @@ export default function Profile() {
 
   useFocusEffect(
     useCallback(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: false });
-    }, []),
+      scrollRef.current?.scrollTo({
+        y: Platform.OS === "ios" ? -insets.top : 0,
+        animated: false,
+      });
+    }, [insets.top]),
   );
 
   // Global User State from Redux
@@ -624,10 +628,17 @@ export default function Profile() {
         style={{ flex: 1 }}
         bounces={true}
         overScrollMode="always"
-        contentContainerStyle={{ flex: 1, paddingBottom: 160 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        nestedScrollEnabled
+        {...(Platform.OS === "ios"
+          ? {
+              contentInset: { top: insets.top },
+              contentOffset: { x: 0, y: -insets.top },
+            }
+          : {})}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -638,181 +649,185 @@ export default function Profile() {
           />
         }
       >
-        {/* Header - Static */}
-        <Header />
+        {/* Header */}
+        <View
+          style={Platform.OS === "ios" ? { marginTop: -insets.top } : undefined}
+        >
+          <Header />
 
-        <View className="w-full px-5 flex-1">
-          <Text className="page-title text-white mb-4 mt-8">
-            Your{"\n"}Account
-          </Text>
+          <View className="w-full px-5">
+            <Text className="page-title text-white mb-4 mt-8">
+              Your{"\n"}Account
+            </Text>
 
-          {/* Profile Card with Gradient Border Overlay */}
-          <View
-            className="rounded-[32px] overflow-hidden mb-8"
-            style={{
-              shadowColor: "#000000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.45,
-              shadowRadius: 24,
-              elevation: 12,
-            }}
-          >
-            <BlurView intensity={30} tint="light" className="p-[1px]">
-              <LinearGradient
-                colors={[
-                  "rgba(255, 255, 255, 0.1)",
-                  "rgba(255, 255, 255, 0.1)",
-                ]}
-                style={{
-                  borderRadius: 32,
-                  paddingVertical: 20,
-                  paddingHorizontal: 10,
-                  position: "relative",
-                }}
-              >
-                {/* Gradient Border SVG (Taller to hide bottom stroke) */}
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <Svg height="120%" width="100%">
-                    <Defs>
-                      <SvgLinearGradient
-                        id="cardBorderGrad"
-                        x1="0%"
-                        y1="0%"
-                        x2="0%"
-                        y2="100%"
-                      >
-                        <Stop
-                          offset="0%"
-                          stopColor="rgba(255, 255, 255, 0.7)"
-                          stopOpacity="1"
-                        />
-                        <Stop
-                          offset="100%"
-                          stopColor="rgba(0, 0, 0, 0.7)"
-                          stopOpacity="1"
-                        />
-                      </SvgLinearGradient>
-                    </Defs>
-                    <Rect
-                      x="0.5"
-                      y="0.5"
-                      width="99.7%"
-                      height="87%" // Relative to SVG height="120%", this puts bottom edge way outside container
-                      rx="32"
-                      ry="32"
-                      stroke="url(#cardBorderGrad)"
-                      strokeWidth="1"
-                      fill="transparent"
-                    />
-                  </Svg>
-                </View>
-
-                {/* User Header */}
-                <View className="flex-row items-center justify-between mb-2 px-2">
-                  <View className="flex-row items-center gap-3">
-                    <View className="w-[50px] h-[50px] items-center justify-center">
-                      <GradientRingSVG />
-                      <Image
-                        source={
-                          image
-                            ? {
-                                uri:
-                                  image.startsWith("http") ||
-                                  image.startsWith("file") ||
-                                  image.startsWith("data:")
-                                    ? image
-                                    : `data:image/png;base64,${image}`,
-                              }
-                            : require("../../assets/images/avtar.png")
-                        }
-                        className="w-[45px] h-[45px] rounded-full"
-                        resizeMode={image ? "cover" : "contain"}
+            {/* Profile Card with Gradient Border Overlay */}
+            <View
+              className="rounded-[32px] overflow-hidden mb-8"
+              style={{
+                shadowColor: "#000000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.45,
+                shadowRadius: 24,
+                elevation: 12,
+              }}
+            >
+              <BlurView intensity={30} tint="light" className="p-[1px]">
+                <LinearGradient
+                  colors={[
+                    "rgba(255, 255, 255, 0.1)",
+                    "rgba(255, 255, 255, 0.1)",
+                  ]}
+                  style={{
+                    borderRadius: 32,
+                    paddingVertical: 20,
+                    paddingHorizontal: 10,
+                    position: "relative",
+                  }}
+                >
+                  {/* Gradient Border SVG (Taller to hide bottom stroke) */}
+                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                    <Svg height="120%" width="100%">
+                      <Defs>
+                        <SvgLinearGradient
+                          id="cardBorderGrad"
+                          x1="0%"
+                          y1="0%"
+                          x2="0%"
+                          y2="100%"
+                        >
+                          <Stop
+                            offset="0%"
+                            stopColor="rgba(255, 255, 255, 0.7)"
+                            stopOpacity="1"
+                          />
+                          <Stop
+                            offset="100%"
+                            stopColor="rgba(0, 0, 0, 0.7)"
+                            stopOpacity="1"
+                          />
+                        </SvgLinearGradient>
+                      </Defs>
+                      <Rect
+                        x="0.5"
+                        y="0.5"
+                        width="99.7%"
+                        height="87%" // Relative to SVG height="120%", this puts bottom edge way outside container
+                        rx="32"
+                        ry="32"
+                        stroke="url(#cardBorderGrad)"
+                        strokeWidth="1"
+                        fill="transparent"
                       />
-                    </View>
-                    <Text className="profile-username text-white">
-                      {username}
-                    </Text>
+                    </Svg>
                   </View>
-                  <TouchableOpacity
-                    className="rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]"
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setEditModalVisible(true);
-                    }}
-                    style={{
-                      shadowColor: "#000000",
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.3,
-                      shadowRadius: 8,
-                      elevation: 6,
-                    }}
-                  >
-                    <Image
-                      source={require("../../assets/icons/edit.png")}
-                      className="w-5 h-5"
-                      resizeMode="contain"
+
+                  {/* User Header */}
+                  <View className="flex-row items-center justify-between mb-2 px-2">
+                    <View className="flex-row items-center gap-3">
+                      <View className="w-[50px] h-[50px] items-center justify-center">
+                        <GradientRingSVG />
+                        <Image
+                          source={
+                            image
+                              ? {
+                                  uri:
+                                    image.startsWith("http") ||
+                                    image.startsWith("file") ||
+                                    image.startsWith("data:")
+                                      ? image
+                                      : `data:image/png;base64,${image}`,
+                                }
+                              : require("../../assets/images/avtar.png")
+                          }
+                          className="w-[45px] h-[45px] rounded-full"
+                          resizeMode={image ? "cover" : "contain"}
+                        />
+                      </View>
+                      <Text className="profile-username text-white">
+                        {username}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      className="rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]"
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setEditModalVisible(true);
+                      }}
+                      style={{
+                        shadowColor: "#000000",
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 8,
+                        elevation: 6,
+                      }}
+                    >
+                      <Image
+                        source={require("../../assets/icons/edit.png")}
+                        className="w-5 h-5"
+                        resizeMode="contain"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Stats Grid */}
+                  <View className="flex-row flex-wrap gap-3 p-2">
+                    <StatItem
+                      label="Sosh Views"
+                      value={
+                        analytics.totalViews > 0
+                          ? formatNumber(analytics.totalViews)
+                          : "0"
+                      }
                     />
-                  </TouchableOpacity>
-                </View>
+                    <StatItem
+                      label="Sosh Likes"
+                      value={
+                        analytics.totalLikes > 0
+                          ? formatNumber(analytics.totalLikes)
+                          : "0"
+                      }
+                    />
+                    <StatItem
+                      label="Platforms"
+                      value={SOCIAL_PLATFORMS.filter((p) =>
+                        isPlatformConnected(p.key),
+                      ).length.toString()}
+                    />
+                    <StatItem
+                      label="Sosh Posts"
+                      value={
+                        analytics.totalPosts > 0
+                          ? formatNumber(analytics.totalPosts)
+                          : "0"
+                      }
+                    />
+                  </View>
+                </LinearGradient>
+              </BlurView>
+            </View>
 
-                {/* Stats Grid */}
-                <View className="flex-row flex-wrap gap-3 p-2">
-                  <StatItem
-                    label="Sosh Views"
-                    value={
-                      analytics.totalViews > 0
-                        ? formatNumber(analytics.totalViews)
-                        : "0"
-                    }
-                  />
-                  <StatItem
-                    label="Sosh Likes"
-                    value={
-                      analytics.totalLikes > 0
-                        ? formatNumber(analytics.totalLikes)
-                        : "0"
-                    }
-                  />
-                  <StatItem
-                    label="Platforms"
-                    value={SOCIAL_PLATFORMS.filter((p) =>
-                      isPlatformConnected(p.key),
-                    ).length.toString()}
-                  />
-                  <StatItem
-                    label="Sosh Posts"
-                    value={
-                      analytics.totalPosts > 0
-                        ? formatNumber(analytics.totalPosts)
-                        : "0"
-                    }
-                  />
-                </View>
-              </LinearGradient>
-            </BlurView>
+            {/* Connected Accounts */}
+            <Text className="text-white text-lg font-medium mb-4">
+              Connected accounts
+            </Text>
+
+            {SOCIAL_PLATFORMS.map((platform) => (
+              <ConnectedAccountItem
+                key={platform.key}
+                icon={platform.icon}
+                name={platform.name}
+                status={getPlatformStatus(platform.key)}
+                connectedUsername={getPlatformUsername(platform.key)}
+                isConnected={isPlatformConnected(platform.key)}
+                isConnecting={connectingPlatform === platform.key}
+                isPending={pendingConnections.indexOf(platform.key) !== -1}
+                onConnect={() => handleConnectPress(platform.key)}
+                onDisconnect={() =>
+                  handleDisconnectPress(platform.name, platform.key)
+                }
+              />
+            ))}
           </View>
-
-          {/* Connected Accounts */}
-          <Text className="text-white text-lg font-medium mb-4">
-            Connected accounts
-          </Text>
-
-          {SOCIAL_PLATFORMS.map((platform) => (
-            <ConnectedAccountItem
-              key={platform.key}
-              icon={platform.icon}
-              name={platform.name}
-              status={getPlatformStatus(platform.key)}
-              connectedUsername={getPlatformUsername(platform.key)}
-              isConnected={isPlatformConnected(platform.key)}
-              isConnecting={connectingPlatform === platform.key}
-              isPending={pendingConnections.indexOf(platform.key) !== -1}
-              onConnect={() => handleConnectPress(platform.key)}
-              onDisconnect={() =>
-                handleDisconnectPress(platform.name, platform.key)
-              }
-            />
-          ))}
         </View>
       </ScrollView>
 
