@@ -1011,17 +1011,26 @@ export default function CreatePost() {
     height: number,
   ): Promise<string | null> => {
     try {
+      // Wait for iOS to fully dismiss the previous picker modal
+      // before presenting the cropper view controller
+      if (Platform.OS === "ios") {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+      }
       const result = await ImageCropPicker.openCropper({
         path: imageUri,
         width,
         height,
-        cropping: true,
         mediaType: "photo",
         includeBase64: false,
+        forceJpg: true,
       });
       return result.path;
     } catch (error: any) {
-      if (error?.code === "E_PICKER_CANCELLED") {
+      if (
+        error?.code === "E_PICKER_CANCELLED" ||
+        error?.message?.includes("cancelled") ||
+        error?.message?.includes("canceled")
+      ) {
         return null;
       }
       console.error("Image cropping error:", error);
@@ -1044,7 +1053,7 @@ export default function CreatePost() {
     if (!result.canceled) {
       const originalUri = result.assets[0].uri;
       // Crop image with 9:16 aspect ratio for cover
-      const croppedUri = await cropImage(originalUri, 9, 16);
+      const croppedUri = await cropImage(originalUri, 1080, 1920);
       if (croppedUri) {
         updateActiveTab("cover_img", croppedUri);
       }
@@ -1090,7 +1099,7 @@ export default function CreatePost() {
 
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes,
-      allowsEditing: !allowsMultipleSelection,
+      allowsEditing: false,
       shape: "rectangle",
       quality: 0.5,
       allowsMultipleSelection,
@@ -1170,19 +1179,19 @@ export default function CreatePost() {
 
         // Offer cropping for image selections (not videos)
         if (!isVideoUrl(asset.uri)) {
-          let cropWidth = 1;
-          let cropHeight = 1;
+          let cropWidth = 1080;
+          let cropHeight = 1080;
 
           // Set aspect ratio based on post type
           if (activeTab === "Post" && postType === "Single") {
-            cropWidth = 4;
-            cropHeight = 5; // Instagram feed aspect ratio
+            cropWidth = 1080;
+            cropHeight = 1350; // Instagram feed 4:5
           } else if (activeTab === "Reel") {
-            cropWidth = 9;
-            cropHeight = 16; // Reel/Story aspect ratio
+            cropWidth = 1080;
+            cropHeight = 1920; // 9:16
           } else if (activeTab === "Story") {
-            cropWidth = 9;
-            cropHeight = 16; // Story aspect ratio
+            cropWidth = 1080;
+            cropHeight = 1920; // 9:16
           }
 
           const croppedUri = await cropImage(
@@ -1238,6 +1247,17 @@ export default function CreatePost() {
                     key={tab}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (activeTab !== tab) {
+                        setTabData((prev) => ({
+                          ...prev,
+                          [activeTab]: {
+                            ...INITIAL_TAB_DATA[
+                              activeTab as keyof typeof INITIAL_TAB_DATA
+                            ],
+                          },
+                        }));
+                        setTagInputText("");
+                      }
                       setActiveTab(tab);
                     }}
                     className={`content-tab-btn ${isActive ? "content-tab-active" : ""}`}
@@ -1700,64 +1720,68 @@ export default function CreatePost() {
                     )}
 
                     {/* Tags */}
-                    <Text className="input-label">Tags</Text>
-                    <View className="flex-row gap-3 mb-6">
-                      <View className="flex-1 glass-input flex-row items-center">
-                        <BlurView
-                          intensity={0}
-                          tint="light"
-                          className="flex-1 flex-row px-4"
-                        >
-                          <Text className="text-white/40 mr-2 input-text-regular">
-                            @
-                          </Text>
-                          <TextInput
-                            className="text-white font-inter font-semibold py-0 flex-1"
-                            placeholder="Add a tag"
-                            placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                            value={tagInputText}
-                            onChangeText={setTagInputText}
-                            onSubmitEditing={handleAddTag}
-                            blurOnSubmit={false}
-                          />
-                        </BlurView>
-                      </View>
-                      <TouchableOpacity
-                        className="w-[61px] h-[52px] rounded-[20px] overflow-hidden bg-[#FFFFFF1A]"
-                        onPress={handleAddTag}
-                      >
-                        <BlurView
-                          intensity={14}
-                          tint="light"
-                          className="flex-1 items-center justify-center"
-                        >
-                          <Text className="text-white font-inter font-medium text-sm">
-                            Add
-                          </Text>
-                        </BlurView>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Render Added Tags */}
-                    {activeTags && activeTags.length > 0 && (
-                      <View className="flex-row flex-wrap gap-2 mb-6 mt-[-8px]">
-                        {activeTags.map((tag: string, index: number) => (
-                          <View
-                            key={index}
-                            className="flex-row items-center bg-[#FFFFFF1A] px-3 py-2.5 rounded-full"
-                          >
-                            <Text className="text-white font-inter text-lg mr-2">
-                              @{tag}
-                            </Text>
-                            <TouchableOpacity
-                              onPress={() => handleRemoveTag(tag)}
-                              className="bg-black/30 rounded-full p-0.5"
+                    {activeTab !== "Story" && (
+                      <>
+                        <Text className="input-label">Tags</Text>
+                        <View className="flex-row gap-3 mb-6">
+                          <View className="flex-1 glass-input flex-row items-center">
+                            <BlurView
+                              intensity={0}
+                              tint="light"
+                              className="flex-1 flex-row px-4"
                             >
-                              <X color="white" size={16} />
-                            </TouchableOpacity>
+                              <Text className="text-white/40 mr-2 input-text-regular">
+                                @
+                              </Text>
+                              <TextInput
+                                className="text-white font-inter font-semibold py-0 flex-1"
+                                placeholder="Add a tag"
+                                placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                value={tagInputText}
+                                onChangeText={setTagInputText}
+                                onSubmitEditing={handleAddTag}
+                                blurOnSubmit={false}
+                              />
+                            </BlurView>
                           </View>
-                        ))}
-                      </View>
+                          <TouchableOpacity
+                            className="w-[61px] h-[52px] rounded-[20px] overflow-hidden bg-[#FFFFFF1A]"
+                            onPress={handleAddTag}
+                          >
+                            <BlurView
+                              intensity={14}
+                              tint="light"
+                              className="flex-1 items-center justify-center"
+                            >
+                              <Text className="text-white font-inter font-medium text-sm">
+                                Add
+                              </Text>
+                            </BlurView>
+                          </TouchableOpacity>
+                        </View>
+
+                        {/* Render Added Tags */}
+                        {activeTags && activeTags.length > 0 && (
+                          <View className="flex-row flex-wrap gap-2 mb-6 mt-[-8px]">
+                            {activeTags.map((tag: string, index: number) => (
+                              <View
+                                key={index}
+                                className="flex-row items-center bg-[#FFFFFF1A] px-3 py-2.5 rounded-full"
+                              >
+                                <Text className="text-white font-inter text-lg mr-2">
+                                  @{tag}
+                                </Text>
+                                <TouchableOpacity
+                                  onPress={() => handleRemoveTag(tag)}
+                                  className="bg-black/30 rounded-full p-0.5"
+                                >
+                                  <X color="white" size={16} />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </>
                     )}
                   </View>
                 </BlurView>
