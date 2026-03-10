@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Platform, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import Header from "../../components/common/Header";
@@ -89,7 +89,10 @@ export default function Home() {
   const bottomPadding = Math.max(insets.bottom + 10, 40) + 106;
 
   return (
-    <View className="flex-1">
+    <View
+      className="flex-1"
+      style={{ paddingTop: Platform.OS === "ios" ? insets.top + 10 : 0 }}
+    >
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flex: 1, paddingBottom: bottomPadding }}
@@ -103,12 +106,12 @@ export default function Home() {
             onRefresh={handleRefresh}
             tintColor="#FFFFFF"
             colors={["#FFFFFF"]}
-            progressViewOffset={insets.top + 20}
+            progressViewOffset={Platform.OS === "ios" ? 0 : insets.top + 20}
           />
         }
       >
         {/* Header */}
-        <Header />
+        <Header disableTopSpacing />
 
         <View className="w-full px-5 flex-1">
           <Text className="page-title text-white mb-4 mt-8">

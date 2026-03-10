@@ -69,8 +69,13 @@ const ringStyles = StyleSheet.create({
 });
 
 /* ---------- Header Component ---------- */
-export default function Header() {
-  const { showNotifications, notifications, addNotification } = useNotification();
+type HeaderProps = {
+  disableTopSpacing?: boolean;
+};
+
+export default function Header({ disableTopSpacing = false }: HeaderProps) {
+  const { showNotifications, notifications, addNotification } =
+    useNotification();
   const profilePic = useSelector(
     (state: RootState) => state.user.profilePicture,
   );
@@ -94,7 +99,11 @@ export default function Header() {
   return (
     <View
       className="flex-row justify-between items-center px-5"
-      style={{ paddingTop: Math.max(insets.top + 10, normalize(55)) }}
+      style={{
+        paddingTop: disableTopSpacing
+          ? 0
+          : Math.max(insets.top + 10, normalize(55)),
+      }}
     >
       {/* Left Logo */}
       <View
@@ -147,13 +156,13 @@ export default function Header() {
             source={
               profilePic
                 ? {
-                  uri:
-                    profilePic.startsWith("data:") ||
+                    uri:
+                      profilePic.startsWith("data:") ||
                       profilePic.startsWith("http") ||
                       profilePic.startsWith("file")
-                      ? profilePic
-                      : `data:image/png;base64,${profilePic}`,
-                }
+                        ? profilePic
+                        : `data:image/png;base64,${profilePic}`,
+                  }
                 : require("../../assets/images/avtar.png")
             }
             style={{
