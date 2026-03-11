@@ -5,8 +5,8 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
-import { Image, ImageBackground, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ImageBackground, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { Provider, useSelector } from "react-redux";
 import { toastConfig } from "../components/common/CustomToast";
@@ -59,11 +59,12 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_400Regular,
   });
+  const [assetsReady, setAssetsReady] = useState(false);
 
+  // Preload assets once on mount
   useEffect(() => {
-    async function prepare() {
+    async function preloadAssets() {
       try {
-        // Preload all essential icons and images to prevent loading delays
         await Asset.loadAsync([
           require("../assets/images/background.png"),
           require("../assets/icons/instagram.png"),
@@ -90,37 +91,26 @@ export default function RootLayout() {
           require("../assets/images/avtar.png"),
           require("../assets/images/button-bg.png"),
         ]);
-
-        if (loaded || error) {
-          await SplashScreen.hideAsync();
-        }
       } catch (e) {
         console.warn(e);
+      } finally {
+        setAssetsReady(true);
       }
     }
 
-    prepare();
-    // Initialize user data from storage into Redux
+    preloadAssets();
     store.dispatch(initializeUser());
-  }, [loaded, error]);
+  }, []);
+
+  // Hide splash only after both fonts and assets are ready
+  useEffect(() => {
+    if ((loaded || error) && assetsReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, error, assetsReady]);
 
   if (!loaded && !error) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#000" }}>
-        <StatusBar style="light" translucent backgroundColor="transparent" />
-        <ImageBackground
-          source={require("../assets/images/background.png")}
-          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-          resizeMode="cover"
-        >
-          <Image
-            source={require("../assets/images/logo.png")}
-            style={{ width: 80, height: 80 }}
-            resizeMode="contain"
-          />
-        </ImageBackground>
-      </View>
-    );
+    return null;
   }
 
   return (

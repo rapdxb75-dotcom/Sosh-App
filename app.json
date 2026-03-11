@@ -5,6 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
+    "splash": {
+      "image": "./assets/images/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "scheme": "rapdxb",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,6 +17,11 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.social.aiautomation",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "splash": {
+        "image": "./assets/images/logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#000000"
+      },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to the microphone for voice recognition",
         "NSSpeechRecognitionUsageDescription": "This app needs speech recognition access to convert your voice to text"
@@ -43,10 +53,7 @@
           "image": "./assets/images/logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#000000"
         }
       ],
       "expo-font",
