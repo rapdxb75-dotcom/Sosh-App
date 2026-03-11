@@ -1,4 +1,5 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
+import axios from "axios";
 import { ResizeMode, Video } from "expo-av";
 import { BlurView } from "expo-blur";
 import * as FileSystem from "expo-file-system";
@@ -17,6 +18,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   Image,
   ImageBackground,
   Keyboard,
@@ -376,6 +378,8 @@ export default function CreatePost() {
   const lastProcessedResult = useRef<number>(0);
   const activeTabRef = useRef(activeTab);
   const postTypeRef = useRef<string>("Single");
+  const appStateRef = useRef(AppState.currentState);
+  const publishInterruptedByBackgroundRef = useRef(false);
 
   // Cover scrubber — all mutable values in refs so PanResponder never has stale closures
   const coverVideoRef = useRef<any>(null);
@@ -388,6 +392,25 @@ export default function CreatePost() {
   const [scrubberPositionMs, setScrubberPositionMs] = useState(0);
   const filmStripWidth = useRef(0);
   const SELECTOR_WIDTH = 76;
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      const movingToBackground =
+        nextState === "background" || nextState === "inactive";
+
+      if (
+        isPublishing &&
+        appStateRef.current === "active" &&
+        movingToBackground
+      ) {
+        publishInterruptedByBackgroundRef.current = true;
+      }
+
+      appStateRef.current = nextState;
+    });
+
+    return () => subscription.remove();
+  }, [isPublishing]);
 
   // Safe seek: silently skips if a seek is already in flight
   const safeSeek = (ms: number) => {
@@ -832,6 +855,7 @@ export default function CreatePost() {
     }
 
     try {
+      publishInterruptedByBackgroundRef.current = false;
       setIsPublishing(true);
       const token = await storageService.getToken();
 
@@ -1212,6 +1236,27 @@ export default function CreatePost() {
       scrubberPositionMsRef.current = 0;
     } catch (error) {
       console.error("Post generation error:", error);
+
+      const isBackgroundInterruptedNetworkError =
+        publishInterruptedByBackgroundRef.current &&
+        axios.isAxiosError(error) &&
+        !error.response;
+
+      if (isBackgroundInterruptedNetworkError) {
+        addNotification({
+          type: "neutral",
+          title: "Upload Interrupted",
+          message:
+            "Upload was interrupted because the app moved to background. Keep app open until posting completes.",
+        });
+        Toast.show({
+          type: "error",
+          text1: "Upload Interrupted",
+          text2: "Keep app open until upload is complete.",
+        });
+        return;
+      }
+
       if (
         error instanceof Error &&
         error.message.includes("Compression did not produce valid reduced file")
@@ -1234,6 +1279,7 @@ export default function CreatePost() {
         text2: `Failed to create ${activeTab.toLowerCase()}. Please try again.`,
       });
     } finally {
+      publishInterruptedByBackgroundRef.current = false;
       setIsPublishing(false);
     }
   };
