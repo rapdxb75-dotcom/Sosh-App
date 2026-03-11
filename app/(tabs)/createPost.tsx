@@ -35,7 +35,6 @@ import {
 } from "react-native";
 import { DraggableGrid } from "react-native-draggable-grid";
 import ImageCropPicker from "react-native-image-crop-picker";
-import MovToMp4 from "react-native-mov-to-mp4";
 import Svg, {
   Circle,
   Defs,
@@ -1107,26 +1106,6 @@ export default function CreatePost() {
     });
 
     if (!result.canceled) {
-      const handleVideoConversion = async (uri: string) => {
-        if (Platform.OS === "ios" && uri.toLowerCase().endsWith(".mov")) {
-          try {
-            const filename = Date.now().toString() + ".mp4";
-            let convertedUri = await MovToMp4.convertMovToMp4(
-              uri.replace("file://", ""),
-              filename,
-            );
-            if (!convertedUri.startsWith("file://")) {
-              convertedUri = "file://" + convertedUri;
-            }
-            return convertedUri;
-          } catch (error) {
-            console.error("Video conversion error:", error);
-            return uri;
-          }
-        }
-        return uri;
-      };
-
       const handleImageConversion = async (uri: string) => {
         if (!isVideoUrl(uri)) {
           try {
@@ -1163,7 +1142,7 @@ export default function CreatePost() {
       if (allowsMultipleSelection) {
         const newUris = await Promise.all(
           result.assets.map(async (a) => {
-            let processedUri = await handleVideoConversion(a.uri);
+            let processedUri = a.uri;
             processedUri = await handleImageConversion(processedUri);
             return processedUri;
           }),
@@ -1175,7 +1154,7 @@ export default function CreatePost() {
         }
       } else {
         const asset = result.assets[0];
-        let processedUri = await handleVideoConversion(asset.uri);
+        let processedUri = asset.uri;
 
         // Offer cropping for image selections (not videos)
         if (!isVideoUrl(asset.uri)) {
