@@ -33,6 +33,11 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import {
+  Video as CompressorVideo,
+  getFileSize as compressorGetFileSize,
+  getRealPath as compressorGetRealPath,
+} from "react-native-compressor";
 import { DraggableGrid } from "react-native-draggable-grid";
 import ImageCropPicker from "react-native-image-crop-picker";
 import Svg, {
@@ -841,13 +846,250 @@ export default function CreatePost() {
 
       const isCarousel = Array.isArray(currentMedia);
 
-      const processMediaForUpload = (mediaItem: string) => {
-        if (mediaItem.startsWith("data:")) {
-          return mediaItem; // Probably still base64 for images
+      const getFileSizeInMB = async (uri: string) => {
+        const parseBytesToMB = (bytesValue: unknown) => {
+          const bytesNum = Number(bytesValue);
+          if (!Number.isFinite(bytesNum) || bytesNum <= 0) {
+            return null;
+          }
+          return bytesNum / (1024 * 1024);
+        };
+
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(uri);
+          if (!fileInfo.exists || fileInfo.size === undefined) {
+            console.log("[UploadDebug] File info missing", { uri });
+          } else {
+            const sizeMB = parseBytesToMB(fileInfo.size);
+            if (sizeMB) {
+              console.log("[UploadDebug] File size fetched", {
+                uri,
+                sizeMB: Number(sizeMB.toFixed(2)),
+                source: "expo-file-system",
+              });
+              return sizeMB;
+            }
+          }
+        } catch (error) {
+          console.log("[UploadDebug] File size fetch failed", { uri });
+          console.log("[UploadDebug] File size fetch error detail", {
+            uri,
+            error,
+          });
         }
-        if (mediaItem.startsWith("file://")) {
-          const ext = mediaItem.split(".").pop()?.toLowerCase() || "jpg";
-          const isVideo = ext === "mp4" || ext === "mov";
+
+        try {
+          const realPath = await compressorGetRealPath(uri, "video").catch(
+            () => uri,
+          );
+          const sizeBytes = await compressorGetFileSize(realPath);
+          const sizeMB = parseBytesToMB(sizeBytes);
+          if (sizeMB) {
+            console.log("[UploadDebug] File size fetched", {
+              uri,
+              realPath,
+              sizeMB: Number(sizeMB.toFixed(2)),
+              source: "react-native-compressor",
+            });
+            return sizeMB;
+          }
+        } catch (error) {
+          console.log("[UploadDebug] Compressor file size fetch failed", {
+            uri,
+            error,
+          });
+        }
+
+        return null;
+      };
+
+      const normalizeMediaUri = (uri: string) => {
+        if (
+          uri.startsWith("file://") ||
+          uri.startsWith("content://") ||
+          uri.startsWith("ph://") ||
+          uri.startsWith("assets-library://")
+        ) {
+          return uri;
+        }
+        return `file://${uri}`;
+      };
+
+      const ensureLocalFileUri = async (uri: string) => {
+        if (
+          uri.startsWith("data:") ||
+          uri.startsWith("http://") ||
+          uri.startsWith("https://")
+        ) {
+          return uri;
+        }
+
+        if (uri.startsWith("file://")) {
+          return uri;
+        }
+
+        try {
+          const maybeRealPath = await compressorGetRealPath(uri, "video").catch(
+            () => uri,
+          );
+          const sourceUri = normalizeMediaUri(maybeRealPath || uri);
+          const ext = sourceUri.split(".").pop()?.toLowerCase() || "mp4";
+          const baseDir =
+            (FileSystem as any).Paths?.cache?.uri ||
+            (FileSystem as any).cacheDirectory ||
+            (FileSystem as any).documentDirectory ||
+            "file:///tmp/";
+          const localUri = `${baseDir}upload-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          await FileSystem.copyAsync({ from: sourceUri, to: localUri });
+          console.log("[UploadDebug] Local file prepared", {
+            originalUri: uri,
+            sourceUri,
+            localUri,
+          });
+          return localUri;
+        } catch {
+          const fallbackUri = normalizeMediaUri(uri);
+          console.log("[UploadDebug] Local file prepare fallback", {
+            originalUri: uri,
+            fallbackUri,
+          });
+          return fallbackUri;
+        }
+      };
+
+      const compressVideoIfNeeded = async (mediaItem: string) => {
+        const localMediaUri = await ensureLocalFileUri(mediaItem);
+        const isVideoMedia =
+          isVideoUrl(localMediaUri) ||
+          isVideoUrl(mediaItem) ||
+          (activeTab === "Story" && postType === "Carousel") ||
+          activeTab === "Reel";
+
+        console.log("[UploadDebug] Compression check", {
+          activeTab,
+          postType,
+          mediaItem,
+          localMediaUri,
+          isVideoMedia,
+        });
+
+        if (!localMediaUri.startsWith("file://") || !isVideoMedia) {
+          return mediaItem;
+        }
+
+        const maxSizeMB = activeTab === "Story" ? 100 : 300;
+        const targetSizeMB = activeTab === "Story" ? 95 : 290;
+        const initialSizeMB = await getFileSizeInMB(localMediaUri);
+
+        const shouldForceCompression = activeTab === "Story" && isVideoMedia;
+
+        if (initialSizeMB && initialSizeMB <= maxSizeMB) {
+          console.log("[UploadDebug] Compression skipped (under threshold)", {
+            localMediaUri,
+            initialSizeMB,
+            maxSizeMB,
+          });
+          return localMediaUri;
+        }
+
+        if (!initialSizeMB && !shouldForceCompression) {
+          console.log("[UploadDebug] Compression skipped (size unknown)", {
+            localMediaUri,
+            activeTab,
+            postType,
+          });
+          return localMediaUri;
+        }
+
+        if (!initialSizeMB && shouldForceCompression) {
+          console.log(
+            "[UploadDebug] Forcing Story video compression because size is unknown",
+            {
+              localMediaUri,
+              maxSizeMB,
+              targetSizeMB,
+            },
+          );
+        }
+
+        Toast.show({
+          type: "info",
+          text1: "Compressing Video",
+          text2: `Video is larger than ${maxSizeMB}MB. Optimizing before upload...`,
+        });
+
+        let compressedUri = localMediaUri;
+        let currentSizeMB = initialSizeMB ?? Number.MAX_SAFE_INTEGER;
+        const maxSizeSteps = [1280, 960, 720];
+
+        for (const maxSize of maxSizeSteps) {
+          if (currentSizeMB <= targetSizeMB) {
+            break;
+          }
+
+          const nextUri = await CompressorVideo.compress(compressedUri, {
+            compressionMethod: "auto",
+            maxSize,
+          });
+
+          compressedUri = normalizeMediaUri(nextUri);
+          const nextSizeMB = await getFileSizeInMB(compressedUri);
+          console.log("[UploadDebug] Compression step", {
+            maxSize,
+            previousSizeMB: currentSizeMB,
+            nextSizeMB,
+            compressedUri,
+          });
+          if (!nextSizeMB || nextSizeMB >= currentSizeMB) {
+            break;
+          }
+          currentSizeMB = nextSizeMB;
+        }
+
+        const finalSizeMB = await getFileSizeInMB(compressedUri);
+        console.log("[UploadDebug] Compression result", {
+          localMediaUri,
+          compressedUri,
+          initialSizeMB,
+          finalSizeMB,
+          maxSizeMB,
+          targetSizeMB,
+        });
+
+        if (!finalSizeMB || finalSizeMB > maxSizeMB) {
+          throw new Error(
+            `Compression did not produce valid reduced file. initial=${initialSizeMB}, final=${finalSizeMB}`,
+          );
+        }
+
+        if (initialSizeMB && finalSizeMB >= initialSizeMB) {
+          throw new Error(
+            `Compression did not produce valid reduced file. initial=${initialSizeMB}, final=${finalSizeMB}`,
+          );
+        }
+
+        return compressedUri;
+      };
+
+      const processMediaForUpload = async (mediaItem: string) => {
+        const processedMediaItem = await compressVideoIfNeeded(mediaItem);
+
+        if (processedMediaItem.startsWith("data:")) {
+          return processedMediaItem; // Probably still base64 for images
+        }
+        if (
+          processedMediaItem.startsWith("file://") ||
+          processedMediaItem.startsWith("content://") ||
+          processedMediaItem.startsWith("ph://") ||
+          processedMediaItem.startsWith("assets-library://")
+        ) {
+          const ext =
+            processedMediaItem.split(".").pop()?.toLowerCase() || "jpg";
+          const isVideo =
+            isVideoUrl(processedMediaItem) ||
+            isVideoUrl(mediaItem) ||
+            (activeTab === "Story" && postType === "Carousel") ||
+            activeTab === "Reel";
           let mimeType = "image/jpeg";
           if (isVideo) {
             mimeType = ext === "mov" ? "video/quicktime" : "video/mp4";
@@ -856,25 +1098,36 @@ export default function CreatePost() {
           } else if (ext === "webp") {
             mimeType = "image/webp";
           }
-          const fileName = mediaItem.split("/").pop() || `upload.${ext}`;
+          const rawName = processedMediaItem.split("/").pop() || "";
+          const fileName = rawName.includes(".")
+            ? rawName
+            : isVideo
+              ? "upload.mp4"
+              : `upload.${ext}`;
 
           return {
-            uri: mediaItem,
+            uri: processedMediaItem,
             type: mimeType,
             name: fileName,
           } as any;
         }
-        return mediaItem;
+        return processedMediaItem;
       };
 
       let mediaPayload: any | any[] = "";
       if (isCarousel) {
-        mediaPayload = (currentMedia as unknown as string[]).map(
-          processMediaForUpload,
+        mediaPayload = await Promise.all(
+          (currentMedia as unknown as string[]).map(processMediaForUpload),
         );
       } else {
-        mediaPayload = processMediaForUpload(currentMedia as string);
+        mediaPayload = await processMediaForUpload(currentMedia as string);
       }
+
+      console.log("[UploadDebug] Final media payload prepared", {
+        activeTab,
+        isCarousel,
+        payload: mediaPayload,
+      });
 
       const activePlatforms = Object.entries(selectedPlatforms)
         .filter(([_, isSelected]) => isSelected)
@@ -959,6 +1212,17 @@ export default function CreatePost() {
       scrubberPositionMsRef.current = 0;
     } catch (error) {
       console.error("Post generation error:", error);
+      if (
+        error instanceof Error &&
+        error.message.includes("Compression did not produce valid reduced file")
+      ) {
+        Toast.show({
+          type: "error",
+          text1: "Video Compression Failed",
+          text2:
+            "Could not prepare reduced video URL. Please try a different file.",
+        });
+      }
       addNotification({
         type: "error",
         title: `${activeTab} Creation Failed`,
