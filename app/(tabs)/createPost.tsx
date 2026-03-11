@@ -1432,9 +1432,15 @@ export default function CreatePost() {
               }
             }
 
+            // Resize carousel images to proper dimensions (same as single posts)
+            let resizeAction: any[] = [];
+            if (activeTab === "Post" && postType === "Carousel") {
+              resizeAction = [{ resize: { width: 1080, height: 1350 } }];
+            }
+
             const manipResult = await ImageManipulator.manipulateAsync(
               uri,
-              [],
+              resizeAction,
               {
                 compress: compressionRatio,
                 format: ImageManipulator.SaveFormat.JPEG,
