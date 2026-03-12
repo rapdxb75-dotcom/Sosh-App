@@ -1355,7 +1355,10 @@ export default function CreatePost() {
     }
   };
 
-  const trimVideo = (videoUri: string): Promise<string> => {
+  const trimVideo = (
+    videoUri: string,
+    maxDuration: number = 60,
+  ): Promise<string> => {
     return new Promise((resolve) => {
       const eventEmitter = new NativeEventEmitter(NativeModules.VideoTrim);
       const subscription = eventEmitter.addListener(
@@ -1384,9 +1387,11 @@ export default function CreatePost() {
         },
       );
 
-      showEditor(videoUri, {
-        maxDuration: 60,
-      });
+      const editorConfig: any = {};
+      if (maxDuration > 0) {
+        editorConfig.maxDuration = maxDuration;
+      }
+      showEditor(videoUri, editorConfig);
     });
   };
 
@@ -1545,7 +1550,9 @@ export default function CreatePost() {
           (activeTab === "Reel" ||
             (activeTab === "Story" && postType === "Carousel"))
         ) {
-          processedUri = await trimVideo(processedUri);
+          // Story: max 90 sec, Reel: no limit (user can trim freely)
+          const trimMax = activeTab === "Story" ? 60 : 0;
+          processedUri = await trimVideo(processedUri, trimMax);
         }
 
         updateActiveTab(targetKey, processedUri);
