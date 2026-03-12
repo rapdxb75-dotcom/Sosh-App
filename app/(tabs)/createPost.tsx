@@ -24,6 +24,8 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
+  NativeEventEmitter,
+  NativeModules,
   PanResponder,
   Platform,
   ScrollView,
@@ -49,6 +51,7 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
+import { showEditor } from "react-native-video-trim";
 import { useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import { useNotification } from "../../context/NotificationContext";
@@ -1352,6 +1355,41 @@ export default function CreatePost() {
     }
   };
 
+  const trimVideo = (videoUri: string): Promise<string> => {
+    return new Promise((resolve) => {
+      const eventEmitter = new NativeEventEmitter(NativeModules.VideoTrim);
+      const subscription = eventEmitter.addListener(
+        "VideoTrim",
+        (event: any) => {
+          switch (event.name) {
+            case "onFinishTrimming":
+              subscription.remove();
+              resolve(event.outputPath);
+              break;
+            case "onCancelTrimming":
+              subscription.remove();
+              resolve(videoUri);
+              break;
+            case "onError":
+              subscription.remove();
+              console.error("Video trim error:", event.message);
+              Toast.show({
+                type: "error",
+                text1: "Trim Failed",
+                text2: "Could not trim video. Using original.",
+              });
+              resolve(videoUri);
+              break;
+          }
+        },
+      );
+
+      showEditor(videoUri, {
+        maxDuration: 60,
+      });
+    });
+  };
+
   const pickCoverImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -1500,6 +1538,16 @@ export default function CreatePost() {
         }
 
         processedUri = await handleImageConversion(processedUri);
+
+        // Trim video for Reel or Story video uploads
+        if (
+          isVideoUrl(processedUri) &&
+          (activeTab === "Reel" ||
+            (activeTab === "Story" && postType === "Carousel"))
+        ) {
+          processedUri = await trimVideo(processedUri);
+        }
+
         updateActiveTab(targetKey, processedUri);
       }
     }
