@@ -7,7 +7,7 @@ import * as Haptics from "expo-haptics";
 import { Image as ExpoImage } from "expo-image";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
@@ -59,6 +59,10 @@ import createPostService from "../../services/api/createPost";
 import poppyService from "../../services/api/poppy";
 import { listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
+import {
+  consumePreviewPostSuccessReset,
+  setPreviewData,
+} from "../../store/previewStore";
 import { RootState } from "../../store/store";
 
 const captionModalStyles = StyleSheet.create({
@@ -298,6 +302,10 @@ export default function CreatePost() {
 
   // Get user email from Redux
   const globalEmail = useSelector((state: RootState) => state.user.email);
+  const globalUserName = useSelector((state: RootState) => state.user.userName);
+  const globalProfilePicture = useSelector(
+    (state: RootState) => state.user.profilePicture,
+  );
 
   // Social media connections state
   const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
@@ -346,6 +354,15 @@ export default function CreatePost() {
   useFocusEffect(
     useCallback(() => {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+
+      if (consumePreviewPostSuccessReset()) {
+        setTabData(INITIAL_TAB_DATA);
+        setTagInputText("");
+        setCoverDurationMs(0);
+        setScrubberPositionMs(0);
+        coverDurationMsRef.current = 0;
+        scrubberPositionMsRef.current = 0;
+      }
     }, []),
   );
   const tabs = ["Post", "Reel", "Story"];
@@ -821,8 +838,29 @@ export default function CreatePost() {
     }
   };
 
-  const handleGeneratePost = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const waitForAppToBecomeActive = () =>
+    new Promise<void>((resolve) => {
+      if (appStateRef.current === "active") {
+        resolve();
+        return;
+      }
+
+      const resumeSubscription = AppState.addEventListener(
+        "change",
+        (nextState) => {
+          appStateRef.current = nextState;
+          if (nextState === "active") {
+            resumeSubscription.remove();
+            resolve();
+          }
+        },
+      );
+    });
+
+  const handleGeneratePost = async (isRetryAfterBackground = false) => {
+    if (!isRetryAfterBackground) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
 
     if (
       !currentMedia ||
@@ -859,7 +897,9 @@ export default function CreatePost() {
 
     try {
       publishInterruptedByBackgroundRef.current = false;
-      setIsPublishing(true);
+      if (!isRetryAfterBackground) {
+        setIsPublishing(true);
+      }
       const token = await storageService.getToken();
 
       if (!token) {
@@ -1246,6 +1286,25 @@ export default function CreatePost() {
         !error.response;
 
       if (isBackgroundInterruptedNetworkError) {
+        if (!isRetryAfterBackground) {
+          addNotification({
+            type: "neutral",
+            title: "Upload Paused",
+            message:
+              "Upload paused while app was in background. Resuming automatically.",
+          });
+          Toast.show({
+            type: "info",
+            text1: "Upload Paused",
+            text2: "Resuming when app becomes active...",
+          });
+
+          await waitForAppToBecomeActive();
+          publishInterruptedByBackgroundRef.current = false;
+          await handleGeneratePost(true);
+          return;
+        }
+
         addNotification({
           type: "neutral",
           title: "Upload Interrupted",
@@ -1283,8 +1342,64 @@ export default function CreatePost() {
       });
     } finally {
       publishInterruptedByBackgroundRef.current = false;
-      setIsPublishing(false);
+      if (!isRetryAfterBackground) {
+        setIsPublishing(false);
+      }
     }
+  };
+
+  const handlePreviewPost = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (
+      !currentMedia ||
+      (Array.isArray(currentMedia) && currentMedia.length === 0)
+    ) {
+      Toast.show({
+        type: "error",
+        text1: "Media Required",
+        text2: "Please attach media before previewing",
+      });
+      return;
+    }
+
+    if (!caption.trim() && activeTab !== "Story") {
+      Toast.show({
+        type: "error",
+        text1: "Caption Required",
+        text2: "Please enter a caption before previewing",
+      });
+      return;
+    }
+
+    const activePlatformsCheck = Object.values(selectedPlatforms).some(
+      (isSelected) => isSelected,
+    );
+    if (!activePlatformsCheck) {
+      Toast.show({
+        type: "error",
+        text1: "Platform Required",
+        text2: "Please select at least one platform",
+      });
+      return;
+    }
+
+    setPreviewData({
+      activeTab,
+      postType,
+      currentMedia,
+      caption,
+      activeTags,
+      selectedPlatforms,
+      date,
+      thumbNailOffset,
+      instagramUsername:
+        Array.isArray(socialMediaData.instagram) &&
+        socialMediaData.instagram.length >= 3
+          ? socialMediaData.instagram[2]
+          : socialMediaData.instagram?.[0],
+    });
+    router.push("/postPreview");
   };
 
   const setDate = (value: Date | null) => updateActiveTab("date", value);
@@ -2354,7 +2469,7 @@ export default function CreatePost() {
               {/* Generate Post Button */}
               <TouchableOpacity
                 className="w-full h-14 overflow-hidden rounded-full mb-6"
-                onPress={handleGeneratePost}
+                onPress={handlePreviewPost}
                 disabled={isPublishing}
               >
                 <ImageBackground
@@ -2363,29 +2478,26 @@ export default function CreatePost() {
                   resizeMode="cover"
                 >
                   <View className="absolute inset-0" />
-                  {isPublishing ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
-                    <Text className="text-white font-semibold text-lg">
-                      Post
-                    </Text>
-                  )}
+
+                  <Text className="text-white font-semibold text-lg">
+                    Generate Post
+                  </Text>
                 </ImageBackground>
               </TouchableOpacity>
 
               {/* Separator */}
-              {/* <View className="flex-row items-center w-full mb-6 px-2">
+              <View className="flex-row items-center w-full mb-6 px-2">
                 <View className="flex-1 h-[1px] bg-white/80" />
                 <Text className="text-white mx-4 font-inter text-base">or</Text>
                 <View className="flex-1 h-[1px] bg-white/80" />
-              </View> */}
+              </View>
 
               {/* Post Without Viewing Button */}
-              {/* <TouchableOpacity
+              <TouchableOpacity
                 className="w-full h-14 overflow-hidden rounded-full mb-10"
-                onPress={() =>
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                }
+                onPress={() => {
+                  handleGeneratePost();
+                }}
               >
                 <ImageBackground
                   source={require("../../assets/images/post_without.jpg")}
@@ -2393,11 +2505,15 @@ export default function CreatePost() {
                   resizeMode="cover"
                 >
                   <View className="absolute inset-0" />
-                  <Text className="text-white font-semibold text-lg">
-                    Post without viewing
-                  </Text>
+                  {isPublishing ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <Text className="text-white font-semibold text-lg">
+                      Post without viewing
+                    </Text>
+                  )}
                 </ImageBackground>
-              </TouchableOpacity> */}
+              </TouchableOpacity>
             </View>
           )}
         </View>
