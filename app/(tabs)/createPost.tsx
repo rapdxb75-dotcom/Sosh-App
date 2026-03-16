@@ -1929,7 +1929,6 @@ export default function CreatePost() {
                                                   resizeMode={ResizeMode.COVER}
                                                   shouldPlay
                                                   isLooping
-                                                  isMuted
                                                 />
                                               ) : (
                                                 <Image
@@ -1983,7 +1982,6 @@ export default function CreatePost() {
                                       resizeMode={ResizeMode.COVER}
                                       shouldPlay
                                       isLooping
-                                      isMuted
                                     />
                                   ) : (
                                     <Image
