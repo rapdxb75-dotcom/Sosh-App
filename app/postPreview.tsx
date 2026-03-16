@@ -274,31 +274,7 @@ export default function PostPreview() {
         [safeSeek],
     );
 
-    const swipeBackPanResponder = useMemo(
-        () =>
-            PanResponder.create({
-                onMoveShouldSetPanResponder: (_, gestureState) => {
-                    if (isCarouselTouchingRef.current) {
-                        return false;
-                    }
 
-                    const isHorizontalIntent =
-                        Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-                    const startedNearLeftEdge = gestureState.x0 <= 32;
-                    return (
-                        startedNearLeftEdge && isHorizontalIntent && gestureState.dx > 8
-                    );
-                },
-                onPanResponderRelease: (_, gestureState) => {
-                    if (gestureState.dx <= 72 || Math.abs(gestureState.dy) >= 45) {
-                        return;
-                    }
-
-                    handleBack();
-                },
-            }),
-        [handleBack],
-    );
 
     if (!data) return null;
 
@@ -604,19 +580,46 @@ export default function PostPreview() {
     };
 
     return (
-        <View
-            style={{ flex: 1, backgroundColor: "transparent" }}
-            {...swipeBackPanResponder.panHandlers}
-        >
+        <View style={{ flex: 1, backgroundColor: "transparent" }}>
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
                 {/* Header */}
                 <View style={{ width: "100%" }}>
                     <Header />
                 </View>
 
-                <View style={{ paddingHorizontal: screenHorizontalPadding }}>
-                    <Text className="page-title text-white mb-4 mt-8">
-                        {previewTitle}
+                <View style={{ paddingHorizontal: screenHorizontalPadding, marginTop: 16 }}>
+                    <TouchableOpacity 
+                        onPress={handleBack} 
+                        style={{ marginBottom: 4, alignSelf: 'flex-start' }}
+                        activeOpacity={0.7}
+                    >
+                        <BlurView 
+                            intensity={20} 
+                            tint="light" 
+                            style={{ 
+                                flexDirection: 'row', 
+                                alignItems: 'center', 
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                paddingVertical: 8,
+                                paddingHorizontal: 16,
+                                borderRadius: 24,
+                                overflow: 'hidden',
+                                borderWidth: 1,
+                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                            }}
+                        >
+                            <ChevronLeft color="white" size={20} strokeWidth={2.5} style={{ marginLeft: -4, marginRight: 4 }} />
+                            <Text style={{ color: 'white', fontSize: 16, fontWeight: '600', fontFamily: 'Inter' }}>
+                                Back
+                            </Text>
+                        </BlurView>
+                    </TouchableOpacity>
+                    <Text 
+                        className="page-title text-white mb-4 mt-4" 
+                        adjustsFontSizeToFit 
+                        numberOfLines={2}
+                    >
+                        Post
                         {"\n"}preview screen
                     </Text>
                 </View>
