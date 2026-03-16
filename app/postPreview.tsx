@@ -690,7 +690,6 @@ export default function PostPreview() {
                                                     resizeMode={ResizeMode.COVER}
                                                     shouldPlay
                                                     isLooping
-                                                    isMuted
                                                     onLoad={(status: any) => {
                                                         if (
                                                             status?.isLoaded &&
@@ -942,7 +941,6 @@ export default function PostPreview() {
                                                     resizeMode={ResizeMode.COVER}
                                                     shouldPlay
                                                     isLooping
-                                                    isMuted
                                                 />
                                             ) : (
                                                 <Image
@@ -1305,7 +1303,6 @@ export default function PostPreview() {
                                                             resizeMode={ResizeMode.COVER}
                                                             shouldPlay
                                                             isLooping
-                                                            isMuted
                                                         />
                                                     ) : (
                                                         <Image
@@ -1325,7 +1322,6 @@ export default function PostPreview() {
                                                 resizeMode={ResizeMode.COVER}
                                                 shouldPlay
                                                 isLooping
-                                                isMuted
                                             />
                                         ) : (
                                             <Image
