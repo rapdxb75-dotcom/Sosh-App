@@ -590,26 +590,47 @@ export default function PostPreview() {
                 <View style={{ paddingHorizontal: screenHorizontalPadding, marginTop: 16 }}>
                     <TouchableOpacity 
                         onPress={handleBack} 
-                        style={{ marginBottom: 4, alignSelf: 'flex-start' }}
-                        activeOpacity={0.7}
+                        style={{ marginBottom: 1, alignSelf: 'flex-start' }}
+                        activeOpacity={0.8}
                     >
                         <BlurView 
-                            intensity={20} 
-                            tint="light" 
+                            intensity={40} 
+                            tint="dark" 
                             style={{ 
                                 flexDirection: 'row', 
                                 alignItems: 'center', 
-                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                paddingVertical: 8,
-                                paddingHorizontal: 16,
-                                borderRadius: 24,
+                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                padding: 4,
+                                paddingRight: 14,
+                                borderRadius: 40,
                                 overflow: 'hidden',
                                 borderWidth: 1,
-                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                                borderColor: 'rgba(255, 255, 255, 0.15)'
                             }}
                         >
-                            <ChevronLeft color="white" size={20} strokeWidth={2.5} style={{ marginLeft: -4, marginRight: 4 }} />
-                            <Text style={{ color: 'white', fontSize: 16, fontWeight: '600', fontFamily: 'Inter' }}>
+                            <View style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 14,
+                                backgroundColor: 'white',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: 8,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.15,
+                                shadowRadius: 4,
+                                elevation: 3
+                            }}>
+                                <ChevronLeft color="black" size={16} strokeWidth={2.5} style={{ marginLeft: -2 }} />
+                            </View>
+                            <Text style={{ 
+                                color: 'white', 
+                                fontSize: 13, 
+                                fontWeight: '700', 
+                                fontFamily: 'Inter',
+                                letterSpacing: 0.5
+                            }}>
                                 Back
                             </Text>
                         </BlurView>
