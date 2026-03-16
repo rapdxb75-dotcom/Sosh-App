@@ -12,7 +12,7 @@ import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
-import { Plus, Upload, X } from "lucide-react-native";
+import { Maximize, Minimize, Plus, Upload, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -60,6 +60,7 @@ import poppyService from "../../services/api/poppy";
 import { listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
 import {
+  type PreviewData,
   consumePreviewPostSuccessReset,
   setPreviewData,
 } from "../../store/previewStore";
@@ -393,6 +394,9 @@ export default function CreatePost() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [tagInputText, setTagInputText] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [videoResizeMode, setVideoResizeMode] = useState<ResizeMode>(
+    ResizeMode.CONTAIN,
+  );
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const lastResultIndex = useRef<number>(0);
   const lastProcessedResult = useRef<number>(0);
@@ -1384,7 +1388,10 @@ export default function CreatePost() {
       return;
     }
 
-    setPreviewData({
+    const nextVideoResizeMode: "cover" | "contain" =
+      videoResizeMode === ResizeMode.COVER ? "cover" : "contain";
+
+    const previewPayload: PreviewData = {
       activeTab,
       postType,
       currentMedia,
@@ -1393,13 +1400,24 @@ export default function CreatePost() {
       selectedPlatforms,
       date,
       thumbNailOffset,
+      videoResizeMode: nextVideoResizeMode,
       instagramUsername:
         Array.isArray(socialMediaData.instagram) &&
         socialMediaData.instagram.length >= 3
           ? socialMediaData.instagram[2]
           : socialMediaData.instagram?.[0],
+    };
+
+    setPreviewData(previewPayload);
+    router.push({
+      pathname: "/postPreview",
+      params: {
+        previewData: JSON.stringify({
+          ...previewPayload,
+          date: previewPayload.date ? previewPayload.date.toISOString() : null,
+        }),
+      },
     });
-    router.push("/postPreview");
   };
 
   const setDate = (value: Date | null) => updateActiveTab("date", value);
@@ -1926,7 +1944,7 @@ export default function CreatePost() {
                                                     height: "100%",
                                                     borderRadius: 12,
                                                   }}
-                                                  resizeMode={ResizeMode.COVER}
+                                                  resizeMode={videoResizeMode}
                                                   shouldPlay
                                                   isLooping
                                                 />
@@ -1955,6 +1973,33 @@ export default function CreatePost() {
                                               >
                                                 <X color="white" size={12} />
                                               </TouchableOpacity>
+                                              {isVideoUrl(item.uri) && (
+                                                <TouchableOpacity
+                                                  className="absolute top-2 right-10 bg-black/80 p-1.5 rounded-full"
+                                                  onPress={() => {
+                                                    setVideoResizeMode(
+                                                      (prev) =>
+                                                        prev ===
+                                                        ResizeMode.COVER
+                                                          ? ResizeMode.CONTAIN
+                                                          : ResizeMode.COVER,
+                                                    );
+                                                  }}
+                                                >
+                                                  {videoResizeMode ===
+                                                  ResizeMode.COVER ? (
+                                                    <Minimize
+                                                      color="white"
+                                                      size={12}
+                                                    />
+                                                  ) : (
+                                                    <Maximize
+                                                      color="white"
+                                                      size={12}
+                                                    />
+                                                  )}
+                                                </TouchableOpacity>
+                                              )}
                                             </View>
                                           </View>
                                         );
@@ -1979,7 +2024,7 @@ export default function CreatePost() {
                                     <Video
                                       source={{ uri: currentMedia as string }}
                                       style={{ width: "100%", height: "100%" }}
-                                      resizeMode={ResizeMode.COVER}
+                                      resizeMode={videoResizeMode}
                                       shouldPlay
                                       isLooping
                                     />
@@ -1989,6 +2034,31 @@ export default function CreatePost() {
                                       style={{ width: "100%", height: "100%" }}
                                       resizeMode="cover"
                                     />
+                                  )}
+                                  {isVideoUrl(currentMedia) && (
+                                    <TouchableOpacity
+                                      style={{
+                                        position: "absolute",
+                                        top: 8,
+                                        right: 44,
+                                        backgroundColor: "rgba(0,0,0,0.8)",
+                                        padding: 6,
+                                        borderRadius: 100,
+                                      }}
+                                      onPress={() => {
+                                        setVideoResizeMode((prev) =>
+                                          prev === ResizeMode.COVER
+                                            ? ResizeMode.CONTAIN
+                                            : ResizeMode.COVER,
+                                        );
+                                      }}
+                                    >
+                                      {videoResizeMode === ResizeMode.COVER ? (
+                                        <Minimize color="white" size={12} />
+                                      ) : (
+                                        <Maximize color="white" size={12} />
+                                      )}
+                                    </TouchableOpacity>
                                   )}
                                   <TouchableOpacity
                                     style={{

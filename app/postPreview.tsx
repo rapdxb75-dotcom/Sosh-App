@@ -2,7 +2,7 @@ import { ResizeMode, Video } from "expo-av";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Camera, ChevronLeft, MoreHorizontal, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -82,8 +82,55 @@ const formatDurationLabel = (durationMs: number): string => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
+const parsePreviewDataParam = (
+  rawParam: string | string[] | undefined,
+): PreviewData | null => {
+  const serialized = Array.isArray(rawParam) ? rawParam[0] : rawParam;
+  if (!serialized) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(serialized);
+    if (!parsed || typeof parsed !== "object") {
+      return null;
+    }
+
+    const normalizedDate =
+      parsed.date && typeof parsed.date === "string"
+        ? new Date(parsed.date)
+        : null;
+
+    return {
+      activeTab: parsed.activeTab,
+      postType: parsed.postType,
+      currentMedia: parsed.currentMedia,
+      caption: parsed.caption,
+      activeTags: Array.isArray(parsed.activeTags) ? parsed.activeTags : [],
+      selectedPlatforms:
+        parsed.selectedPlatforms && typeof parsed.selectedPlatforms === "object"
+          ? parsed.selectedPlatforms
+          : {},
+      date:
+        normalizedDate && !Number.isNaN(normalizedDate.getTime())
+          ? normalizedDate
+          : null,
+      thumbNailOffset:
+        typeof parsed.thumbNailOffset === "number" ? parsed.thumbNailOffset : 0,
+      videoResizeMode: parsed.videoResizeMode === "cover" ? "cover" : "contain",
+      instagramUsername:
+        typeof parsed.instagramUsername === "string"
+          ? parsed.instagramUsername
+          : undefined,
+    };
+  } catch {
+    return null;
+  }
+};
+
 export default function PostPreview() {
   const { width } = useWindowDimensions();
+  const { previewData } = useLocalSearchParams<{ previewData?: string }>();
   const { addNotification } = useNotification();
   const globalUserName = useSelector((state: RootState) => state.user.userName);
   const globalProfilePicture = useSelector(
@@ -120,13 +167,23 @@ export default function PostPreview() {
   }, []);
 
   useEffect(() => {
-    const previewData = getPreviewData();
-    if (!previewData) {
-      router.back();
+    const inMemoryPreviewData = getPreviewData();
+    if (inMemoryPreviewData) {
+      setData(inMemoryPreviewData);
       return;
     }
-    setData(previewData);
-  }, []);
+
+    const paramPreviewData = parsePreviewDataParam(previewData);
+    if (paramPreviewData) {
+      setPreviewData(paramPreviewData);
+      setData(paramPreviewData);
+      return;
+    }
+
+    if (!inMemoryPreviewData) {
+      router.back();
+    }
+  }, [previewData]);
 
   useEffect(() => {
     setCurrentMediaIndex(0);
@@ -284,6 +341,7 @@ export default function PostPreview() {
     selectedPlatforms,
     date,
     thumbNailOffset,
+    videoResizeMode,
     instagramUsername,
   } = data;
   const normalizedInstagramUsername = extractHandleText(instagramUsername);
@@ -311,6 +369,8 @@ export default function PostPreview() {
   const reelCardWidth = Math.max(width - screenHorizontalPadding * 2, 1);
   const reelMediaWidth = Math.max(reelCardWidth - 12, 1);
   const reelMediaAspectRatio = 9 / 16;
+  const previewVideoResizeMode =
+    videoResizeMode === "cover" ? ResizeMode.COVER : ResizeMode.CONTAIN;
   const storyMediaUri = mediaItems.length > 0 ? mediaItems[0] : null;
   const storySegmentCount = isStoryPreview ? Math.max(mediaItems.length, 4) : 0;
   const previewTitle = isStoryPreview
@@ -696,7 +756,7 @@ export default function PostPreview() {
                         <Video
                           source={{ uri: storyMediaUri }}
                           style={{ width: "100%", height: "100%" }}
-                          resizeMode={ResizeMode.COVER}
+                          resizeMode={previewVideoResizeMode}
                           shouldPlay
                           isLooping
                           onLoad={(status: any) => {
@@ -947,7 +1007,7 @@ export default function PostPreview() {
                         <Video
                           source={{ uri: mediaItems[currentMediaIndex] }}
                           style={{ width: "100%", height: "100%" }}
-                          resizeMode={ResizeMode.COVER}
+                          resizeMode={previewVideoResizeMode}
                           shouldPlay
                           isLooping
                         />
@@ -1309,7 +1369,7 @@ export default function PostPreview() {
                             <Video
                               source={{ uri }}
                               style={{ width: "100%", height: "100%" }}
-                              resizeMode={ResizeMode.COVER}
+                              resizeMode={previewVideoResizeMode}
                               shouldPlay
                               isLooping
                             />
@@ -1328,7 +1388,7 @@ export default function PostPreview() {
                       <Video
                         source={{ uri: mediaItems[0] }}
                         style={{ width: "100%", height: "100%" }}
-                        resizeMode={ResizeMode.COVER}
+                        resizeMode={previewVideoResizeMode}
                         shouldPlay
                         isLooping
                       />

@@ -12,6 +12,7 @@ export interface PreviewData {
   date: Date | null;
   thumbNailOffset?: number;
   instagramUsername?: string;
+  videoResizeMode?: "cover" | "contain";
 }
 
 export function setPreviewData(data: PreviewData) {
