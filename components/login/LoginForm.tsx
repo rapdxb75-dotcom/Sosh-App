@@ -358,7 +358,7 @@ export default function LoginForm() {
           className="w-full h-full items-center justify-center"
           resizeMode="cover"
         >
-          <View className="absolute inset-0 bg-blue-500/20" />
+          <View className="absolute inset-0" />
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
