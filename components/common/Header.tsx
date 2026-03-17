@@ -1,9 +1,10 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { LogOut } from "lucide-react-native";
 import { useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
   Circle,
@@ -113,7 +114,8 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
         <Image
           source={require("../../assets/images/logo.png")}
           style={{ width: normalize(38), height: normalize(38) }}
-          resizeMode="contain"
+          contentFit="contain"
+          cachePolicy="memory-disk"
         />
       </View>
 
@@ -131,7 +133,8 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
           <Image
             source={require("../../assets/images/notification.png")}
             style={{ width: normalize(38), height: normalize(38) }}
-            resizeMode="contain"
+            contentFit="contain"
+            cachePolicy="memory-disk"
           />
           {notifications.length > 0 && (
             <View className="absolute top-1 right-1 bg-[#EE2828] rounded-full min-w-[16px] h-[16px] items-center justify-center px-1 border-[1.5px] border-black">
@@ -170,7 +173,8 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
               height: normalize(36),
               borderRadius: profilePic ? normalize(18) : 0,
             }}
-            resizeMode={profilePic ? "cover" : "contain"}
+            contentFit={profilePic ? "cover" : "contain"}
+            cachePolicy="memory-disk"
           />
         </TouchableOpacity>
 
