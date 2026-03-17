@@ -90,6 +90,14 @@ interface SocialMediaData {
   [key: string]: string[] | undefined;
 }
 
+const normalizePlatformUrl = (url: string): string => {
+  const trimmedUrl = url.trim();
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmedUrl)) {
+    return trimmedUrl;
+  }
+  return `https://${trimmedUrl}`;
+};
+
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
   const size = 50;
@@ -621,6 +629,38 @@ export default function Profile() {
     }
   };
 
+  const handleOpenConnectedPlatform = async (
+    platformKey: SocialPlatformKey,
+    platformName: string,
+  ) => {
+    const platformUrl = getPlatformUrl(platformKey);
+    if (!platformUrl) {
+      return;
+    }
+
+    try {
+      const normalizedUrl = normalizePlatformUrl(platformUrl);
+      const canOpen = await Linking.canOpenURL(normalizedUrl);
+
+      if (!canOpen) {
+        Toast.show({
+          type: "error",
+          text1: "Link Unavailable",
+          text2: `Unable to open ${platformName} link`,
+        });
+        return;
+      }
+
+      await Linking.openURL(normalizedUrl);
+    } catch (error: any) {
+      Toast.show({
+        type: "error",
+        text1: "Open Failed",
+        text2: error?.message || `Could not open ${platformName}`,
+      });
+    }
+  };
+
   return (
     <View className="flex-1">
       <ScrollView
@@ -818,9 +858,13 @@ export default function Profile() {
                 name={platform.name}
                 status={getPlatformStatus(platform.key)}
                 connectedUsername={getPlatformUsername(platform.key)}
+                platformUrl={getPlatformUrl(platform.key)}
                 isConnected={isPlatformConnected(platform.key)}
                 isConnecting={connectingPlatform === platform.key}
                 isPending={pendingConnections.indexOf(platform.key) !== -1}
+                onIconPress={() =>
+                  handleOpenConnectedPlatform(platform.key, platform.name)
+                }
                 onConnect={() => handleConnectPress(platform.key)}
                 onDisconnect={() =>
                   handleDisconnectPress(platform.name, platform.key)
@@ -1075,9 +1119,11 @@ function ConnectedAccountItem({
   name,
   status,
   connectedUsername,
+  platformUrl,
   isConnected,
   isConnecting,
   isPending,
+  onIconPress,
   onConnect,
   onDisconnect,
 }: {
@@ -1085,13 +1131,16 @@ function ConnectedAccountItem({
   name: string;
   status: string;
   connectedUsername?: string | null;
+  platformUrl?: string | null;
   isConnected: boolean;
   isConnecting?: boolean;
   isPending?: boolean;
+  onIconPress?: () => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
 }) {
   const isLoading = isConnecting || isPending;
+  const canOpenPlatformUrl = isConnected && !!platformUrl && !isLoading;
 
   const handlePress = () => {
     if (isLoading) return;
@@ -1102,16 +1151,27 @@ function ConnectedAccountItem({
     }
   };
 
+  const handleIconPress = () => {
+    if (!canOpenPlatformUrl) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onIconPress?.();
+  };
+
   return (
     <View className="connected-account-card">
       <View className="flex-row items-center gap-4">
-        <View className="w-12 h-12 items-center justify-center mb-6">
+        <TouchableOpacity
+          className="w-12 h-12 items-center justify-center mb-6"
+          onPress={handleIconPress}
+          disabled={!canOpenPlatformUrl}
+          activeOpacity={0.7}
+        >
           <Image
             source={icon}
             className="w-[36px] h-[36px]"
             resizeMode="contain"
           />
-        </View>
+        </TouchableOpacity>
         <View>
           <Text className="platform-card-name">{name}</Text>
           <View className="flex-row items-start mt-1">
