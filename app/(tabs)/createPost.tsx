@@ -1520,7 +1520,9 @@ export default function CreatePost() {
         },
       );
 
-      const editorConfig: any = {};
+      const editorConfig: any = {
+        enableSaveDialog: false,
+      };
       if (maxDuration > 0) {
         editorConfig.maxDuration = maxDuration;
       }

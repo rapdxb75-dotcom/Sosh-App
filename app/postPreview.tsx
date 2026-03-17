@@ -6,24 +6,24 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Camera, ChevronLeft, MoreHorizontal, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    AppState,
-    Image,
-    ImageBackground,
-    Modal,
-    PanResponder,
-    Platform,
-    ScrollView,
-    Text,
-    TouchableOpacity,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  AppState,
+  Image,
+  ImageBackground,
+  Modal,
+  PanResponder,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import Svg, {
-    Circle,
-    Defs,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -32,11 +32,11 @@ import { useNotification } from "../context/NotificationContext";
 import createPostService from "../services/api/createPost";
 import storageService from "../services/storage";
 import {
-    type PreviewData,
-    clearPreviewData,
-    getPreviewData,
-    markPreviewPostSuccessReset,
-    setPreviewData,
+  type PreviewData,
+  clearPreviewData,
+  getPreviewData,
+  markPreviewPostSuccessReset,
+  setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
 
