@@ -2009,6 +2009,9 @@ export default function PostPreview() {
                       coverDurationMsRef.current = durationMs;
                       setCoverDurationMs(durationMs);
 
+                      // Explicitly pause the video
+                      coverVideoRef.current?.pauseAsync();
+
                       const nextMs = Math.min(
                         scrubberPositionMsRef.current,
                         durationMs,

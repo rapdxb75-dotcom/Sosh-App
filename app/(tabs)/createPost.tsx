@@ -2890,8 +2890,16 @@ export default function CreatePost() {
                       const dur = status?.durationMillis ?? 0;
                       coverDurationMsRef.current = dur;
                       setCoverDurationMs(dur);
-                      // Start playing after load
-                      coverVideoRef.current?.playAsync();
+                      // Set the playback to paused properly and update initial thumb
+                      coverVideoRef.current?.pauseAsync();
+
+                      const nextMs = Math.min(
+                        scrubberPositionMsRef.current,
+                        dur,
+                      );
+                      scrubberPositionMsRef.current = nextMs;
+                      setScrubberPositionMs(nextMs);
+                      safeSeek(nextMs);
                     }}
                   />
                 ) : (
