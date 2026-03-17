@@ -3,7 +3,14 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
-import { Camera, ChevronLeft, MoreHorizontal, X } from "lucide-react-native";
+import {
+  Camera,
+  ChevronLeft,
+  MoreHorizontal,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -143,6 +150,7 @@ export default function PostPreview() {
   const [coverDurationMs, setCoverDurationMs] = useState(0);
   const [scrubberPositionMs, setScrubberPositionMs] = useState(0);
   const [storyDurationMs, setStoryDurationMs] = useState<number | null>(null);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const swipeBackLockRef = useRef(false);
   const coverVideoRef = useRef<any>(null);
   const thumbVideoRef = useRef<any>(null);
@@ -335,6 +343,7 @@ export default function PostPreview() {
 
   const {
     activeTab,
+    postType,
     currentMedia,
     caption,
     activeTags,
@@ -396,6 +405,11 @@ export default function PostPreview() {
       }
     : require("../assets/images/avtar.png");
   const previewProfileResizeMode = globalProfilePicture ? "cover" : "contain";
+  const activePreviewMediaUri =
+    mediaItems[currentMediaIndex] ?? mediaItems[0] ?? null;
+  const isActivePreviewVideo = isVideoUrl(activePreviewMediaUri);
+  const isPostCarousel = activeTab === "Post" && postType === "Carousel";
+  const shouldShowCarouselVoiceOverlay = isPostCarousel && isActivePreviewVideo;
 
   const openCoverEditor = () => {
     if (!isReelPreview || !reelMediaUri) {
@@ -421,6 +435,11 @@ export default function PostPreview() {
     setData(updatedData);
     setPreviewData(updatedData);
     setShowCoverModal(false);
+  };
+
+  const toggleVoice = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsVoiceEnabled((prev) => !prev);
   };
 
   const handlePost = async (isRetryAfterBackground = false) => {
@@ -759,6 +778,7 @@ export default function PostPreview() {
                           resizeMode={previewVideoResizeMode}
                           shouldPlay
                           isLooping
+                          isMuted={!isVoiceEnabled}
                           onLoad={(status: any) => {
                             if (
                               status?.isLoaded &&
@@ -945,6 +965,45 @@ export default function PostPreview() {
                             strokeWidth={2.2}
                           />
                           <X color="white" size={18} strokeWidth={2.2} />
+                          {isVideoUrl(storyMediaUri) ? (
+                            <TouchableOpacity
+                              onPress={toggleVoice}
+                              activeOpacity={0.75}
+                              style={{
+                                width: 25,
+                                height: 25,
+                                borderRadius: 12.5,
+                                overflow: "hidden",
+                                borderWidth: 1,
+                                borderColor: "rgba(255,255,255,0.16)",
+                              }}
+                            >
+                              <BlurView
+                                intensity={36}
+                                tint="dark"
+                                style={{
+                                  flex: 1,
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  backgroundColor: "rgba(0,0,0,0.28)",
+                                }}
+                              >
+                                {isVoiceEnabled ? (
+                                  <Volume2
+                                    color="white"
+                                    size={15}
+                                    strokeWidth={2.2}
+                                  />
+                                ) : (
+                                  <VolumeX
+                                    color="white"
+                                    size={15}
+                                    strokeWidth={2.2}
+                                  />
+                                )}
+                              </BlurView>
+                            </TouchableOpacity>
+                          ) : null}
                         </View>
                         {storyDurationMs !== null ? (
                           <Text
@@ -1010,6 +1069,7 @@ export default function PostPreview() {
                           resizeMode={previewVideoResizeMode}
                           shouldPlay
                           isLooping
+                          isMuted={!isVoiceEnabled}
                         />
                       ) : (
                         <Image
@@ -1082,6 +1142,45 @@ export default function PostPreview() {
                         style={{ width: 26, height: 26 }}
                         resizeMode="contain"
                       />
+                      {isActivePreviewVideo ? (
+                        <TouchableOpacity
+                          onPress={toggleVoice}
+                          activeOpacity={0.75}
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 13,
+                            overflow: "hidden",
+                            borderWidth: 1,
+                            borderColor: "rgba(255,255,255,0.16)",
+                          }}
+                        >
+                          <BlurView
+                            intensity={36}
+                            tint="dark"
+                            style={{
+                              flex: 1,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              backgroundColor: "rgba(0,0,0,0.28)",
+                            }}
+                          >
+                            {isVoiceEnabled ? (
+                              <Volume2
+                                color="white"
+                                size={17}
+                                strokeWidth={2.2}
+                              />
+                            ) : (
+                              <VolumeX
+                                color="white"
+                                size={17}
+                                strokeWidth={2.2}
+                              />
+                            )}
+                          </BlurView>
+                        </TouchableOpacity>
+                      ) : null}
                     </View>
 
                     <View
@@ -1372,6 +1471,7 @@ export default function PostPreview() {
                               resizeMode={previewVideoResizeMode}
                               shouldPlay
                               isLooping
+                              isMuted={!isVoiceEnabled}
                             />
                           ) : (
                             <Image
@@ -1391,6 +1491,7 @@ export default function PostPreview() {
                         resizeMode={previewVideoResizeMode}
                         shouldPlay
                         isLooping
+                        isMuted={!isVoiceEnabled}
                       />
                     ) : (
                       <Image
@@ -1445,6 +1546,43 @@ export default function PostPreview() {
                       resizeMode={previewProfileResizeMode}
                     />
                   </View>
+
+                  {shouldShowCarouselVoiceOverlay ? (
+                    <TouchableOpacity
+                      onPress={toggleVoice}
+                      activeOpacity={0.75}
+                      style={{
+                        position: "absolute",
+                        right: 16,
+                        bottom: 16,
+                        width: 30,
+                        height: 30,
+                        borderRadius: 15,
+                        zIndex: 30,
+                        elevation: 10,
+                        overflow: "hidden",
+                        borderWidth: 1,
+                        borderColor: "rgba(255,255,255,0.16)",
+                      }}
+                    >
+                      <BlurView
+                        intensity={36}
+                        tint="dark"
+                        style={{
+                          flex: 1,
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "rgba(0,0,0,0.28)",
+                        }}
+                      >
+                        {isVoiceEnabled ? (
+                          <Volume2 color="white" size={16} strokeWidth={2.2} />
+                        ) : (
+                          <VolumeX color="white" size={16} strokeWidth={2.2} />
+                        )}
+                      </BlurView>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
 
                 {/* Carousel Dots */}
@@ -1513,6 +1651,45 @@ export default function PostPreview() {
                       style={{ width: 25, height: 25 }}
                       resizeMode="contain"
                     />
+                    {isActivePreviewVideo && !isPostCarousel ? (
+                      <TouchableOpacity
+                        onPress={toggleVoice}
+                        activeOpacity={0.75}
+                        style={{
+                          width: 25,
+                          height: 25,
+                          borderRadius: 12.5,
+                          overflow: "hidden",
+                          borderWidth: 1,
+                          borderColor: "rgba(255,255,255,0.16)",
+                        }}
+                      >
+                        <BlurView
+                          intensity={36}
+                          tint="dark"
+                          style={{
+                            flex: 1,
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: "rgba(0,0,0,0.28)",
+                          }}
+                        >
+                          {isVoiceEnabled ? (
+                            <Volume2
+                              color="white"
+                              size={15}
+                              strokeWidth={2.2}
+                            />
+                          ) : (
+                            <VolumeX
+                              color="white"
+                              size={15}
+                              strokeWidth={2.2}
+                            />
+                          )}
+                        </BlurView>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                   <Image
                     source={require("../assets/icons/post_favourite.png")}
