@@ -137,6 +137,10 @@ const captionModalStyles = StyleSheet.create({
   },
 });
 
+const COVER_PREVIEW_WIDTH = 242;
+const COVER_PREVIEW_ASPECT_RATIO = 9 / 16;
+const COVER_PREVIEW_HEIGHT = COVER_PREVIEW_WIDTH / COVER_PREVIEW_ASPECT_RATIO;
+
 const coverModalStyles = StyleSheet.create({
   card: {
     width: "90%",
@@ -174,14 +178,14 @@ const coverModalStyles = StyleSheet.create({
     fontFamily: "Inter",
   },
   previewContainer: {
-    width: 242,
-    height: 444,
+    width: COVER_PREVIEW_WIDTH,
+    aspectRatio: COVER_PREVIEW_ASPECT_RATIO,
     position: "absolute",
     top: 56,
     alignSelf: "center",
     borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: "#080808",
   },
   previewImage: {
     width: "100%",
@@ -234,6 +238,43 @@ const isVideoUrl = (url?: string | null) => {
     lower.endsWith(".mov") ||
     lower.startsWith("data:video")
   );
+};
+
+const formatScheduledAt = (scheduledDate?: Date | null): string => {
+  if (!(scheduledDate instanceof Date)) {
+    return "";
+  }
+
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return "";
+  }
+
+  return scheduledDate.toLocaleString();
+};
+
+const getPublishSuccessCopy = ({
+  contentType,
+  platformNames,
+  scheduledDate,
+}: {
+  contentType: string;
+  platformNames: string;
+  scheduledDate?: Date | null;
+}) => {
+  const destination = platformNames || "selected platforms";
+  const scheduledAt = formatScheduledAt(scheduledDate);
+
+  if (scheduledAt) {
+    return {
+      notificationMessage: `Your ${contentType} has been scheduled to post on ${destination} at ${scheduledAt}.`,
+      toastMessage: `Scheduled on ${destination} at ${scheduledAt}`,
+    };
+  }
+
+  return {
+    notificationMessage: `Your ${contentType} has been published to ${destination}.`,
+    toastMessage: `Published to ${destination}`,
+  };
 };
 
 const INITIAL_TAB_DATA = {
@@ -1225,6 +1266,11 @@ export default function CreatePost() {
             : isCarousel
               ? "Carousel Post"
               : "Post";
+      const { notificationMessage, toastMessage } = getPublishSuccessCopy({
+        contentType,
+        platformNames,
+        scheduledDate: date,
+      });
 
       if (activeTab === "Reel") {
         await createPostService.createReel(
@@ -1266,12 +1312,12 @@ export default function CreatePost() {
       addNotification({
         type: "success",
         title: `${contentType} Created`,
-        message: `Your ${contentType.toLowerCase()} has been published to ${platformNames}.`,
+        message: notificationMessage,
       });
       Toast.show({
         type: "success",
         text1: `${contentType} Created`,
-        text2: `Published to ${platformNames}`,
+        text2: toastMessage,
       });
 
       // Clear all fields upon successful publish
@@ -2837,7 +2883,7 @@ export default function CreatePost() {
                     ref={coverVideoRef}
                     source={{ uri: currentMedia as string }}
                     style={coverModalStyles.previewImage}
-                    resizeMode={ResizeMode.CONTAIN}
+                    resizeMode={ResizeMode.COVER}
                     shouldPlay={false}
                     isMuted
                     onLoad={(status: any) => {
@@ -2863,7 +2909,7 @@ export default function CreatePost() {
                 )}
               </View>
 
-              <View style={{ height: 444 }} />
+              <View style={{ height: COVER_PREVIEW_HEIGHT }} />
 
               {/* Bottom Controls */}
               <View style={coverModalStyles.bottomSection}>

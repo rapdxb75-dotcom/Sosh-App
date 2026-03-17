@@ -89,6 +89,46 @@ const formatDurationLabel = (durationMs: number): string => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
+const formatScheduledAt = (scheduledDate?: Date | null): string => {
+  if (!(scheduledDate instanceof Date)) {
+    return "";
+  }
+
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return "";
+  }
+
+  return scheduledDate.toLocaleString();
+};
+
+const getPublishSuccessCopy = ({
+  contentType,
+  platformNames,
+  scheduledDate,
+}: {
+  contentType: string;
+  platformNames: string;
+  scheduledDate?: Date | null;
+}) => {
+  const destination = platformNames || "selected platforms";
+  const scheduledAt = formatScheduledAt(scheduledDate);
+
+  if (scheduledAt) {
+    return {
+      notificationMessage: `Your ${contentType} has been scheduled to post on ${destination} at ${scheduledAt}.`,
+      toastMessage: `Scheduled on ${destination} at ${scheduledAt}`,
+    };
+  }
+
+  return {
+    notificationMessage: `Your ${contentType} has been published to ${destination}.`,
+    toastMessage: `Published to ${destination}`,
+  };
+};
+
+const COVER_PREVIEW_WIDTH = 242;
+const COVER_PREVIEW_ASPECT_RATIO = 9 / 16;
+
 const parsePreviewDataParam = (
   rawParam: string | string[] | undefined,
 ): PreviewData | null => {
@@ -541,7 +581,7 @@ export default function PostPreview() {
         instagram: "Instagram",
         tiktok: "TikTok",
         youtube: "YouTube",
-        snapchat: "Snapchat",
+        snapchat: "Snap",
         x: "X",
         twitter: "Twitter",
         facebook: "Facebook",
@@ -558,6 +598,11 @@ export default function PostPreview() {
             : isCarousel
               ? "Carousel Post"
               : "Post";
+      const { notificationMessage, toastMessage } = getPublishSuccessCopy({
+        contentType,
+        platformNames,
+        scheduledDate: date,
+      });
 
       const mediaPayload = isCarousel
         ? (currentMedia as string[]).map(processMediaForUpload)
@@ -603,12 +648,12 @@ export default function PostPreview() {
       addNotification({
         type: "success",
         title: `${contentType} Created`,
-        message: `Your ${contentType.toLowerCase()} has been published to ${platformNames}.`,
+        message: notificationMessage,
       });
       Toast.show({
         type: "success",
         text1: `${contentType} Created`,
-        text2: `Published to ${platformNames}`,
+        text2: toastMessage,
       });
 
       markPreviewPostSuccessReset();
@@ -1943,12 +1988,12 @@ export default function PostPreview() {
 
               <View
                 style={{
-                  width: 242,
-                  height: 444,
+                  width: COVER_PREVIEW_WIDTH,
+                  aspectRatio: COVER_PREVIEW_ASPECT_RATIO,
                   alignSelf: "center",
                   borderRadius: 24,
                   overflow: "hidden",
-                  backgroundColor: "rgba(255,255,255,0.1)",
+                  backgroundColor: "#080808",
                 }}
               >
                 {reelMediaUri ? (
@@ -1956,7 +2001,7 @@ export default function PostPreview() {
                     ref={coverVideoRef}
                     source={{ uri: reelMediaUri }}
                     style={{ width: "100%", height: "100%" }}
-                    resizeMode={ResizeMode.CONTAIN}
+                    resizeMode={ResizeMode.COVER}
                     shouldPlay={false}
                     isMuted
                     onLoad={(status: any) => {
