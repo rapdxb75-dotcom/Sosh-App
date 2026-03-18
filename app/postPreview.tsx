@@ -4,6 +4,10 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
+import {
   Camera,
   ChevronLeft,
   MoreHorizontal,
@@ -14,15 +18,22 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
   AppState,
   Image,
   ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   PanResponder,
   Platform,
   ScrollView,
+  StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -37,6 +48,7 @@ import { useSelector } from "react-redux";
 import Header from "../components/common/Header";
 import { useNotification } from "../context/NotificationContext";
 import createPostService from "../services/api/createPost";
+import poppyService from "../services/api/poppy";
 import storageService from "../services/storage";
 import {
   type PreviewData,
@@ -56,6 +68,77 @@ const isVideoUrl = (url?: string | null) => {
     lower.startsWith("data:video")
   );
 };
+
+const captionModalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+  },
+  card: {
+    width: "90%",
+    maxWidth: 500,
+    height: 420,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.4)",
+    backgroundColor: "rgba(0, 0, 0, 0.15)",
+    shadowColor: "#000000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    elevation: 14,
+  },
+  cardInner: {
+    flex: 1,
+    borderRadius: 23,
+    overflow: "hidden",
+  },
+  textInput: {
+    flex: 1,
+    color: "white",
+    fontSize: 15,
+    fontFamily: "Inter",
+    padding: 20,
+    textAlignVertical: "top",
+  },
+  collapseBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bottomBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  saveBtn: {
+    backgroundColor: "white",
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 30,
+  },
+  saveBtnText: {
+    color: "black",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  iconRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  iconBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
 
 const extractHandleText = (value: unknown): string => {
   if (typeof value === "string") return value.trim();
@@ -187,6 +270,12 @@ export default function PostPreview() {
   const [data, setData] = useState<PreviewData | null>(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showCoverModal, setShowCoverModal] = useState(false);
+  const [showCaptionModal, setShowCaptionModal] = useState(false);
+  const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const lastResultIndex = useRef(0);
+  const lastProcessedResult = useRef(0);
   const [coverDurationMs, setCoverDurationMs] = useState(0);
   const [scrubberPositionMs, setScrubberPositionMs] = useState(0);
   const [storyDurationMs, setStoryDurationMs] = useState<number | null>(null);
@@ -232,6 +321,12 @@ export default function PostPreview() {
       router.back();
     }
   }, [previewData]);
+
+  useEffect(() => {
+    if (data) {
+      setPreviewData(data);
+    }
+  }, [data]);
 
   useEffect(() => {
     setCurrentMediaIndex(0);
@@ -378,6 +473,191 @@ export default function PostPreview() {
       }),
     [safeSeek],
   );
+
+  const handleGenerateCaption = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!data?.caption?.trim()) {
+      Toast.show({
+        type: "error",
+        text1: "Caption Required",
+        text2: "Please enter a caption prompt first",
+      });
+      return;
+    }
+
+    try {
+      setIsGeneratingCaption(true);
+      const token = await storageService.getToken();
+
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Authentication Error",
+          text2: "Please login again",
+        });
+        return;
+      }
+
+      const isReel = data?.activeTab === "Reel";
+
+      const generatedCaption = await poppyService.generateCaption(
+        data.caption,
+        isReel,
+        token,
+      );
+
+      setData((prev) => (prev ? { ...prev, caption: generatedCaption } : prev));
+
+      addNotification({
+        type: "success",
+        title: "Caption Generated",
+        message: `AI caption generated for your ${data?.activeTab}.`,
+      });
+      Toast.show({
+        type: "success",
+        text1: "Caption Generated",
+        text2: "AI caption generated successfully",
+      });
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch (error) {
+      console.error("Caption generation error:", error);
+      addNotification({
+        type: "error",
+        title: "Caption Generation Failed",
+        message: "Failed to generate caption. Please try again.",
+      });
+      Toast.show({
+        type: "error",
+        text1: "Generation Failed",
+        text2: "Failed to generate caption. Please try again.",
+      });
+    } finally {
+      setIsGeneratingCaption(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isListening) {
+      pulseAnim.setValue(1);
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.25,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      pulse.start();
+      return () => {
+        pulse.stop();
+        pulseAnim.setValue(1);
+      };
+    } else {
+      pulseAnim.stopAnimation(() => {
+        pulseAnim.setValue(1);
+      });
+    }
+  }, [isListening]);
+
+  useSpeechRecognitionEvent("result", (event) => {
+    if (isListening) {
+      let interim = "";
+      let final = "";
+
+      const startIdx = Math.max(0, lastProcessedResult.current);
+
+      for (let i = startIdx; i < event.results.length; i++) {
+        const result = event.results[i];
+        const text = result?.transcript || "";
+
+        if (text) {
+          if ((result as any).isFinal === true) {
+            final += text;
+            lastProcessedResult.current = i + 1;
+          } else {
+            interim += text;
+          }
+        }
+      }
+
+      setData((prev) => {
+        if (!prev) return prev;
+        const currentCaption = prev.caption || "";
+        const base = currentCaption.substring(0, lastResultIndex.current);
+
+        if (final) {
+          const sep = base && base.trim() ? " " : "";
+          const newText = base + sep + final;
+          lastResultIndex.current = newText.length;
+          return { ...prev, caption: newText };
+        } else if (interim) {
+          const sep = base && base.trim() && interim.trim() ? " " : "";
+          return { ...prev, caption: base + sep + interim };
+        }
+
+        return prev;
+      });
+    }
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    setIsListening(false);
+  });
+
+  useSpeechRecognitionEvent("error", (event) => {
+    Alert.alert("Error", event.error || "Speech recognition failed");
+    setIsListening(false);
+  });
+
+  const startListening = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const { status } =
+        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert("Permission Required", "Please enable microphone access");
+        return;
+      }
+
+      await ExpoSpeechRecognitionModule.start({
+        lang: Platform.OS === "ios" ? "en-US" : undefined,
+        interimResults: true,
+        maxAlternatives: 1,
+        continuous: true,
+        requiresOnDeviceRecognition: Platform.OS === "ios",
+        addsPunctuation: true,
+        contextualStrings: [],
+      });
+
+      setIsListening(true);
+      lastResultIndex.current = (data?.caption || "").length;
+      lastProcessedResult.current = 0;
+    } catch (error: any) {
+      Alert.alert("Error", error?.message || "Failed to start recording");
+    }
+  };
+
+  const stopListening = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await ExpoSpeechRecognitionModule.stop();
+      setIsListening(false);
+      lastResultIndex.current = (data?.caption || "").length;
+      lastProcessedResult.current = 0;
+    } catch (error) {
+      console.log("Stop Voice Error:", error);
+      setIsListening(false);
+    }
+  };
 
   if (!data) return null;
 
@@ -773,7 +1053,7 @@ export default function PostPreview() {
             adjustsFontSizeToFit
             numberOfLines={2}
           >
-            Post
+            {isStoryPreview ? "Story" : isReelPreview ? "Reel" : "Post"}
             {"\n"}preview screen
           </Text>
         </View>
@@ -1748,7 +2028,7 @@ export default function PostPreview() {
         )}
 
         {/* Caption Section */}
-        {!isStoryPreview && caption.trim() ? (
+        {!isStoryPreview ? (
           <View style={{ marginHorizontal: 16, marginTop: 18 }}>
             <Text
               style={{
@@ -1792,7 +2072,7 @@ export default function PostPreview() {
                       lineHeight: 22,
                     }}
                   >
-                    {caption}
+                    {caption || "Write your caption..."}
                   </Text>
 
                   <View
@@ -1816,7 +2096,11 @@ export default function PostPreview() {
                       {hashtagText}
                     </Text>
 
-                    <View
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        setShowCaptionModal(true);
+                      }}
                       style={{
                         borderRadius: 12,
                         padding: 8,
@@ -1829,13 +2113,14 @@ export default function PostPreview() {
                         shadowRadius: 8,
                         elevation: 6,
                       }}
+                      activeOpacity={0.7}
                     >
                       <Image
                         source={require("../assets/icons/edit.png")}
                         style={{ width: 20, height: 20 }}
                         resizeMode="contain"
                       />
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 </View>
               </BlurView>
@@ -1915,6 +2200,121 @@ export default function PostPreview() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Expanded Caption Modal */}
+      <Modal
+        visible={showCaptionModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCaptionModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior="padding"
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        >
+          <View style={captionModalStyles.overlay}>
+            <BlurView
+              intensity={14}
+              tint="light"
+              style={StyleSheet.absoluteFillObject}
+            />
+
+            {/* Background Dismiss Tracker */}
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={StyleSheet.absoluteFillObject} />
+            </TouchableWithoutFeedback>
+
+            <View style={captionModalStyles.card}>
+              <View style={captionModalStyles.cardInner}>
+                <TextInput
+                  style={captionModalStyles.textInput}
+                  placeholder="Write your caption..."
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  multiline
+                  scrollEnabled={true}
+                  value={caption}
+                  onChangeText={(text) => {
+                    setData((prev) =>
+                      prev ? { ...prev, caption: text } : prev,
+                    );
+                  }}
+                />
+
+                <TouchableOpacity
+                  style={captionModalStyles.collapseBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setShowCaptionModal(false);
+                  }}
+                >
+                  <Image
+                    source={require("../assets/icons/move_out.png")}
+                    style={{ width: 44, height: 44 }}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+
+                <View style={captionModalStyles.bottomBar}>
+                  <TouchableOpacity
+                    style={captionModalStyles.saveBtn}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setShowCaptionModal(false);
+                    }}
+                  >
+                    <Text style={captionModalStyles.saveBtnText}>Save</Text>
+                  </TouchableOpacity>
+
+                  <View style={captionModalStyles.iconRow}>
+                    <TouchableOpacity
+                      style={captionModalStyles.iconBtn}
+                      onPress={handleGenerateCaption}
+                      disabled={isGeneratingCaption}
+                    >
+                      {isGeneratingCaption ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Image
+                          source={require("../assets/icons/chat_ai.png")}
+                          style={{ width: 44, height: 44 }}
+                          resizeMode="contain"
+                        />
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={captionModalStyles.iconBtn}
+                      onPress={isListening ? stopListening : startListening}
+                    >
+                      <Animated.View
+                        style={{ transform: [{ scale: pulseAnim }] }}
+                      >
+                        {isListening ? (
+                          <View
+                            style={{
+                              width: 22,
+                              height: 22,
+                              backgroundColor: "#ff4444",
+                              borderRadius: 4,
+                            }}
+                          />
+                        ) : (
+                          <Image
+                            source={require("../assets/icons/caption_mike.png")}
+                            style={{ width: 44, height: 44 }}
+                            resizeMode="contain"
+                          />
+                        )}
+                      </Animated.View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       <Modal
         visible={showCoverModal}

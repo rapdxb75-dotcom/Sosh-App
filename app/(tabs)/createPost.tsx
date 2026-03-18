@@ -62,6 +62,7 @@ import storageService from "../../services/storage";
 import {
   type PreviewData,
   consumePreviewPostSuccessReset,
+  getPreviewData,
   setPreviewData,
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
@@ -404,6 +405,29 @@ export default function CreatePost() {
         setScrubberPositionMs(0);
         coverDurationMsRef.current = 0;
         scrubberPositionMsRef.current = 0;
+      } else {
+        const previewState = getPreviewData();
+        if (previewState) {
+          setTabData((prev) => {
+            const next = { ...prev };
+            const tab = previewState.activeTab;
+            if (tab === "Post") {
+              next.Post = { ...prev.Post };
+              if (previewState.postType === "Single") {
+                next.Post.singleCaption = previewState.caption || "";
+              } else {
+                next.Post.carouselCaption = previewState.caption || "";
+              }
+            } else {
+              const tabKey = tab as "Reel" | "Story";
+              next[tabKey] = {
+                ...prev[tabKey],
+                caption: previewState.caption || "",
+              };
+            }
+            return next;
+          });
+        }
       }
     }, []),
   );
