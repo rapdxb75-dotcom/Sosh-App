@@ -10,6 +10,7 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
   Path as SvgPath,
 } from "react-native-svg";
+import { ICONS } from "../../constants/Assets";
 
 export default function BottomNavigation({
   state,
@@ -116,7 +117,8 @@ export default function BottomNavigation({
             className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive("home") ? "bg-[#FFFFFF1A]" : ""}`}
           >
             <Image
-              source={require("../../assets/icons/nav_home.png")}
+              source={ICONS.nav_home}
+              fadeDuration={0}
               className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
@@ -126,7 +128,8 @@ export default function BottomNavigation({
             className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive("ai") ? "bg-[#FFFFFF1A]" : ""}`}
           >
             <Image
-              source={require("../../assets/icons/nav_ai.png")}
+              source={ICONS.nav_ai}
+              fadeDuration={0}
               className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
@@ -140,7 +143,8 @@ export default function BottomNavigation({
             onPress={() => navigateTo("analysis")}
           >
             <Image
-              source={require("../../assets/icons/nav_chart.png")}
+              source={ICONS.nav_chart}
+              fadeDuration={0}
               className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
@@ -150,7 +154,8 @@ export default function BottomNavigation({
             className={`w-[42px] h-[42px] items-center justify-center rounded-[14px] ${isActive("profile") ? "bg-[#FFFFFF1A]" : ""}`}
           >
             <Image
-              source={require("../../assets/icons/nav_user.png")}
+              source={ICONS.nav_user}
+              fadeDuration={0}
               className="w-[26px] h-[26px]"
               resizeMode="contain"
             />
