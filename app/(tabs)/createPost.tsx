@@ -1592,6 +1592,10 @@ export default function CreatePost() {
 
       const editorConfig: any = {
         enableSaveDialog: false,
+        alertOnFailToLoad: true,
+        alertOnFailTitle: "Oops!",
+        alertOnFailMessage: "Cannot load this video file",
+        alertOnFailCloseText: "OK",
       };
       if (maxDuration > 0) {
         editorConfig.maxDuration = maxDuration;
