@@ -5,13 +5,8 @@ import { BlurView } from "expo-blur";
 import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import { Image as ExpoImage } from "expo-image";
-import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
 import { Maximize, Minimize, Plus, Upload, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -58,6 +53,11 @@ import { useNotification } from "../../context/NotificationContext";
 import createPostService from "../../services/api/createPost";
 import poppyService from "../../services/api/poppy";
 import { listenToUserData } from "../../services/firebase";
+import {
+  isSpeechRecognitionAvailable,
+  speechRecognitionModule,
+  useOptionalSpeechRecognitionEvent,
+} from "../../services/speechRecognition";
 import storageService from "../../services/storage";
 import {
   type PreviewData,
@@ -66,6 +66,17 @@ import {
   setPreviewData,
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
+
+type ExpoImageManipulatorModule = typeof import("expo-image-manipulator");
+
+let imageManipulatorModule: ExpoImageManipulatorModule | null = null;
+
+try {
+  imageManipulatorModule =
+    require("expo-image-manipulator") as ExpoImageManipulatorModule;
+} catch {
+  imageManipulatorModule = null;
+}
 
 const captionModalStyles = StyleSheet.create({
   overlay: {
@@ -712,7 +723,7 @@ export default function CreatePost() {
   }, [isListening]);
 
   // Event: Process speech results
-  useSpeechRecognitionEvent("result", (event) => {
+  useOptionalSpeechRecognitionEvent("result", (event) => {
     if (isListening) {
       let interim = "";
       let final = "";
@@ -752,12 +763,12 @@ export default function CreatePost() {
   });
 
   // Event: Recognition ended
-  useSpeechRecognitionEvent("end", () => {
+  useOptionalSpeechRecognitionEvent("end", () => {
     setIsListening(false);
   });
 
   // Event: Error occurred
-  useSpeechRecognitionEvent("error", (event) => {
+  useOptionalSpeechRecognitionEvent("error", (event) => {
     Alert.alert("Error", event.error || "Speech recognition failed");
     setIsListening(false);
   });
@@ -765,16 +776,24 @@ export default function CreatePost() {
   const startListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      Alert.alert(
+        "Voice Unavailable",
+        "Speech recognition is not available in this app build. Rebuild the native app and try again.",
+      );
+      return;
+    }
+
     try {
       const { status } =
-        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        await speechRecognitionModule.requestPermissionsAsync();
 
       if (status !== "granted") {
         Alert.alert("Permission Required", "Please enable microphone access");
         return;
       }
 
-      await ExpoSpeechRecognitionModule.start({
+      await speechRecognitionModule.start({
         lang: Platform.OS === "ios" ? "en-US" : undefined,
         interimResults: true,
         maxAlternatives: 1,
@@ -794,8 +813,14 @@ export default function CreatePost() {
 
   const stopListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      setIsListening(false);
+      return;
+    }
+
     try {
-      await ExpoSpeechRecognitionModule.stop();
+      await speechRecognitionModule.stop();
       setIsListening(false);
       lastResultIndex.current = caption.length;
       lastProcessedResult.current = 0;
@@ -1690,12 +1715,16 @@ export default function CreatePost() {
               resizeAction = [{ resize: { width: 1080, height: 1350 } }];
             }
 
-            const manipResult = await ImageManipulator.manipulateAsync(
+            if (!imageManipulatorModule) {
+              return uri;
+            }
+
+            const manipResult = await imageManipulatorModule.manipulateAsync(
               uri,
               resizeAction,
               {
                 compress: compressionRatio,
-                format: ImageManipulator.SaveFormat.JPEG,
+                format: imageManipulatorModule.SaveFormat.JPEG,
               },
             );
             return manipResult.uri;

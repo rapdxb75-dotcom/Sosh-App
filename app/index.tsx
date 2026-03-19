@@ -1,6 +1,6 @@
 import { Redirect } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { initializeFirebase } from "../services/firebase";
 import storageService from "../services/storage";
 
@@ -10,33 +10,29 @@ export default function Index() {
 
   useEffect(() => {
     const checkToken = async () => {
-      const token = await storageService.getToken();
-      setHasToken(!!token);
+      try {
+        const token = await storageService.getToken();
+        setHasToken(!!token);
 
-      // Initialize Firebase if user is logged in
-      // The listener will be set up in _layout.tsx
-      if (token) {
-        initializeFirebase();
+        // Initialize Firebase if user is logged in.
+        // The listener will be set up in _layout.tsx.
+        if (token) {
+          initializeFirebase();
+        }
+      } catch (tokenError) {
+        console.error("Error checking auth token:", tokenError);
+        setHasToken(false);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
+
     checkToken();
   }, []);
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#000" }}>
-        <Image
-          source={require("../assets/images/background.png")}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={{ width: 80, height: 80, marginBottom: 32 }}
-          resizeMode="contain"
-        />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="small" color="rgba(255,255,255,0.5)" />
       </View>
     );

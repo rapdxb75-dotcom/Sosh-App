@@ -4,10 +4,6 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
-import {
   Camera,
   ChevronLeft,
   MoreHorizontal,
@@ -49,6 +45,11 @@ import Header from "../components/common/Header";
 import { useNotification } from "../context/NotificationContext";
 import createPostService from "../services/api/createPost";
 import poppyService from "../services/api/poppy";
+import {
+  isSpeechRecognitionAvailable,
+  speechRecognitionModule,
+  useOptionalSpeechRecognitionEvent,
+} from "../services/speechRecognition";
 import storageService from "../services/storage";
 import {
   type PreviewData,
@@ -566,7 +567,7 @@ export default function PostPreview() {
     }
   }, [isListening]);
 
-  useSpeechRecognitionEvent("result", (event) => {
+  useOptionalSpeechRecognitionEvent("result", (event) => {
     if (isListening) {
       let interim = "";
       let final = "";
@@ -607,11 +608,11 @@ export default function PostPreview() {
     }
   });
 
-  useSpeechRecognitionEvent("end", () => {
+  useOptionalSpeechRecognitionEvent("end", () => {
     setIsListening(false);
   });
 
-  useSpeechRecognitionEvent("error", (event) => {
+  useOptionalSpeechRecognitionEvent("error", (event) => {
     Alert.alert("Error", event.error || "Speech recognition failed");
     setIsListening(false);
   });
@@ -619,16 +620,24 @@ export default function PostPreview() {
   const startListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      Alert.alert(
+        "Voice Unavailable",
+        "Speech recognition is not available in this app build. Rebuild the native app and try again.",
+      );
+      return;
+    }
+
     try {
       const { status } =
-        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        await speechRecognitionModule.requestPermissionsAsync();
 
       if (status !== "granted") {
         Alert.alert("Permission Required", "Please enable microphone access");
         return;
       }
 
-      await ExpoSpeechRecognitionModule.start({
+      await speechRecognitionModule.start({
         lang: Platform.OS === "ios" ? "en-US" : undefined,
         interimResults: true,
         maxAlternatives: 1,
@@ -648,8 +657,14 @@ export default function PostPreview() {
 
   const stopListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      setIsListening(false);
+      return;
+    }
+
     try {
-      await ExpoSpeechRecognitionModule.stop();
+      await speechRecognitionModule.stop();
       setIsListening(false);
       lastResultIndex.current = (data?.caption || "").length;
       lastProcessedResult.current = 0;

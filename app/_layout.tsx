@@ -5,7 +5,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Image, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { Provider, useSelector } from "react-redux";
@@ -18,7 +18,9 @@ import { getCurrentUserData, initializeFirebase } from "../services/firebase";
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Ignore duplicate calls in development fast-refresh cycles.
+});
 
 function FirebaseDataFetcher() {
   const email = useSelector((state: RootState) => state.user.email);
@@ -61,6 +63,8 @@ export default function RootLayout() {
     Inter_400Regular,
   });
   const [assetsReady, setAssetsReady] = useState(false);
+  const hasHiddenSplashRef = useRef(false);
+  const isAppReady = (loaded || error) && assetsReady;
 
   // Preload assets once on mount
   useEffect(() => {
@@ -78,14 +82,18 @@ export default function RootLayout() {
     store.dispatch(initializeUser());
   }, []);
 
-  // Hide splash only after both fonts and assets are ready
-  useEffect(() => {
-    if ((loaded || error) && assetsReady) {
-      SplashScreen.hideAsync();
+  const onLayoutRootView = useCallback(() => {
+    if (!isAppReady || hasHiddenSplashRef.current) {
+      return;
     }
-  }, [loaded, error, assetsReady]);
 
-  if (!loaded && !error) {
+    hasHiddenSplashRef.current = true;
+    SplashScreen.hideAsync().catch((splashError) => {
+      console.warn("Failed to hide splash screen:", splashError);
+    });
+  }, [isAppReady]);
+
+  if (!isAppReady) {
     return null;
   }
 
@@ -93,7 +101,10 @@ export default function RootLayout() {
     <Provider store={store}>
       <NotificationProvider>
         <FirebaseDataFetcher />
-        <View style={{ flex: 1, backgroundColor: "#000" }}>
+        <View
+          onLayout={onLayoutRootView}
+          style={{ flex: 1, backgroundColor: "#000" }}
+        >
           <StatusBar style="light" translucent backgroundColor="transparent" />
 
           <View style={{ flex: 1 }}>

@@ -1,39 +1,35 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
-import {
-    ExpoSpeechRecognitionModule,
-    useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
 import { Plus, X } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    ImageBackground,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    useWindowDimensions,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
-    Circle,
-    Defs,
-    Path,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Path,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -42,6 +38,11 @@ import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import chatService, { Conversation, Message } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
+import {
+  isSpeechRecognitionAvailable,
+  speechRecognitionModule,
+  useOptionalSpeechRecognitionEvent,
+} from "../../services/speechRecognition";
 import { RootState } from "../../store/store";
 
 /* ---------- Gradient Ring Component ---------- */
@@ -422,7 +423,7 @@ export default function AI() {
   }, [isListening]);
 
   // Event: Process speech results
-  useSpeechRecognitionEvent("result", (event) => {
+  useOptionalSpeechRecognitionEvent("result", (event) => {
     if (isListening) {
       let interim = "";
       let final = "";
@@ -462,12 +463,12 @@ export default function AI() {
   });
 
   // Event: Recognition ended
-  useSpeechRecognitionEvent("end", () => {
+  useOptionalSpeechRecognitionEvent("end", () => {
     setIsListening(false);
   });
 
   // Event: Error occurred
-  useSpeechRecognitionEvent("error", (event) => {
+  useOptionalSpeechRecognitionEvent("error", (event) => {
     Alert.alert("Error", event.error || "Speech recognition failed");
     setIsListening(false);
   });
@@ -475,16 +476,24 @@ export default function AI() {
   const startListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      Alert.alert(
+        "Voice Unavailable",
+        "Speech recognition is not available in this app build. Rebuild the native app and try again.",
+      );
+      return;
+    }
+
     try {
       const { status } =
-        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+        await speechRecognitionModule.requestPermissionsAsync();
 
       if (status !== "granted") {
         Alert.alert("Permission Required", "Please enable microphone access");
         return;
       }
 
-      await ExpoSpeechRecognitionModule.start({
+      await speechRecognitionModule.start({
         lang: Platform.OS === "ios" ? "en-US" : undefined,
         interimResults: true,
         maxAlternatives: 1,
@@ -504,8 +513,14 @@ export default function AI() {
 
   const stopListening = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      setIsListening(false);
+      return;
+    }
+
     try {
-      await ExpoSpeechRecognitionModule.stop();
+      await speechRecognitionModule.stop();
       setIsListening(false);
       lastResultIndex.current = inputText.length;
       lastProcessedResult.current = 0;
