@@ -1,8 +1,16 @@
+import Clipboard from "@react-native-clipboard/clipboard";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "expo-router";
-import { Plus, X } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Check,
+  Copy,
+  Plus,
+  ThumbsDown,
+  ThumbsUp,
+  X,
+} from "lucide-react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,6 +21,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -97,6 +106,44 @@ const ringStyles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
+  },
+});
+
+const chatMessageStyles = StyleSheet.create({
+  responseToolsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    paddingLeft: 2,
+  },
+  toolButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255, 255, 255, 0.25)",
+  },
+  toolButtonUpActive: {
+    backgroundColor: "rgba(74, 222, 128, 0.22)",
+    borderColor: "rgba(74, 222, 128, 0.6)",
+  },
+  toolButtonDownActive: {
+    backgroundColor: "rgba(251, 113, 133, 0.22)",
+    borderColor: "rgba(251, 113, 133, 0.6)",
+  },
+  toolButtonCopyActive: {
+    backgroundColor: "rgba(125, 211, 252, 0.22)",
+    borderColor: "rgba(125, 211, 252, 0.62)",
+  },
+  toolButtonPressed: {
+    opacity: 0.7,
+  },
+  toolButtonDisabled: {
+    opacity: 0.5,
   },
 });
 
@@ -215,42 +262,136 @@ const ChatItem = ({
   </TouchableOpacity>
 );
 
-import { memo } from "react";
+type ChatMessageProps = {
+  message: Message;
+  profilePicture: string | null;
+  onFeedback: (messageId: string, reaction: "up" | "down") => void;
+  feedback: "up" | "down" | null;
+  actionsDisabled: boolean;
+};
 
 /* ---------- Chat Message Component ---------- */
-const ChatMessage = memo(
+const ChatMessage = React.memo(
   ({
     message,
     profilePicture,
-  }: {
-    message: Message;
-    profilePicture: string | null;
-  }) => {
+    onFeedback,
+    feedback,
+    actionsDisabled,
+  }: ChatMessageProps) => {
     const isUser = message.role === "User";
+    const hasContent = Boolean(message.content?.trim());
+    const isThumbsUpActive = feedback === "up";
+    const isThumbsDownActive = feedback === "down";
+    const areResponseActionsDisabled = actionsDisabled;
+    const thumbsUpScale = useRef(new Animated.Value(1)).current;
+    const thumbsDownScale = useRef(new Animated.Value(1)).current;
+    const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+      null,
+    );
+    const [isCopyConfirmed, setIsCopyConfirmed] = useState(false);
+
+    useEffect(() => {
+      return () => {
+        if (copyResetTimerRef.current) {
+          clearTimeout(copyResetTimerRef.current);
+        }
+      };
+    }, []);
+
+    const animateFeedbackTap = useCallback((targetScale: Animated.Value) => {
+      targetScale.setValue(1);
+      Animated.sequence([
+        Animated.timing(targetScale, {
+          toValue: 1.16,
+          duration: 90,
+          useNativeDriver: true,
+        }),
+        Animated.spring(targetScale, {
+          toValue: 1,
+          friction: 5,
+          tension: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
+
+    const handleFeedbackPress = useCallback(
+      (reaction: "up" | "down") => {
+        if (reaction === "up") {
+          animateFeedbackTap(thumbsUpScale);
+        } else {
+          animateFeedbackTap(thumbsDownScale);
+        }
+
+        onFeedback(message._id, reaction);
+      },
+      [
+        animateFeedbackTap,
+        message._id,
+        onFeedback,
+        thumbsDownScale,
+        thumbsUpScale,
+      ],
+    );
+
+    const handleCopyAll = useCallback(() => {
+      if (!hasContent) return;
+
+      Clipboard.setString(message.content);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setIsCopyConfirmed(true);
+
+      if (copyResetTimerRef.current) {
+        clearTimeout(copyResetTimerRef.current);
+      }
+
+      copyResetTimerRef.current = setTimeout(() => {
+        setIsCopyConfirmed(false);
+      }, 1200);
+
+      Toast.show({
+        type: "success",
+        text1: "Copied",
+        text2: "Message copied to clipboard",
+      });
+    }, [hasContent, message.content]);
 
     if (isUser) {
       // User message - right side with sharp top-right corner
       return (
         <View className="mb-4 flex-row justify-end items-start">
           <View className="max-w-[75%] relative">
-            <BlurView
-              intensity={20}
-              tint="light"
+            <View
               style={{
-                paddingTop: 13,
-                paddingRight: 21,
-                paddingBottom: 13,
-                paddingLeft: 21,
                 backgroundColor: "rgba(255, 255, 255, 0.15)",
                 borderRadius: 24,
                 borderTopRightRadius: 0,
                 overflow: "hidden",
               }}
             >
-              <Text className="text-white font-inter text-base leading-6">
-                {message.content}
-              </Text>
-            </BlurView>
+              <BlurView
+                intensity={20}
+                tint="light"
+                pointerEvents="none"
+                style={StyleSheet.absoluteFill}
+              />
+              <View
+                style={{
+                  paddingTop: 13,
+                  paddingRight: 21,
+                  paddingBottom: 13,
+                  paddingLeft: 21,
+                }}
+              >
+                <Text
+                  className="text-white font-inter text-base leading-6"
+                  selectable={true}
+                >
+                  {message.content}
+                </Text>
+              </View>
+            </View>
             {/* Border Overlay */}
             <View
               pointerEvents="none"
@@ -291,45 +432,142 @@ const ChatMessage = memo(
               resizeMode="contain"
             />
           </View>
-          <View className="max-w-[75%] relative">
-            <BlurView
-              intensity={14}
-              tint="dark"
-              style={{
-                paddingTop: 13,
-                paddingRight: 21,
-                paddingBottom: 13,
-                paddingLeft: 21,
-                backgroundColor: "rgba(0, 0, 0, 0.4)",
-                borderRadius: 24,
-                borderTopLeftRadius: 0,
-                overflow: "hidden",
-              }}
-            >
-              {message.content ? (
-                <MarkdownText content={message.content} />
-              ) : (
-                <TypingDots />
-              )}
-            </BlurView>
-            {/* Border Overlay */}
-            <View
-              pointerEvents="none"
-              style={{
-                position: "absolute",
-                inset: 0,
-                borderWidth: 1,
-                borderColor: "rgba(255, 255, 255, 0.5)",
-                borderRadius: 24,
-                borderTopLeftRadius: 0,
-              }}
-            />
+          <View className="max-w-[75%]">
+            <View className="relative">
+              <View
+                style={{
+                  backgroundColor: "rgba(0, 0, 0, 0.4)",
+                  borderRadius: 24,
+                  borderTopLeftRadius: 0,
+                  overflow: "hidden",
+                }}
+              >
+                <BlurView
+                  intensity={14}
+                  tint="dark"
+                  pointerEvents="none"
+                  style={StyleSheet.absoluteFill}
+                />
+                <View
+                  style={{
+                    paddingTop: 13,
+                    paddingRight: 21,
+                    paddingBottom: 13,
+                    paddingLeft: 21,
+                  }}
+                >
+                  {hasContent ? (
+                    <MarkdownText content={message.content} selectable={true} />
+                  ) : (
+                    <TypingDots />
+                  )}
+                </View>
+              </View>
+              {/* Border Overlay */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderWidth: 1,
+                  borderColor: "rgba(255, 255, 255, 0.5)",
+                  borderRadius: 24,
+                  borderTopLeftRadius: 0,
+                }}
+              />
+            </View>
+
+            {hasContent && (
+              <View style={chatMessageStyles.responseToolsRow}>
+                <Pressable
+                  onPress={handleCopyAll}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isCopyConfirmed ? "Response copied" : "Copy response"
+                  }
+                  disabled={areResponseActionsDisabled}
+                  style={({ pressed }) => [
+                    chatMessageStyles.toolButton,
+                    isCopyConfirmed && chatMessageStyles.toolButtonCopyActive,
+                    areResponseActionsDisabled &&
+                      chatMessageStyles.toolButtonDisabled,
+                    pressed && chatMessageStyles.toolButtonPressed,
+                  ]}
+                >
+                  {isCopyConfirmed ? (
+                    <Check color="#FFFFFF" size={14} strokeWidth={2.4} />
+                  ) : (
+                    <Copy color="#FFFFFF" size={14} strokeWidth={2} />
+                  )}
+                </Pressable>
+
+                <Animated.View
+                  style={{ transform: [{ scale: thumbsUpScale }] }}
+                >
+                  <Pressable
+                    onPress={() => handleFeedbackPress("up")}
+                    accessibilityRole="button"
+                    accessibilityLabel="Mark response as helpful"
+                    disabled={areResponseActionsDisabled}
+                    style={({ pressed }) => [
+                      chatMessageStyles.toolButton,
+                      isThumbsUpActive && chatMessageStyles.toolButtonUpActive,
+                      areResponseActionsDisabled &&
+                        chatMessageStyles.toolButtonDisabled,
+                      pressed && chatMessageStyles.toolButtonPressed,
+                    ]}
+                  >
+                    <ThumbsUp
+                      color="#FFFFFF"
+                      fill={isThumbsUpActive ? "#FFFFFF" : "transparent"}
+                      size={14}
+                      strokeWidth={2}
+                    />
+                  </Pressable>
+                </Animated.View>
+
+                <Animated.View
+                  style={{ transform: [{ scale: thumbsDownScale }] }}
+                >
+                  <Pressable
+                    onPress={() => handleFeedbackPress("down")}
+                    accessibilityRole="button"
+                    accessibilityLabel="Mark response as unhelpful"
+                    disabled={areResponseActionsDisabled}
+                    style={({ pressed }) => [
+                      chatMessageStyles.toolButton,
+                      isThumbsDownActive &&
+                        chatMessageStyles.toolButtonDownActive,
+                      areResponseActionsDisabled &&
+                        chatMessageStyles.toolButtonDisabled,
+                      pressed && chatMessageStyles.toolButtonPressed,
+                    ]}
+                  >
+                    <ThumbsDown
+                      color="#FFFFFF"
+                      fill={isThumbsDownActive ? "#FFFFFF" : "transparent"}
+                      size={14}
+                      strokeWidth={2}
+                    />
+                  </Pressable>
+                </Animated.View>
+              </View>
+            )}
           </View>
         </View>
       );
     }
   },
+  (prevProps, nextProps) =>
+    prevProps.profilePicture === nextProps.profilePicture &&
+    prevProps.message._id === nextProps.message._id &&
+    prevProps.message.role === nextProps.message.role &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.feedback === nextProps.feedback &&
+    prevProps.actionsDisabled === nextProps.actionsDisabled,
 );
+
+type MessageReaction = "up" | "down" | null;
 
 export default function AI() {
   const { width, height } = useWindowDimensions();
@@ -381,6 +619,9 @@ export default function AI() {
     string | null
   >(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messageReactions, setMessageReactions] = useState<
+    Record<string, MessageReaction>
+  >({});
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [inputText, setInputText] = useState("");
   const [isSending, setIsSending] = useState(false);
@@ -610,6 +851,7 @@ export default function AI() {
     setTimeout(() => {
       setActiveConversationId(null);
       setMessages([]);
+      setMessageReactions({});
       setInputText("");
     }, 300);
   };
@@ -731,6 +973,7 @@ export default function AI() {
     setActiveConversationId(conversationId);
     setIsLoadingMessages(true);
     setMessages([]);
+    setMessageReactions({});
 
     try {
       const history = await chatService.getHistory(conversationId);
@@ -757,6 +1000,7 @@ export default function AI() {
     } catch (error) {
       console.error("Failed to load conversation history:", error);
       setMessages([]);
+      setMessageReactions({});
     } finally {
       setIsLoadingMessages(false);
     }
@@ -765,6 +1009,22 @@ export default function AI() {
   // Ref for batching streaming token updates
   const streamBufferRef = useRef("");
   const rafIdRef = useRef<number | null>(null);
+
+  const handleMessageFeedback = useCallback(
+    (messageId: string, reaction: "up" | "down") => {
+      setMessageReactions((prev) => {
+        const nextReaction = prev[messageId] === reaction ? null : reaction;
+
+        return {
+          ...prev,
+          [messageId]: nextReaction,
+        };
+      });
+
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    [],
+  );
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || isSending || !userEmail) return;
@@ -976,6 +1236,7 @@ export default function AI() {
       if (activeConversationId === conversationToDelete) {
         setActiveConversationId(null);
         setMessages([]);
+        setMessageReactions({});
       }
 
       // Close modal
@@ -1038,6 +1299,7 @@ export default function AI() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setActiveConversationId(null);
                 setMessages([]);
+                setMessageReactions({});
                 setInputText("");
               }}
               style={{ width: normalize(38), height: normalize(38) }}
@@ -1118,6 +1380,9 @@ export default function AI() {
                       key={`${message._id}-${index}`}
                       message={message}
                       profilePicture={profilePicture}
+                      onFeedback={handleMessageFeedback}
+                      feedback={messageReactions[message._id] ?? null}
+                      actionsDisabled={isSending}
                     />
                   ))
                 ) : (

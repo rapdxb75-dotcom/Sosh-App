@@ -4,11 +4,13 @@ import { StyleSheet, Text, View } from "react-native";
 interface MarkdownTextProps {
   content: string;
   className?: string;
+  selectable?: boolean;
 }
 
 export const MarkdownText: React.FC<MarkdownTextProps> = ({
   content,
   className,
+  selectable = false,
 }) => {
   const parseMarkdown = (text: string) => {
     const lines = text.split("\n");
@@ -27,7 +29,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
           // End code block
           elements.push(
             <View key={`code-${lineIndex}`} style={styles.codeBlock}>
-              <Text style={styles.codeBlockText}>
+              <Text style={styles.codeBlockText} selectable={selectable}>
                 {codeBlockContent.join("\n")}
               </Text>
             </View>,
@@ -61,7 +63,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
         // End blockquote
         elements.push(
           <View key={`quote-${lineIndex}`} style={styles.blockquote}>
-            <Text style={styles.blockquoteText}>
+            <Text style={styles.blockquoteText} selectable={selectable}>
               {parseInlineMarkdown(blockquoteContent.join("\n"))}
             </Text>
           </View>,
@@ -91,6 +93,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
           <Text
             key={lineIndex}
             style={[styles.heading, styles[`h${level}` as keyof typeof styles]]}
+            selectable={selectable}
           >
             {parseInlineMarkdown(headingText)}
           </Text>,
@@ -108,8 +111,12 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
             key={lineIndex}
             style={[styles.listItem, { marginLeft: indent * 20 }]}
           >
-            <Text style={styles.listBullet}>•</Text>
-            <Text style={styles.listText}>{parseInlineMarkdown(content)}</Text>
+            <Text style={styles.listBullet} selectable={selectable}>
+              •
+            </Text>
+            <Text style={styles.listText} selectable={selectable}>
+              {parseInlineMarkdown(content)}
+            </Text>
           </View>,
         );
         return;
@@ -126,8 +133,12 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
             key={lineIndex}
             style={[styles.listItem, { marginLeft: indent * 20 }]}
           >
-            <Text style={styles.listNumber}>{number}.</Text>
-            <Text style={styles.listText}>{parseInlineMarkdown(content)}</Text>
+            <Text style={styles.listNumber} selectable={selectable}>
+              {number}.
+            </Text>
+            <Text style={styles.listText} selectable={selectable}>
+              {parseInlineMarkdown(content)}
+            </Text>
           </View>,
         );
         return;
@@ -140,8 +151,13 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
         const content = taskMatch[3];
         elements.push(
           <View key={lineIndex} style={styles.listItem}>
-            <Text style={styles.taskCheckbox}>{checked ? "☑" : "☐"}</Text>
-            <Text style={[styles.listText, checked && styles.taskCompleted]}>
+            <Text style={styles.taskCheckbox} selectable={selectable}>
+              {checked ? "☑" : "☐"}
+            </Text>
+            <Text
+              style={[styles.listText, checked && styles.taskCompleted]}
+              selectable={selectable}
+            >
               {parseInlineMarkdown(content)}
             </Text>
           </View>,
@@ -157,7 +173,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
 
       // Handle regular paragraphs
       elements.push(
-        <Text key={lineIndex} style={styles.paragraph}>
+        <Text key={lineIndex} style={styles.paragraph} selectable={selectable}>
           {parseInlineMarkdown(line)}
         </Text>,
       );
@@ -167,7 +183,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
     if (inBlockquote && blockquoteContent.length > 0) {
       elements.push(
         <View key="quote-final" style={styles.blockquote}>
-          <Text style={styles.blockquoteText}>
+          <Text style={styles.blockquoteText} selectable={selectable}>
             {parseInlineMarkdown(blockquoteContent.join("\n"))}
           </Text>
         </View>,
@@ -225,14 +241,14 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
         // Add plain text before this segment
         if (segment.start > lastEnd) {
           parts.push(
-            <Text key={key++} style={styles.normalText}>
+            <Text key={key++} style={styles.normalText} selectable={selectable}>
               {text.substring(lastEnd, segment.start)}
             </Text>,
           );
         }
         // Add styled segment
         parts.push(
-          <Text key={key++} style={segment.style}>
+          <Text key={key++} style={segment.style} selectable={selectable}>
             {segment.text}
           </Text>,
         );
@@ -243,7 +259,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
     // Add remaining text
     if (lastEnd < text.length) {
       parts.push(
-        <Text key={key++} style={styles.normalText}>
+        <Text key={key++} style={styles.normalText} selectable={selectable}>
           {text.substring(lastEnd)}
         </Text>,
       );
