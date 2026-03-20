@@ -1,0 +1,237 @@
+diff --git a/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/VideoTrimModule.java b/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/VideoTrimModule.java
+index 9e207fa..1c38a08 100644
+--- a/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/VideoTrimModule.java
++++ b/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/VideoTrimModule.java
+@@ -68,6 +68,8 @@ public class VideoTrimModule extends ReactContextBaseJavaModule implements Video
+   private AlertDialog cancelTrimmingConfirmDialog;
+   private ProgressBar mProgressBar;
+   private int listenerCount = 0;
++  private boolean showTrimmingProgressDialog = true;
++  private boolean hideProgressDialogWhenNotTrimmed = false;
+   private boolean enableCancelTrimming = true;
+ 
+   private String cancelTrimmingButtonText = "Cancel";
+@@ -179,6 +181,8 @@ public class VideoTrimModule extends ReactContextBaseJavaModule implements Video
+     saveDialogMessage = config.hasKey("saveDialogMessage") ? config.getString("saveDialogMessage") : "Are you sure want to save?";
+     saveDialogCancelText = config.hasKey("saveDialogCancelText") ? config.getString("saveDialogCancelText") : "Close";
+     saveDialogConfirmText = config.hasKey("saveDialogConfirmText") ? config.getString("saveDialogConfirmText") : "Proceed";
++    showTrimmingProgressDialog = !config.hasKey("showTrimmingProgressDialog") || config.getBoolean("showTrimmingProgressDialog");
++    hideProgressDialogWhenNotTrimmed = config.hasKey("hideProgressDialogWhenNotTrimmed") && config.getBoolean("hideProgressDialogWhenNotTrimmed");
+     trimmingText = config.hasKey("trimmingText") ? config.getString("trimmingText") : "Trimming video...";
+ 
+     saveToPhoto = config.hasKey("saveToPhoto") && config.getBoolean("saveToPhoto");
+@@ -383,6 +387,28 @@ public class VideoTrimModule extends ReactContextBaseJavaModule implements Video
+   }
+ 
+   private void startTrim() {
++    boolean isOriginalDurationSelected = false;
++    if (trimmerView != null) {
++      final long trimDecisionToleranceMs = 50L;
++      long selectedStart = trimmerView.getTrimStartTimeMillis();
++      long selectedEnd = trimmerView.getTrimEndTimeMillis();
++      long mediaDuration = trimmerView.getMediaDurationMillis();
++      isOriginalDurationSelected = Math.abs(selectedStart) <= trimDecisionToleranceMs
++        && Math.abs(mediaDuration - selectedEnd) <= trimDecisionToleranceMs;
++    }
++
++    boolean shouldShowProgressDialog = showTrimmingProgressDialog
++      && !(hideProgressDialogWhenNotTrimmed && isOriginalDurationSelected);
++
++    if (!shouldShowProgressDialog) {
++      sendEvent(getReactApplicationContext(), "onStartTrimming", null);
++
++      if (trimmerView != null) {
++        trimmerView.onSaveClicked();
++      }
++      return;
++    }
++
+     Activity activity = getReactApplicationContext().getCurrentActivity();
+     // Create the parent layout for the dialog
+     LinearLayout layout = new LinearLayout(activity);
+diff --git a/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/widgets/VideoTrimmerView.java b/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/widgets/VideoTrimmerView.java
+index 8649e54..75371de 100644
+--- a/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/widgets/VideoTrimmerView.java
++++ b/node_modules/react-native-video-trim/android/src/main/java/com/videotrim/widgets/VideoTrimmerView.java
+@@ -378,6 +378,18 @@ public class VideoTrimmerView extends FrameLayout implements IVideoTrimmerView {
+     );
+   }
+ 
++  public long getTrimStartTimeMillis() {
++    return startTime;
++  }
++
++  public long getTrimEndTimeMillis() {
++    return endTime;
++  }
++
++  public long getMediaDurationMillis() {
++    return mDuration;
++  }
++
+   public void onCancelTrimClicked() {
+     if (ffmpegSession != null) {
+       ffmpegSession.cancel();
+diff --git a/node_modules/react-native-video-trim/ios/VideoTrim.swift b/node_modules/react-native-video-trim/ios/VideoTrim.swift
+index b84d595..1212c1f 100644
+--- a/node_modules/react-native-video-trim/ios/VideoTrim.swift
++++ b/node_modules/react-native-video-trim/ios/VideoTrim.swift
+@@ -29,6 +29,8 @@ class VideoTrim: RCTEventEmitter, AssetLoaderDelegate, UIDocumentPickerDelegate
+   private var saveDialogMessage = "Are you sure want to save?"
+   private var saveDialogCancelText = "Close"
+   private var saveDialogConfirmText = "Proceed"
++  private var showTrimmingProgressDialog = true
++  private var hideProgressDialogWhenNotTrimmed = false
+   private var fullScreenModalIOS = false
+   private var cancelButtonText = "Cancel"
+   private var saveButtonText = "Save"
+@@ -104,6 +106,10 @@ class VideoTrim: RCTEventEmitter, AssetLoaderDelegate, UIDocumentPickerDelegate
+     saveDialogCancelText = config["saveDialogCancelText"] as? String ?? "Close"
+     saveDialogConfirmText =
+       config["saveDialogConfirmText"] as? String ?? "Proceed"
++    showTrimmingProgressDialog =
++      config["showTrimmingProgressDialog"] as? Bool ?? true
++    hideProgressDialogWhenNotTrimmed =
++      config["hideProgressDialogWhenNotTrimmed"] as? Bool ?? false
+     trimmingText = config["trimmingText"] as? String ?? "Trimming video..."
+     fullScreenModalIOS = config["fullScreenModalIOS"] as? Bool ?? false
+     isVideoType = (config["type"] as? String ?? "video") == "video"
+@@ -400,61 +406,76 @@ class VideoTrim: RCTEventEmitter, AssetLoaderDelegate, UIDocumentPickerDelegate
+     emitEventToJS("onStartTrimming", eventData: nil)
+ 
+     var ffmpegSession: FFmpegSession?
+-    let progressAlert = ProgressAlertController()
+-    progressAlert.modalPresentationStyle = .overFullScreen
+-    progressAlert.modalTransitionStyle = .crossDissolve
+-    progressAlert.setTitle(trimmingText)
+-
+-    if enableCancelTrimming {
+-      progressAlert.setCancelTitle(cancelTrimmingButtonText)
+-      progressAlert.showCancelBtn()
+-      progressAlert.onDismiss = {
+-        if self.enableCancelTrimmingDialog {
+-          let dialogMessage = UIAlertController(
+-            title: self.cancelTrimmingDialogTitle,
+-            message: self.cancelTrimmingDialogMessage, preferredStyle: .alert)
+-          dialogMessage.overrideUserInterfaceStyle = .dark
+-
+-          // Create OK button with action handler
+-          let ok = UIAlertAction(
+-            title: self.cancelDialogConfirmText, style: .destructive,
+-            handler: { (action) -> Void in
+-
+-              if let ffmpegSession = ffmpegSession {
+-                ffmpegSession.cancel()
+-              } else {
+-                self.emitEventToJS("onCancelTrimming", eventData: nil)
+-              }
++    var progressAlert: ProgressAlertController? = nil
++    let trimDecisionTolerance = 0.05
++    let isOriginalDurationSelected =
++      abs(startTime) <= trimDecisionTolerance
++      && abs(videoDuration - endTime) <= trimDecisionTolerance
++    let shouldShowProgressDialog =
++      showTrimmingProgressDialog
++      && !(hideProgressDialogWhenNotTrimmed && isOriginalDurationSelected)
++
++    if shouldShowProgressDialog {
++      let alert = ProgressAlertController()
++      alert.modalPresentationStyle = .overFullScreen
++      alert.modalTransitionStyle = .crossDissolve
++      alert.setTitle(trimmingText)
++
++      if enableCancelTrimming {
++        alert.setCancelTitle(cancelTrimmingButtonText)
++        alert.showCancelBtn()
++        alert.onDismiss = {
++          if self.enableCancelTrimmingDialog {
++            let dialogMessage = UIAlertController(
++              title: self.cancelTrimmingDialogTitle,
++              message: self.cancelTrimmingDialogMessage, preferredStyle: .alert)
++            dialogMessage.overrideUserInterfaceStyle = .dark
++
++            // Create OK button with action handler
++            let ok = UIAlertAction(
++              title: self.cancelDialogConfirmText, style: .destructive,
++              handler: { (action) -> Void in
++
++                if let ffmpegSession = ffmpegSession {
++                  ffmpegSession.cancel()
++                } else {
++                  self.emitEventToJS("onCancelTrimming", eventData: nil)
++                }
+ 
+-              progressAlert.dismiss(animated: true)
+-            })
++                alert.dismiss(animated: true)
++              })
+ 
+-          // Create Cancel button with action handlder
+-          let cancel = UIAlertAction(
+-            title: self.cancelDialogCancelText, style: .cancel)
++            // Create Cancel button with action handlder
++            let cancel = UIAlertAction(
++              title: self.cancelDialogCancelText, style: .cancel)
+ 
+-          //Add OK and Cancel button to an Alert object
+-          dialogMessage.addAction(ok)
+-          dialogMessage.addAction(cancel)
++            //Add OK and Cancel button to an Alert object
++            dialogMessage.addAction(ok)
++            dialogMessage.addAction(cancel)
+ 
+-          // Present alert message to user
+-          if let root = RCTPresentedViewController() {
+-            root.present(dialogMessage, animated: true, completion: nil)
+-          }
+-        } else {
+-          if let ffmpegSession = ffmpegSession {
+-            ffmpegSession.cancel()
++            // Present alert message to user
++            if let root = RCTPresentedViewController() {
++              root.present(dialogMessage, animated: true, completion: nil)
++            }
+           } else {
+-            self.emitEventToJS("onCancelTrimming", eventData: nil)
++            if let ffmpegSession = ffmpegSession {
++              ffmpegSession.cancel()
++            } else {
++              self.emitEventToJS("onCancelTrimming", eventData: nil)
++            }
++
++            alert.dismiss(animated: true)
+           }
+ 
+-          progressAlert.dismiss(animated: true)
+         }
+-
+       }
++
++      progressAlert = alert
+     }
+ 
+-    if let root = RCTPresentedViewController() {
++    if let progressAlert = progressAlert,
++      let root = RCTPresentedViewController()
++    {
+       root.present(progressAlert, animated: true, completion: nil)
+     }
+ 
+@@ -485,7 +506,7 @@ class VideoTrim: RCTEventEmitter, AssetLoaderDelegate, UIDocumentPickerDelegate
+ 
+         // always hide progressAlert
+         DispatchQueue.main.async {
+-          progressAlert.dismiss(animated: true)
++          progressAlert?.dismiss(animated: true)
+         }
+ 
+         let state = session?.getState()
+@@ -583,7 +604,7 @@ class VideoTrim: RCTEventEmitter, AssetLoaderDelegate, UIDocumentPickerDelegate
+         if timeInMilliseconds > 0 {
+           let completePercentage = timeInMilliseconds / (videoDuration * 1000)  // from 0 -> 1
+           DispatchQueue.main.async {
+-            progressAlert.setProgress(Float(completePercentage))
++            progressAlert?.setProgress(Float(completePercentage))
+           }
+         }
+ 

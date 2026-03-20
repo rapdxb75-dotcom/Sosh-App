@@ -1617,6 +1617,7 @@ export default function CreatePost() {
 
       const editorConfig: any = {
         enableSaveDialog: false,
+        showTrimmingProgressDialog: false,
         alertOnFailToLoad: true,
         alertOnFailTitle: "Oops!",
         alertOnFailMessage: "Cannot load this video file",
