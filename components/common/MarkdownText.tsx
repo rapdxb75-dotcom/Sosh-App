@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TextInput, View } from "react-native";
 
 interface MarkdownTextProps {
   content: string;
@@ -241,14 +241,14 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
         // Add plain text before this segment
         if (segment.start > lastEnd) {
           parts.push(
-            <Text key={key++} style={styles.normalText} selectable={selectable}>
+            <Text key={key++} style={styles.normalText}>
               {text.substring(lastEnd, segment.start)}
             </Text>,
           );
         }
         // Add styled segment
         parts.push(
-          <Text key={key++} style={segment.style} selectable={selectable}>
+          <Text key={key++} style={segment.style}>
             {segment.text}
           </Text>,
         );
@@ -259,7 +259,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
     // Add remaining text
     if (lastEnd < text.length) {
       parts.push(
-        <Text key={key++} style={styles.normalText} selectable={selectable}>
+        <Text key={key++} style={styles.normalText}>
           {text.substring(lastEnd)}
         </Text>,
       );
@@ -267,6 +267,174 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({
 
     return parts.length > 0 ? parts : [text];
   };
+
+  // Flat rendering: everything as nested <Text> under one selectable root
+  const parseMarkdownFlat = (text: string): React.ReactNode[] => {
+    const lines = text.split("\n");
+    const elements: React.ReactNode[] = [];
+    let inCodeBlock = false;
+    let codeBlockContent: string[] = [];
+
+    lines.forEach((line, lineIndex) => {
+      if (lineIndex > 0 && !inCodeBlock) {
+        elements.push(<Text key={`nl-${lineIndex}`}>{"\n"}</Text>);
+      }
+
+      // Handle code blocks
+      if (line.trim().startsWith("```")) {
+        if (inCodeBlock) {
+          elements.push(
+            <Text key={`code-${lineIndex}`} style={styles.codeBlockTextFlat}>
+              {codeBlockContent.join("\n")}
+            </Text>,
+          );
+          codeBlockContent = [];
+          inCodeBlock = false;
+        } else {
+          inCodeBlock = true;
+        }
+        return;
+      }
+
+      if (inCodeBlock) {
+        codeBlockContent.push(line);
+        return;
+      }
+
+      // Handle blockquotes
+      if (line.trim().startsWith(">")) {
+        const content = line.replace(/^>\s?/, "");
+        elements.push(
+          <Text key={lineIndex} style={styles.blockquoteTextFlat}>
+            {parseInlineMarkdown(content)}
+          </Text>,
+        );
+        return;
+      }
+
+      // Handle horizontal rules
+      if (
+        line.trim() === "---" ||
+        line.trim() === "***" ||
+        line.trim() === "___"
+      ) {
+        elements.push(
+          <Text key={lineIndex} style={styles.horizontalRuleFlat}>
+            {"─────────────"}
+          </Text>,
+        );
+        return;
+      }
+
+      // Handle headings
+      const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2];
+        const headingStyle =
+          styles[`h${level}` as keyof typeof styles] || styles.h3;
+        elements.push(
+          <Text key={lineIndex} style={[styles.heading, headingStyle]}>
+            {parseInlineMarkdown(headingText)}
+          </Text>,
+        );
+        return;
+      }
+
+      // Handle unordered lists
+      const unorderedListMatch = line.match(/^(\s*)([-*+])\s+(.+)/);
+      if (unorderedListMatch) {
+        const content = unorderedListMatch[3];
+        elements.push(
+          <Text key={lineIndex} style={styles.normalText}>
+            {"  • "}
+            {parseInlineMarkdown(content)}
+          </Text>,
+        );
+        return;
+      }
+
+      // Handle ordered lists
+      const orderedListMatch = line.match(/^(\s*)(\d+)\.\s+(.+)/);
+      if (orderedListMatch) {
+        const number = orderedListMatch[2];
+        const content = orderedListMatch[3];
+        elements.push(
+          <Text key={lineIndex} style={styles.normalText}>
+            {"  "}
+            {number}
+            {". "}
+            {parseInlineMarkdown(content)}
+          </Text>,
+        );
+        return;
+      }
+
+      // Handle task lists
+      const taskMatch = line.match(/^(\s*)-\s+\[([ xX])\]\s+(.+)/);
+      if (taskMatch) {
+        const checked = taskMatch[2].toLowerCase() === "x";
+        const content = taskMatch[3];
+        elements.push(
+          <Text
+            key={lineIndex}
+            style={[styles.normalText, checked && styles.taskCompleted]}
+          >
+            {checked ? "  ☑ " : "  ☐ "}
+            {parseInlineMarkdown(content)}
+          </Text>,
+        );
+        return;
+      }
+
+      // Handle empty lines
+      if (line.trim() === "") {
+        return;
+      }
+
+      // Handle regular paragraphs
+      elements.push(
+        <Text key={lineIndex} style={styles.normalText}>
+          {parseInlineMarkdown(line)}
+        </Text>,
+      );
+    });
+
+    return elements;
+  };
+
+  if (selectable) {
+    // Strip markdown syntax so TextInput shows clean readable text
+    // TextInput editable={false} gives native iOS selection handles + Select All
+    const plainText = content
+      .replace(/```[\s\S]*?```/g, (m) => m.replace(/```\w*\n?/g, "").trim())
+      .replace(/\*\*\*(.+?)\*\*\*/g, "$1")
+      .replace(/___(.+?)___/g, "$1")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/__(.+?)__/g, "$1")
+      .replace(/\*(.+?)\*/g, "$1")
+      .replace(/_(.+?)_/g, "$1")
+      .replace(/~~(.+?)~~/g, "$1")
+      .replace(/`(.+?)`/g, "$1")
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/^[-*+]\s+/gm, "• ")
+      .replace(/^>\s?/gm, "");
+
+    return (
+      <View>
+        <TextInput
+          value={plainText}
+          editable={false}
+          multiline={true}
+          scrollEnabled={false}
+          style={[styles.paragraph, styles.selectableInput]}
+          textAlignVertical="top"
+          contextMenuHidden={false}
+          selectTextOnFocus={false}
+        />
+      </View>
+    );
+  }
 
   return <View>{parseMarkdown(content)}</View>;
 };
@@ -306,6 +474,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     marginVertical: 4,
+  },
+  selectableInput: {
+    padding: 0,
+    margin: 0,
+    marginVertical: 0,
+    backgroundColor: "transparent",
+    color: "#FFFFFF",
   },
   normalText: {
     color: "#FFFFFF",
@@ -404,5 +579,23 @@ const styles = StyleSheet.create({
   },
   emptyLine: {
     height: 8,
+  },
+  codeBlockTextFlat: {
+    fontFamily: "Courier",
+    color: "#00DC82",
+    fontSize: 14,
+    lineHeight: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+  },
+  blockquoteTextFlat: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontStyle: "italic",
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  horizontalRuleFlat: {
+    color: "rgba(255, 255, 255, 0.2)",
+    fontSize: 10,
+    lineHeight: 16,
   },
 });
