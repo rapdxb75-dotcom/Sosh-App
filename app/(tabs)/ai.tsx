@@ -12,7 +12,6 @@ import {
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Animated,
@@ -117,11 +116,6 @@ const chatMessageStyles = StyleSheet.create({
     gap: 8,
     marginTop: 8,
     paddingLeft: 2,
-  },
-  userToolsRow: {
-    alignSelf: "flex-end",
-    paddingLeft: 0,
-    paddingRight: 2,
   },
   toolButton: {
     width: 30,
@@ -368,70 +362,6 @@ const ChatMessage = React.memo(
       });
     }, [hasContent, message.content, triggerCopyConfirmation]);
 
-    const handleSelectAll = useCallback(() => {
-      if (!hasContent) return;
-
-      Clipboard.setString(message.content);
-      triggerCopyConfirmation();
-
-      Toast.show({
-        type: "success",
-        text1: "Selected All",
-        text2: "Entire message copied to clipboard",
-      });
-    }, [hasContent, message.content, triggerCopyConfirmation]);
-
-    const handleSelectHint = useCallback(() => {
-      Toast.show({
-        type: "info",
-        text1: "Select Text",
-        text2: "Long-press message text to select words",
-      });
-    }, []);
-
-    const handleCopyActionsMenu = useCallback(() => {
-      if (!hasContent) return;
-
-      if (Platform.OS === "ios") {
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            options: ["Copy", "Select", "Select All", "Cancel"],
-            cancelButtonIndex: 3,
-            userInterfaceStyle: "dark",
-          },
-          (buttonIndex) => {
-            if (buttonIndex === 0) {
-              handleCopyAll();
-            } else if (buttonIndex === 1) {
-              handleSelectHint();
-            } else if (buttonIndex === 2) {
-              handleSelectAll();
-            }
-          },
-        );
-        return;
-      }
-
-      Alert.alert("Message Actions", "Choose an option", [
-        {
-          text: "Copy",
-          onPress: handleCopyAll,
-        },
-        {
-          text: "Select",
-          onPress: handleSelectHint,
-        },
-        {
-          text: "Select All",
-          onPress: handleSelectAll,
-        },
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-      ]);
-    }, [hasContent, handleCopyAll, handleSelectAll, handleSelectHint]);
-
     if (isUser) {
       // User message - right side with sharp top-right corner
       return (
@@ -481,41 +411,6 @@ const ChatMessage = React.memo(
                 }}
               />
             </View>
-
-            {hasContent && (
-              <View
-                style={[
-                  chatMessageStyles.responseToolsRow,
-                  chatMessageStyles.userToolsRow,
-                ]}
-              >
-                <Pressable
-                  onPress={handleCopyAll}
-                  onLongPress={handleCopyActionsMenu}
-                  delayLongPress={280}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isCopyConfirmed
-                      ? "Message copied"
-                      : "Copy message or hold to select all"
-                  }
-                  disabled={areResponseActionsDisabled}
-                  style={({ pressed }) => [
-                    chatMessageStyles.toolButton,
-                    isCopyConfirmed && chatMessageStyles.toolButtonCopyActive,
-                    areResponseActionsDisabled &&
-                      chatMessageStyles.toolButtonDisabled,
-                    pressed && chatMessageStyles.toolButtonPressed,
-                  ]}
-                >
-                  {isCopyConfirmed ? (
-                    <Check color="#FFFFFF" size={14} strokeWidth={2.4} />
-                  ) : (
-                    <Copy color="#FFFFFF" size={14} strokeWidth={2} />
-                  )}
-                </Pressable>
-              </View>
-            )}
           </View>
           <View
             className="ml-2 w-8 h-8 rounded-full overflow-hidden items-center justify-center"
@@ -545,9 +440,12 @@ const ChatMessage = React.memo(
             />
           </View>
           <View className="max-w-[75%]">
-            <View className="relative">
+            <View style={{ position: "relative" }}>
+              {/* Background + Blur (clipped to rounded corners) */}
               <View
+                pointerEvents="none"
                 style={{
+                  ...StyleSheet.absoluteFillObject,
                   backgroundColor: "rgba(0, 0, 0, 0.4)",
                   borderRadius: 24,
                   borderTopLeftRadius: 0,
@@ -557,23 +455,8 @@ const ChatMessage = React.memo(
                 <BlurView
                   intensity={14}
                   tint="dark"
-                  pointerEvents="none"
                   style={StyleSheet.absoluteFill}
                 />
-                <View
-                  style={{
-                    paddingTop: 13,
-                    paddingRight: 21,
-                    paddingBottom: 13,
-                    paddingLeft: 21,
-                  }}
-                >
-                  {hasContent ? (
-                    <MarkdownText content={message.content} selectable={true} />
-                  ) : (
-                    <TypingDots />
-                  )}
-                </View>
               </View>
               {/* Border Overlay */}
               <View
@@ -587,19 +470,40 @@ const ChatMessage = React.memo(
                   borderTopLeftRadius: 0,
                 }}
               />
+              {/* Text content on top — no extra View wrapper blocking touches */}
+              {hasContent ? (
+                <View
+                  pointerEvents="box-none"
+                  style={{
+                    paddingTop: 13,
+                    paddingRight: 21,
+                    paddingBottom: 13,
+                    paddingLeft: 21,
+                  }}
+                >
+                  <MarkdownText content={message.content} selectable={true} />
+                </View>
+              ) : (
+                <View
+                  style={{
+                    paddingTop: 13,
+                    paddingRight: 21,
+                    paddingBottom: 13,
+                    paddingLeft: 21,
+                  }}
+                >
+                  <TypingDots />
+                </View>
+              )}
             </View>
 
             {hasContent && (
               <View style={chatMessageStyles.responseToolsRow}>
                 <Pressable
                   onPress={handleCopyAll}
-                  onLongPress={handleCopyActionsMenu}
-                  delayLongPress={280}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    isCopyConfirmed
-                      ? "Response copied"
-                      : "Copy response or hold to select all"
+                    isCopyConfirmed ? "Response copied" : "Copy response"
                   }
                   disabled={areResponseActionsDisabled}
                   style={({ pressed }) => [
@@ -1990,7 +1894,7 @@ export default function AI() {
 
             <ScrollView
               style={{ flex: 1 }}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
               bounces={true}
             >
               {isLoadingConversations ? (
