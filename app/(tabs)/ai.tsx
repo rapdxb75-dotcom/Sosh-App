@@ -1858,13 +1858,14 @@ export default function AI() {
           <Animated.View
             style={{
               width: sidebarWidth,
-              height: height + insets.top + insets.bottom,
+              height: "100%",
               left: -9,
               borderTopRightRadius: 24,
               borderBottomRightRadius: 24,
               overflow: "hidden",
               transform: [{ translateX: slideAnim }],
               paddingTop: Math.max(insets.top, 40),
+              paddingBottom: Math.max(insets.bottom, 24),
             }}
             className="bg-[#0A0A0A] p-6"
           >
@@ -1894,7 +1895,8 @@ export default function AI() {
 
             <ScrollView
               style={{ flex: 1 }}
-              showsVerticalScrollIndicator={true}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              showsVerticalScrollIndicator={false}
               bounces={true}
             >
               {isLoadingConversations ? (
