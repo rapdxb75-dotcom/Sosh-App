@@ -2,19 +2,19 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Bell, Check, Info, Trash2, X } from "lucide-react-native";
 import {
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { normalize } from "../../constants/Fonts";
 import {
-  Notification,
-  NotificationType,
-  useNotification,
+    Notification,
+    NotificationType,
+    useNotification,
 } from "../../context/NotificationContext";
 
 /* ────────── helpers ────────── */
@@ -57,7 +57,9 @@ function NotificationRow({
 
   return (
     <View>
-      <View style={[styles.card, { borderLeftWidth: 4, borderLeftColor: color }]}>
+      <View
+        style={[styles.card, { borderLeftWidth: 4, borderLeftColor: color }]}
+      >
         {/* Icon */}
         <View style={[styles.iconCircle, { backgroundColor: color }]}>
           {notif.type === "success" ? (
@@ -83,9 +85,7 @@ function NotificationRow({
               )}
             </Text>
           </View>
-          <Text style={styles.message} numberOfLines={2}>
-            {notif.message}
-          </Text>
+          <Text style={styles.message}>{notif.message}</Text>
         </View>
 
         {/* Dismiss button */}
@@ -132,7 +132,8 @@ export default function NotificationModal() {
   const todayNotifs: Notification[] = [];
   const earlierNotifs: Notification[] = [];
   notifications.forEach((n) => {
-    const ts = n.timestamp instanceof Date ? n.timestamp : new Date(n.timestamp);
+    const ts =
+      n.timestamp instanceof Date ? n.timestamp : new Date(n.timestamp);
     if (ts >= today) {
       todayNotifs.push(n);
     } else {
@@ -148,11 +149,7 @@ export default function NotificationModal() {
       onRequestClose={handleClose}
       statusBarTranslucent
     >
-      <BlurView
-        intensity={80}
-        tint="dark"
-        style={[StyleSheet.absoluteFill]}
-      >
+      <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFill]}>
         {/* Tap-to-close overlay */}
         <TouchableOpacity
           style={StyleSheet.absoluteFill}
@@ -183,11 +180,17 @@ export default function NotificationModal() {
 
               <View style={styles.headerRight}>
                 {notifications.length > 0 && (
-                  <TouchableOpacity onPress={handleClear} style={styles.headerBtn}>
+                  <TouchableOpacity
+                    onPress={handleClear}
+                    style={styles.headerBtn}
+                  >
                     <Trash2 size={18} color="#FF453A" strokeWidth={2.5} />
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity onPress={handleClose} style={styles.headerBtn}>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.headerBtn}
+                >
                   <X size={20} color="#FFFFFF" strokeWidth={2.5} />
                 </TouchableOpacity>
               </View>
@@ -203,7 +206,11 @@ export default function NotificationModal() {
               {notifications.length === 0 ? (
                 <View style={styles.emptyState}>
                   <View style={styles.emptyIcon}>
-                    <Bell size={36} color="rgba(255,255,255,0.2)" strokeWidth={1.5} />
+                    <Bell
+                      size={36}
+                      color="rgba(255,255,255,0.2)"
+                      strokeWidth={1.5}
+                    />
                   </View>
                   <Text style={styles.emptyTitle}>All caught up!</Text>
                   <Text style={styles.emptySubtitle}>

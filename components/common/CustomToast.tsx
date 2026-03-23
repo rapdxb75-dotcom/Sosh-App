@@ -57,10 +57,7 @@ const ToastMessage = ({
           </Text>
         )}
         {text2 && (
-          <Text
-            className="text-white/70 text-sm font-inter leading-5"
-            numberOfLines={2}
-          >
+          <Text className="text-white/70 text-sm font-inter leading-5">
             {text2}
           </Text>
         )}

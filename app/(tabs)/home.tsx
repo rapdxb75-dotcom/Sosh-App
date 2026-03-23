@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { Platform, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import StatCard from "../../components/home/StatCard";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import { RootState } from "../../store/store";
+import { setUserData } from "../../store/userSlice";
 import { formatNumber } from "../../utils/format";
 
 export default function Home() {
   const userName = useSelector((state: RootState) => state.user.userName);
   const globalEmail = useSelector((state: RootState) => state.user.email);
+  const dispatch = useDispatch();
 
   const insets = useSafeAreaInsets();
 
@@ -54,20 +56,31 @@ export default function Home() {
     const unsubscribe = listenToUserData(
       globalEmail,
       (userData) => {
-        if (userData?.totalAnalytics) {
-          const { totalFollowers, totalLikes, totalViews } =
-            userData.totalAnalytics;
-          setAnalytics({
-            totalFollowers: totalFollowers || 0,
-            totalLikes: totalLikes || 0,
-            totalViews: totalViews || 0,
-          });
-        } else {
-          setAnalytics({
-            totalFollowers: 0,
-            totalLikes: 0,
-            totalViews: 0,
-          });
+        if (userData) {
+          // Update analytics
+          if (userData.totalAnalytics) {
+            const { totalFollowers, totalLikes, totalViews } =
+              userData.totalAnalytics;
+            setAnalytics({
+              totalFollowers: totalFollowers || 0,
+              totalLikes: totalLikes || 0,
+              totalViews: totalViews || 0,
+            });
+          } else {
+            setAnalytics({
+              totalFollowers: 0,
+              totalLikes: 0,
+              totalViews: 0,
+            });
+          }
+
+          // Update Redux state with profile information (userName, aiAdditions, etc.)
+          dispatch(
+            setUserData({
+              userName: userData.userName || userData.name || userName,
+              aiAdditions: userData.aiAdditions,
+            }),
+          );
         }
 
         setIsLoading(false);
