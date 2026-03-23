@@ -10,6 +10,7 @@ export interface PreviewData {
   activeTags: string[];
   selectedPlatforms: Record<string, boolean>;
   date: Date | null;
+  thumbNailOffset?: number;
   instagramUsername?: string;
   videoResizeMode?: "cover" | "contain";
 }

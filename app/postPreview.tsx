@@ -247,6 +247,8 @@ const parsePreviewDataParam = (
         normalizedDate && !Number.isNaN(normalizedDate.getTime())
           ? normalizedDate
           : null,
+      thumbNailOffset:
+        typeof parsed.thumbNailOffset === "number" ? parsed.thumbNailOffset : 0,
       videoResizeMode: parsed.videoResizeMode === "cover" ? "cover" : "contain",
       instagramUsername:
         typeof parsed.instagramUsername === "string"
@@ -683,6 +685,7 @@ export default function PostPreview() {
     activeTags,
     selectedPlatforms,
     date,
+    thumbNailOffset,
     videoResizeMode,
     instagramUsername,
   } = data;
@@ -750,7 +753,7 @@ export default function PostPreview() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const initialOffset = Math.max(0, scrubberPositionMs);
+    const initialOffset = Math.max(0, Number(thumbNailOffset || 0));
     scrubberPositionMsRef.current = initialOffset;
     dragStartPositionMsRef.current = initialOffset;
     setScrubberPositionMs(initialOffset);
@@ -761,7 +764,12 @@ export default function PostPreview() {
   const saveCoverChanges = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const nextOffset = Math.max(0, Math.round(scrubberPositionMsRef.current));
-    setScrubberPositionMs(nextOffset);
+    const updatedData: PreviewData = {
+      ...data,
+      thumbNailOffset: nextOffset,
+    };
+    setData(updatedData);
+    setPreviewData(updatedData);
     setShowCoverModal(false);
   };
 
@@ -899,9 +907,10 @@ export default function PostPreview() {
       if (activeTab === "Reel") {
         let thumbnailPayload = null;
         if (reelMediaUri) {
+          const actualOffset = thumbNailOffset || scrubberPositionMs || 0;
           const thumbUri = await generateVideoThumbnail(
             reelMediaUri,
-            scrubberPositionMs || 0,
+            actualOffset,
           );
           if (thumbUri) {
             thumbnailPayload = {
@@ -919,6 +928,7 @@ export default function PostPreview() {
           !date,
           mediaPayload as any,
           date,
+          thumbNailOffset || scrubberPositionMs || 0,
           thumbnailPayload,
         );
       } else if (activeTab === "Story") {

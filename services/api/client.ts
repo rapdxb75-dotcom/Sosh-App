@@ -7,7 +7,7 @@ import storageService from "../storage";
 
 // Base URL for API requests
 // Note: In production, consider moving this to an environment variable.
-const BASE_URL = "https://n8n-production-0558.up.railway.app/webhook-test";
+const BASE_URL = "https://n8n-production-0558.up.railway.app/webhook";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,

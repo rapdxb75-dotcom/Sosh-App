@@ -1,6 +1,7 @@
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
 import { TrendingUp } from "lucide-react-native";
+import { useEffect, useRef } from "react";
 import {
   Animated,
   StyleSheet,
@@ -8,7 +9,6 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { useRef, useEffect } from "react";
 import Svg, {
   Defs,
   Rect,
@@ -44,7 +44,7 @@ function Skeleton({
         toValue: 1,
         duration: 1200,
         useNativeDriver: true,
-      })
+      }),
     ).start();
   }, []);
 
@@ -122,7 +122,7 @@ export default function StatCard({
 
           {fullWidth ? (
             /* -------- Full Width Layout -------- */
-            <View className="flex-row items-end justify-between mt-[26px]">
+            <View className="flex-row items-end justify-between mt-[26px] mb-2">
               {loading ? (
                 <Skeleton height={valueFontSize} width={120} />
               ) : (

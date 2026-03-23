@@ -106,6 +106,7 @@ const createPostService = {
    * @param publishNow Boolean to publish immediately
    * @param mediaPayload Base64 string of the video
    * @param scheduleDate Optional publish schedule date
+   * @param thumbNailOffset Offset in milliseconds for the thumbnail
    * @param thumbnailPayload Optional thumbnail payload
    * @returns Promise with API response
    */
@@ -116,6 +117,7 @@ const createPostService = {
     publishNow: boolean,
     mediaPayload: any,
     scheduleDate: Date | null,
+    thumbNailOffset: number,
     thumbnailPayload?: any,
   ) => {
     try {
@@ -134,6 +136,11 @@ const createPostService = {
       formData.append("publishnow", String(publishNow));
       formData.append("isReel", "true");
       formData.append("max_tokens", "1024");
+
+      // Send timestamp in milliseconds
+      if (thumbNailOffset > 0) {
+        formData.append("thumbNailOffset", String(Math.floor(thumbNailOffset)));
+      }
 
       // Send thumbnail payload if provided
       if (thumbnailPayload) {

@@ -324,6 +324,7 @@ const INITIAL_TAB_DATA = {
     date: null as Date | null,
     media: null as string | null,
     cover_img: null as string | null,
+    thumbNailOffset: 0 as number,
     tags: [] as string[],
   },
   Story: {
@@ -595,7 +596,7 @@ export default function CreatePost() {
 
   // Derived State for Active Tab
   const activeData = tabData[activeTab as keyof typeof tabData];
-  const { postType, selectedPlatforms, date, media, tags } =
+  const { postType, selectedPlatforms, date, media, tags, thumbNailOffset } =
     activeData as any;
   const cover_img = (activeData as any).cover_img;
 
@@ -1324,9 +1325,10 @@ export default function CreatePost() {
       if (activeTab === "Reel") {
         let thumbnailPayload = null;
         if (currentMedia && typeof currentMedia === "string") {
+          const actualOffset = thumbNailOffset || scrubberPositionMs || 0;
           const thumbUri = await generateVideoThumbnail(
             currentMedia,
-            scrubberPositionMs || 0,
+            actualOffset,
           );
           if (thumbUri) {
             thumbnailPayload = {
@@ -1344,6 +1346,7 @@ export default function CreatePost() {
           !date,
           mediaPayload as any,
           date,
+          thumbNailOffset || scrubberPositionMs || 0,
           thumbnailPayload,
         );
       } else if (activeTab === "Story") {
@@ -1509,6 +1512,7 @@ export default function CreatePost() {
       activeTags,
       selectedPlatforms,
       date,
+      thumbNailOffset: thumbNailOffset || scrubberPositionMs || 0,
       videoResizeMode: nextVideoResizeMode,
       instagramUsername:
         Array.isArray(socialMediaData.instagram) &&
@@ -3082,6 +3086,7 @@ export default function CreatePost() {
                   style={coverModalStyles.doneBtn}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    updateActiveTab("thumbNailOffset", scrubberPositionMs);
                     setShowCoverModal(false);
                   }}
                 >
