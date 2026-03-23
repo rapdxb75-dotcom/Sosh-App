@@ -59,6 +59,7 @@ import {
   setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
+import { generateVideoThumbnail } from "../utils/video";
 
 const isVideoUrl = (url?: string | null) => {
   if (typeof url !== "string" || !url) return false;
@@ -246,8 +247,6 @@ const parsePreviewDataParam = (
         normalizedDate && !Number.isNaN(normalizedDate.getTime())
           ? normalizedDate
           : null,
-      thumbNailOffset:
-        typeof parsed.thumbNailOffset === "number" ? parsed.thumbNailOffset : 0,
       videoResizeMode: parsed.videoResizeMode === "cover" ? "cover" : "contain",
       instagramUsername:
         typeof parsed.instagramUsername === "string"
@@ -684,7 +683,6 @@ export default function PostPreview() {
     activeTags,
     selectedPlatforms,
     date,
-    thumbNailOffset,
     videoResizeMode,
     instagramUsername,
   } = data;
@@ -752,7 +750,7 @@ export default function PostPreview() {
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const initialOffset = Math.max(0, Number(thumbNailOffset || 0));
+    const initialOffset = Math.max(0, scrubberPositionMs);
     scrubberPositionMsRef.current = initialOffset;
     dragStartPositionMsRef.current = initialOffset;
     setScrubberPositionMs(initialOffset);
@@ -763,12 +761,7 @@ export default function PostPreview() {
   const saveCoverChanges = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const nextOffset = Math.max(0, Math.round(scrubberPositionMsRef.current));
-    const updatedData: PreviewData = {
-      ...data,
-      thumbNailOffset: nextOffset,
-    };
-    setData(updatedData);
-    setPreviewData(updatedData);
+    setScrubberPositionMs(nextOffset);
     setShowCoverModal(false);
   };
 
@@ -904,6 +897,21 @@ export default function PostPreview() {
         : processMediaForUpload(currentMedia as string);
 
       if (activeTab === "Reel") {
+        let thumbnailPayload = null;
+        if (reelMediaUri) {
+          const thumbUri = await generateVideoThumbnail(
+            reelMediaUri,
+            scrubberPositionMs || 0,
+          );
+          if (thumbUri) {
+            thumbnailPayload = {
+              uri: thumbUri,
+              type: "image/jpeg",
+              name: "thumbnail.jpg",
+            } as any;
+          }
+        }
+
         await createPostService.createReel(
           caption,
           activeTags,
@@ -911,7 +919,7 @@ export default function PostPreview() {
           !date,
           mediaPayload as any,
           date,
-          thumbNailOffset || 0,
+          thumbnailPayload,
         );
       } else if (activeTab === "Story") {
         const email = await storageService.getEmail();
