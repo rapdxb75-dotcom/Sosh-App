@@ -104,8 +104,9 @@ const createPostService = {
    * @param tags Array of tags
    * @param selectedPlatforms Array of platform names
    * @param publishNow Boolean to publish immediately
-   * @param mediaBase64 Base64 string of the video
+   * @param mediaPayload Base64 string of the video
    * @param scheduleDate Optional publish schedule date
+   * @param thumbnailPayload Optional thumbnail payload
    * @returns Promise with API response
    */
   createReel: async (
@@ -115,7 +116,7 @@ const createPostService = {
     publishNow: boolean,
     mediaPayload: any,
     scheduleDate: Date | null,
-    thumbNailOffset: number,
+    thumbnailPayload?: any,
   ) => {
     try {
       const token = await storageService.getToken();
@@ -134,9 +135,9 @@ const createPostService = {
       formData.append("isReel", "true");
       formData.append("max_tokens", "1024");
 
-      // Send timestamp in milliseconds
-      if (thumbNailOffset > 0) {
-        formData.append("thumbNailOffset", String(Math.floor(thumbNailOffset)));
+      // Send thumbnail payload if provided
+      if (thumbnailPayload) {
+        formData.append("thumbNail", thumbnailPayload);
       }
 
       // Append platforms

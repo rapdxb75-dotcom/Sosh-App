@@ -66,6 +66,7 @@ import {
   setPreviewData,
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
+import { generateVideoThumbnail } from "../../utils/video";
 
 type ExpoImageManipulatorModule = typeof import("expo-image-manipulator");
 
@@ -323,7 +324,6 @@ const INITIAL_TAB_DATA = {
     date: null as Date | null,
     media: null as string | null,
     cover_img: null as string | null,
-    thumbNailOffset: 0 as number,
     tags: [] as string[],
   },
   Story: {
@@ -595,7 +595,7 @@ export default function CreatePost() {
 
   // Derived State for Active Tab
   const activeData = tabData[activeTab as keyof typeof tabData];
-  const { postType, selectedPlatforms, date, media, tags, thumbNailOffset } =
+  const { postType, selectedPlatforms, date, media, tags } =
     activeData as any;
   const cover_img = (activeData as any).cover_img;
 
@@ -1322,6 +1322,21 @@ export default function CreatePost() {
       });
 
       if (activeTab === "Reel") {
+        let thumbnailPayload = null;
+        if (currentMedia && typeof currentMedia === "string") {
+          const thumbUri = await generateVideoThumbnail(
+            currentMedia,
+            scrubberPositionMs || 0,
+          );
+          if (thumbUri) {
+            thumbnailPayload = {
+              uri: thumbUri,
+              type: "image/jpeg",
+              name: "thumbnail.jpg",
+            } as any;
+          }
+        }
+
         await createPostService.createReel(
           caption,
           activeTags,
@@ -1329,7 +1344,7 @@ export default function CreatePost() {
           !date,
           mediaPayload as any,
           date,
-          thumbNailOffset || 0,
+          thumbnailPayload,
         );
       } else if (activeTab === "Story") {
         const email = await storageService.getEmail();
@@ -1494,7 +1509,6 @@ export default function CreatePost() {
       activeTags,
       selectedPlatforms,
       date,
-      thumbNailOffset,
       videoResizeMode: nextVideoResizeMode,
       instagramUsername:
         Array.isArray(socialMediaData.instagram) &&
@@ -3068,8 +3082,6 @@ export default function CreatePost() {
                   style={coverModalStyles.doneBtn}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    // Save the scrubbed position as the thumbnail offset
-                    updateActiveTab("thumbNailOffset", scrubberPositionMs);
                     setShowCoverModal(false);
                   }}
                 >
