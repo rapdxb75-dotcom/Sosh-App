@@ -346,7 +346,10 @@ export default function LoginForm() {
             ) : null}
           </View>
 
-          <TouchableOpacity className="w-full items-start">
+          <TouchableOpacity
+            className="w-full items-start"
+            onPress={() => router.push("/forgot-password")}
+          >
             <Text className="text-white text-xs underline mx-2 px-1">
               Forgot password?
             </Text>
