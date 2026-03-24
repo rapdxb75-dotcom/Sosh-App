@@ -127,15 +127,15 @@ export default function ResetPasswordConfirmationScreen() {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ flex: 1 }}
           >
-            <View className="flex-1 px-6">
+            <View className="flex-1 px-6 justify-center">
               <TouchableOpacity
                 onPress={() => router.back()}
-                className="mt-4 w-10 h-10 items-center justify-center rounded-full bg-white/10"
+                className="absolute top-4 left-0 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/10"
               >
                 <ChevronLeft color="white" size={24} />
               </TouchableOpacity>
 
-              <View className="flex-1 justify-center gap-5 mb-5">
+              <View className="gap-5 mb-5">
                 {/* Logo */}
                 <View
                   style={{
