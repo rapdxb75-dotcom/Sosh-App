@@ -139,15 +139,29 @@ export const getFCMToken = async (): Promise<string | null> => {
 
 export const setupForegroundMessageListener = () => {
   return messaging().onMessage(async (remoteMessage) => {
-    console.log("🔔 Foreground notification:", remoteMessage);
+    console.log(
+      "🔔 Foreground notification:",
+      JSON.stringify(remoteMessage, null, 2),
+    );
 
-    if (remoteMessage.notification) {
+    const title =
+      remoteMessage.notification?.title ||
+      remoteMessage.data?.title ||
+      "Notification";
+    const body =
+      remoteMessage.notification?.body ||
+      remoteMessage.data?.body ||
+      remoteMessage.data?.message ||
+      remoteMessage.data?.text ||
+      "";
+
+    if (title || body) {
       Toast.show({
-        type: "info",
-        text1: remoteMessage.notification.title || "Notification",
-        text2: remoteMessage.notification.body || "",
+        type: "success",
+        text1: title,
+        text2: body,
         position: "top",
-        visibilityTime: 4000,
+        visibilityTime: 6000,
         autoHide: true,
       });
     }

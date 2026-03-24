@@ -16,7 +16,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  AppState,
   Image,
   ImageBackground,
   Keyboard,
@@ -31,7 +30,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  useWindowDimensions,
+  useWindowDimensions
 } from "react-native";
 import Svg, {
   Circle,
@@ -291,8 +290,6 @@ export default function PostPreview() {
   const isSeekingRef = useRef(false);
   const filmStripWidthRef = useRef(0);
   const isCarouselTouchingRef = useRef(false);
-  const appStateRef = useRef(AppState.currentState);
-  const publishInterruptedByBackgroundRef = useRef(false);
   const selectorWidth = 76;
 
   const handleBack = useCallback(() => {
@@ -345,47 +342,6 @@ export default function PostPreview() {
       setStoryDurationMs(null);
     }
   }, [data?.activeTab, data?.currentMedia]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      const movingToBackground =
-        nextState === "background" || nextState === "inactive";
-
-      if (
-        isPublishing &&
-        appStateRef.current === "active" &&
-        movingToBackground
-      ) {
-        publishInterruptedByBackgroundRef.current = true;
-      }
-
-      appStateRef.current = nextState;
-    });
-
-    return () => subscription.remove();
-  }, [isPublishing]);
-
-  const waitForAppToBecomeActive = useCallback(
-    () =>
-      new Promise<void>((resolve) => {
-        if (appStateRef.current === "active") {
-          resolve();
-          return;
-        }
-
-        const resumeSubscription = AppState.addEventListener(
-          "change",
-          (nextState) => {
-            appStateRef.current = nextState;
-            if (nextState === "active") {
-              resumeSubscription.remove();
-              resolve();
-            }
-          },
-        );
-      }),
-    [],
-  );
 
   const safeSeek = useCallback((ms: number) => {
     if (!coverVideoRef.current || isSeekingRef.current) {
@@ -686,6 +642,7 @@ export default function PostPreview() {
     selectedPlatforms,
     date,
     thumbNailOffset,
+    cover_img,
     videoResizeMode,
     instagramUsername,
   } = data;
@@ -783,7 +740,6 @@ export default function PostPreview() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     try {
-      publishInterruptedByBackgroundRef.current = false;
       if (!isRetryAfterBackground) {
         setIsPublishing(true);
       }
@@ -905,22 +861,6 @@ export default function PostPreview() {
         : processMediaForUpload(currentMedia as string);
 
       if (activeTab === "Reel") {
-        let thumbnailPayload = null;
-        if (reelMediaUri) {
-          const actualOffset = thumbNailOffset || scrubberPositionMs || 0;
-          const thumbUri = await generateVideoThumbnail(
-            reelMediaUri,
-            actualOffset,
-          );
-          if (thumbUri) {
-            thumbnailPayload = {
-              uri: thumbUri,
-              type: "image/jpeg",
-              name: "thumbnail.jpg",
-            } as any;
-          }
-        }
-
         await createPostService.createReel(
           caption,
           activeTags,
@@ -929,7 +869,7 @@ export default function PostPreview() {
           mediaPayload as any,
           date,
           thumbNailOffset || scrubberPositionMs || 0,
-          thumbnailPayload,
+          null, // thumbnailPayload
         );
       } else if (activeTab === "Story") {
         const email = await storageService.getEmail();
@@ -973,33 +913,6 @@ export default function PostPreview() {
       clearPreviewData();
       router.back();
     } catch (error) {
-      const isBackgroundInterruptedNetworkError =
-        publishInterruptedByBackgroundRef.current &&
-        !!(error as any)?.isAxiosError &&
-        !(error as any)?.response;
-
-      if (isBackgroundInterruptedNetworkError) {
-        if (!isRetryAfterBackground) {
-          Toast.show({
-            type: "info",
-            text1: "Upload Paused",
-            text2: "Resuming when app becomes active...",
-          });
-
-          await waitForAppToBecomeActive();
-          publishInterruptedByBackgroundRef.current = false;
-          await handlePost(true);
-          return;
-        }
-
-        Toast.show({
-          type: "error",
-          text1: "Upload Interrupted",
-          text2: "Keep app open until upload is complete.",
-        });
-        return;
-      }
-
       console.error("Post error:", error);
       Toast.show({
         type: "error",
@@ -1007,7 +920,6 @@ export default function PostPreview() {
         text2: "Please try again.",
       });
     } finally {
-      publishInterruptedByBackgroundRef.current = false;
       if (!isRetryAfterBackground) {
         setIsPublishing(false);
       }
