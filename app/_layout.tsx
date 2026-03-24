@@ -1,5 +1,6 @@
 import { Inter_400Regular, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { Questrial_400Regular } from "@expo-google-fonts/questrial";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Asset } from "expo-asset";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -14,7 +15,12 @@ import NotificationModal from "../components/common/NotificationModal";
 import { PRELOAD_ASSETS } from "../constants/Assets";
 import { NotificationProvider } from "../context/NotificationContext";
 import "../global.css";
-import { getCurrentUserData, initializeFirebase } from "../services/firebase";
+import {
+  getCurrentUserData,
+  initializeFCM,
+  initializeFirebase,
+  requestNotificationPermission,
+} from "../services/firebase";
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
 
@@ -42,6 +48,17 @@ function FirebaseDataFetcher() {
         if (userData?.aiAdditions) {
           store.dispatch(updateUser({ aiAdditions: userData.aiAdditions }));
           console.log("✅ aiAdditions loaded from Firebase");
+        }
+
+        // --- FCM Setup ---
+        try {
+          console.log("🚀 Initializing FCM...");
+          const token = await initializeFCM();
+          if (token) {
+            console.log("✅ FCM Token obtained");
+          }
+        } catch (fcmError) {
+          console.error("❌ FCM Setup error:", fcmError);
         }
 
         hasFetchedRef.current = true;
@@ -78,7 +95,25 @@ export default function RootLayout() {
       }
     }
 
+    async function requestPermissionsOnStartup() {
+      try {
+        const hasRequestedBefore = await AsyncStorage.getItem(
+          "push_permission_requested",
+        );
+        if (!hasRequestedBefore) {
+          console.log(
+            "🔐 Requesting notification permissions on first launch...",
+          );
+          await requestNotificationPermission();
+          await AsyncStorage.setItem("push_permission_requested", "true");
+        }
+      } catch (error) {
+        console.error("Error requesting permissions on startup:", error);
+      }
+    }
+
     preloadAssets();
+    requestPermissionsOnStartup();
     store.dispatch(initializeUser());
   }, []);
 

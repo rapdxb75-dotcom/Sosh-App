@@ -18,6 +18,20 @@ export interface SocialMediaConnectResponse {
 
 const userService = {
   /**
+   * Update user FCM token with the backend
+   * @param fcmToken FCM token to sync
+   */
+  updateFcmToken: async (fcmToken: string) => {
+    try {
+      const response = await apiClient.post("/updateFcmToken", { fcmToken });
+      return response.data;
+    } catch (error) {
+      console.error("Update FCM Token API Error:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Update user profile details
    * @param payload UpdateProfilePayload
    * @returns Promise<UpdateProfileResponse>

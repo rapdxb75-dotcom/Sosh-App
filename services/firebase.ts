@@ -1,17 +1,23 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import messaging from "@react-native-firebase/messaging";
 import { initializeApp } from "firebase/app";
 import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    getFirestore,
-    increment,
-    onSnapshot,
-    query,
-    setDoc,
-    updateDoc,
-    where,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  getFirestore,
+  increment,
+  onSnapshot,
+  query,
+  setDoc,
+  updateDoc,
+  where,
 } from "firebase/firestore";
+import { Platform } from "react-native";
+import { checkNotifications } from "react-native-permissions";
+import Toast from "react-native-toast-message";
+import userService from "./api/user";
 
 // Firebase Configuration
 const firebaseConfig = {
@@ -37,6 +43,170 @@ export const initializeFirebase = () => {
   }
   return { app, db };
 };
+
+// --- FCM & Push Notifications ---
+
+export const checkNotificationPermission = async (): Promise<boolean> => {
+  try {
+    const { status } = await checkNotifications();
+    const granted =
+      status === "granted" || (status as string) === "provisional";
+    return granted;
+  } catch (error) {
+    console.error("Error checking notification permission:", error);
+    return false;
+  }
+};
+
+export const requestNotificationPermission = async (): Promise<boolean> => {
+  try {
+    const alreadyGranted = await checkNotificationPermission();
+
+    if (Platform.OS === "ios") {
+      try {
+        console.log("📱 [iOS] Registering device for remote messages...");
+        await messaging().registerDeviceForRemoteMessages();
+        console.log("✅ [iOS] Device registered successfully");
+      } catch (error) {
+        console.error("❌ [iOS] Failed to register device:", error);
+      }
+    }
+
+    if (alreadyGranted) return true;
+
+    const authStatus = await messaging().requestPermission({
+      sound: true,
+      badge: true,
+      alert: true,
+    });
+
+    return (
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL
+    );
+  } catch (error) {
+    console.error("Error requesting notification permission:", error);
+    return false;
+  }
+};
+
+export const getFCMToken = async (): Promise<string | null> => {
+  try {
+    // 1. iOS: Explicitly register device for remote messages before anything else
+    if (Platform.OS === "ios") {
+      console.log(
+        "📱 [iOS] Registering device for remote messages explicitly...",
+      );
+      await messaging().registerDeviceForRemoteMessages();
+      console.log("✅ [iOS] Device registered successfully");
+      // Crucial: wait for registration to propagate
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    // 2. Request/Check permissions
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) {
+      console.log("❌ No notification permission - cannot get FCM token");
+      return null;
+    }
+
+    // 3. Enable auto-init
+    await messaging().setAutoInitEnabled(true);
+
+    // 4. Get the token
+    console.log("🎫 [FCM] Requesting token...");
+    try {
+      const token = await messaging().getToken();
+
+      if (token) {
+        await AsyncStorage.setItem("fcm_token", token);
+        console.log("✅ [FCM] Token obtained successfully:", token);
+        // Sync token with local backend/webhook
+        await syncFCMTokenWithBackend(token);
+      } else {
+        console.error("❌ [FCM] Received null or empty token.");
+      }
+      return token;
+    } catch (tokenError) {
+      console.error("❌ [FCM] messaging().getToken() error:", tokenError);
+      return null;
+    }
+  } catch (error) {
+    console.error("❌ [FCM] Error in getFCMToken flow:", error);
+    return null;
+  }
+};
+
+export const setupForegroundMessageListener = () => {
+  return messaging().onMessage(async (remoteMessage) => {
+    console.log(
+      "🔔 Foreground notification:",
+      JSON.stringify(remoteMessage, null, 2),
+    );
+
+    const title =
+      remoteMessage.notification?.title ||
+      remoteMessage.data?.title ||
+      "Notification";
+    const body =
+      remoteMessage.notification?.body ||
+      remoteMessage.data?.body ||
+      remoteMessage.data?.message ||
+      remoteMessage.data?.text ||
+      "";
+
+    if (title || body) {
+      Toast.show({
+        type: "success",
+        text1: title,
+        text2: body,
+        position: "top",
+        visibilityTime: 6000,
+        autoHide: true,
+      });
+    }
+  });
+};
+
+export const setupTokenRefreshListener = () => {
+  return messaging().onTokenRefresh(async (token) => {
+    console.log("🔁 FCM Token refreshed:", token);
+    await AsyncStorage.setItem("fcm_token", token);
+    await syncFCMTokenWithBackend(token);
+  });
+};
+
+/**
+ * Synchronizes the FCM token with the backend using userService.
+ */
+export const syncFCMTokenWithBackend = async (fcmToken: string) => {
+  try {
+    console.log("📤 Syncing FCM token with backend...");
+    await userService.updateFcmToken(fcmToken);
+    console.log("✅ FCM token synced successfully");
+  } catch (error) {
+    console.error("❌ Error syncing FCM token with backend:", error);
+  }
+};
+
+export const initializeFCM = async () => {
+  try {
+    console.log("🚀 [FCM] Starting initialization...");
+
+    // Ensure Firebase is initialized
+    initializeFirebase();
+
+    setupForegroundMessageListener();
+    setupTokenRefreshListener();
+
+    return await getFCMToken();
+  } catch (error) {
+    console.error("❌ FCM initialization failed:", error);
+    return null;
+  }
+};
+
+// --- Firestore Data Methods ---
 
 // Get Current User's Document Data
 export const getCurrentUserData = async (userEmail: string) => {
