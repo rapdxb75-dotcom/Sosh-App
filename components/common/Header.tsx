@@ -7,11 +7,11 @@ import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
-  Circle,
-  Defs,
-  LinearGradient,
-  Rect,
-  Stop,
+    Circle,
+    Defs,
+    LinearGradient,
+    Rect,
+    Stop,
 } from "react-native-svg";
 import { useDispatch, useSelector } from "react-redux";
 import { normalize } from "../../constants/Fonts";
@@ -75,8 +75,7 @@ type HeaderProps = {
 };
 
 export default function Header({ disableTopSpacing = false }: HeaderProps) {
-  const { showNotifications, notifications, addNotification } =
-    useNotification();
+  const { showNotifications, unreadCount, addNotification } = useNotification();
   const profilePic = useSelector(
     (state: RootState) => state.user.profilePicture,
   );
@@ -136,10 +135,10 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
             contentFit="contain"
             cachePolicy="memory-disk"
           />
-          {notifications.length > 0 && (
+          {unreadCount > 0 && (
             <View className="absolute top-1 right-1 bg-[#EE2828] rounded-full min-w-[16px] h-[16px] items-center justify-center px-1 border-[1.5px] border-black">
               <Text className="text-white text-[9px] font-bold leading-none text-center">
-                {notifications.length > 99 ? "99+" : notifications.length}
+                {unreadCount > 99 ? "99+" : unreadCount}
               </Text>
             </View>
           )}
