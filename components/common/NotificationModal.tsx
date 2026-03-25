@@ -1,20 +1,21 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Bell, Check, Info, Trash2, X } from "lucide-react-native";
+import { useEffect } from "react";
 import {
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { normalize } from "../../constants/Fonts";
 import {
-    Notification,
-    NotificationType,
-    useNotification,
+  Notification,
+  NotificationType,
+  useNotification,
 } from "../../context/NotificationContext";
 
 /* ────────── helpers ────────── */
@@ -113,8 +114,16 @@ export default function NotificationModal() {
     notifications,
     removeNotification,
     clearNotifications,
+    markAsRead,
   } = useNotification();
   const insets = useSafeAreaInsets();
+
+  // Mark all as read when the modal is opened
+  useEffect(() => {
+    if (isVisible) {
+      markAsRead();
+    }
+  }, [isVisible, markAsRead]);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
