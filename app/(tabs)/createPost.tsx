@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   Image,
   ImageBackground,
   Keyboard,
@@ -28,7 +29,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  useWindowDimensions
+  useWindowDimensions,
 } from "react-native";
 import {
   Video as CompressorVideo,
@@ -64,7 +65,6 @@ import {
   setPreviewData,
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
-import { generateVideoThumbnail } from "../../utils/video";
 
 type ExpoImageManipulatorModule = typeof import("expo-image-manipulator");
 
@@ -467,6 +467,20 @@ export default function CreatePost() {
   const [showCoverModal, setShowCoverModal] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const isBackgroundPublishing = useRef(false);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "background" && isPublishing) {
+        isBackgroundPublishing.current = true;
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isPublishing]);
+
   const [tagInputText, setTagInputText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [videoResizeMode, setVideoResizeMode] = useState<ResizeMode>(
@@ -911,6 +925,8 @@ export default function CreatePost() {
   };
 
   const handleGeneratePost = async (isRetryAfterBackground = false) => {
+    if (isPublishing) return;
+
     if (!isRetryAfterBackground) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -1344,8 +1360,47 @@ export default function CreatePost() {
       setScrubberPositionMs(0);
       coverDurationMsRef.current = 0;
       scrubberPositionMsRef.current = 0;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Post generation error:", error);
+
+      // If app went to background during publishing, backend likely processed it.
+      // We clear fields and avoid showing an error toast to prevent confusion.
+      if (isBackgroundPublishing.current) {
+        setTabData(INITIAL_TAB_DATA);
+        setTagInputText("");
+        setCoverDurationMs(0);
+        setScrubberPositionMs(0);
+        coverDurationMsRef.current = 0;
+        scrubberPositionMsRef.current = 0;
+        return;
+      }
+
+      // Special handling for Timeout if we suspect it actually posted (common with webhooks)
+      if (
+        error?.code === "ECONNABORTED" &&
+        error?.message?.includes("timeout")
+      ) {
+        // Backend often processes the post even if the connection times out
+        addNotification({
+          type: "success",
+          title: `${contentType} Created`,
+          message: `Your ${contentType.toLowerCase()} is being processed (Connection timeout).`,
+        });
+        Toast.show({
+          type: "success",
+          text1: `${contentType} Posted`,
+          text2: "Your post is being processed.",
+        });
+
+        // Clear all fields as it likely succeeded on backend
+        setTabData(INITIAL_TAB_DATA);
+        setTagInputText("");
+        setCoverDurationMs(0);
+        setScrubberPositionMs(0);
+        coverDurationMsRef.current = 0;
+        scrubberPositionMsRef.current = 0;
+        return;
+      }
 
       if (
         error instanceof Error &&
@@ -1372,6 +1427,7 @@ export default function CreatePost() {
       if (!isRetryAfterBackground) {
         setIsPublishing(false);
       }
+      isBackgroundPublishing.current = false;
     }
   };
 

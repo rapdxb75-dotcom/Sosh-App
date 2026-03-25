@@ -11,6 +11,7 @@ const BASE_URL = "https://n8n-production-0558.up.railway.app/webhook";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
+  timeout: 120000,
   headers: {
     "Content-Type": "application/json",
   },

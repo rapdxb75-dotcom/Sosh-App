@@ -3,25 +3,25 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ChevronLeft, Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    ImageBackground,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  ActivityIndicator,
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
 import Svg, {
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { FontFamily, FontSize, normalize } from "../constants/Fonts";
@@ -130,7 +130,7 @@ export default function ResetPasswordConfirmationScreen() {
             <View className="flex-1 px-6 justify-center">
               <TouchableOpacity
                 onPress={() => router.back()}
-                className="absolute top-4 left-0 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/10"
+                className="absolute top-4 left-6 z-10 w-10 h-10 items-center justify-center rounded-full bg-white/10"
               >
                 <ChevronLeft color="white" size={24} />
               </TouchableOpacity>
