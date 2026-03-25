@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  AppState,
   Image,
   ImageBackground,
   Keyboard,
@@ -30,7 +31,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
-  useWindowDimensions
+  useWindowDimensions,
 } from "react-native";
 import Svg, {
   Circle,
@@ -58,7 +59,6 @@ import {
   setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
-import { generateVideoThumbnail } from "../utils/video";
 
 const isVideoUrl = (url?: string | null) => {
   if (typeof url !== "string" || !url) return false;
@@ -268,6 +268,20 @@ export default function PostPreview() {
     (state: RootState) => state.user.profilePicture,
   );
   const [isPublishing, setIsPublishing] = useState(false);
+  const isBackgroundPublishing = useRef(false);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "background" && isPublishing) {
+        isBackgroundPublishing.current = true;
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isPublishing]);
+
   const [data, setData] = useState<PreviewData | null>(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showCoverModal, setShowCoverModal] = useState(false);
@@ -736,6 +750,8 @@ export default function PostPreview() {
   };
 
   const handlePost = async (isRetryAfterBackground = false) => {
+    if (isPublishing) return;
+
     if (!isRetryAfterBackground) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
@@ -912,8 +928,41 @@ export default function PostPreview() {
       markPreviewPostSuccessReset();
       clearPreviewData();
       router.back();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Post error:", error);
+
+      // If app went to background during publishing, backend likely processed it.
+      if (isBackgroundPublishing.current) {
+        markPreviewPostSuccessReset();
+        clearPreviewData();
+        router.back();
+        return;
+      }
+
+      // Special handling for Timeout if we suspect it actually posted (common with webhooks)
+      if (
+        error?.code === "ECONNABORTED" &&
+        error?.message?.includes("timeout")
+      ) {
+        // Backend often processes the post even if the connection times out
+        addNotification({
+          type: "success",
+          title: `${activeTab} Created`,
+          message: `Your ${activeTab.toLowerCase()} is being processed (Connection timeout).`,
+        });
+        Toast.show({
+          type: "success",
+          text1: `${activeTab} Posted`,
+          text2: "Your post is being processed.",
+        });
+
+        // Clear and return as if successful
+        markPreviewPostSuccessReset();
+        clearPreviewData();
+        router.back();
+        return;
+      }
+
       Toast.show({
         type: "error",
         text1: `${activeTab} Creation Failed`,
@@ -923,6 +972,7 @@ export default function PostPreview() {
       if (!isRetryAfterBackground) {
         setIsPublishing(false);
       }
+      isBackgroundPublishing.current = false;
     }
   };
 

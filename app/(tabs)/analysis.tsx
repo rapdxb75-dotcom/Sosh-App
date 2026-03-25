@@ -22,6 +22,8 @@ import {
   VictoryAxis,
   VictoryChart,
   VictoryGroup,
+  VictoryTooltip,
+  VictoryVoronoiContainer,
 } from "victory-native";
 import Header from "../../components/common/Header";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
@@ -294,14 +296,12 @@ const PlatformCard = ({
 
   const formatCompactNumber = (number: number) => {
     if (number >= 1000000) {
-      return parseFloat((number / 1000000).toFixed(2)) + "M";
+      return (number / 1000000).toFixed(1) + "M";
     }
     if (number >= 1000) {
-      return parseFloat((number / 1000).toFixed(2)) + "K";
+      return (number / 1000).toFixed(1) + "K";
     }
-    return Number.isInteger(number)
-      ? number.toString()
-      : parseFloat(number.toFixed(2)).toString();
+    return Math.round(number).toString();
   };
 
   const getMultiplierForTab = (tab: string) => {
@@ -489,7 +489,38 @@ const PlatformCard = ({
                 <VictoryChart
                   width={screenWidth - 40}
                   height={180}
-                  padding={{ top: 10, bottom: 30, left: 20, right: 20 }}
+                  padding={{ top: 25, bottom: 30, left: 20, right: 20 }}
+                  domainPadding={{ y: [0, 20] }}
+                  containerComponent={
+                    <VictoryVoronoiContainer
+                      labels={({ datum }) => `Views: ${Math.round(datum.y2)}`}
+                      labelComponent={
+                        <VictoryTooltip
+                          renderInPortal={false}
+                          constrainToVisibleArea={true}
+                          centerOffset={{ x: 0, y: -10 }}
+                          flyoutStyle={{
+                            fill: "#1A1A1A",
+                            stroke: "#F59E0B",
+                            strokeWidth: 1.2,
+                          }}
+                          style={{
+                            fill: "#FFFFFF",
+                            fontSize: 10,
+                            fontWeight: "600",
+                          }}
+                          pointerLength={5}
+                          cornerRadius={8}
+                          flyoutPadding={{
+                            top: 5,
+                            bottom: 5,
+                            left: 8,
+                            right: 8,
+                          }}
+                        />
+                      }
+                    />
+                  }
                 >
                   <VictoryAxis
                     tickValues={chartTickValues}
@@ -618,11 +649,11 @@ const PlatformCard = ({
               </View>
 
               {/* Horizontal Bars Container */}
-              <View className="relative mt-2 mb-2">
+              <View className="relative mt-2 mb-2 flex-1">
                 {/* Background Grid Lines */}
                 <View
                   className="absolute left-0 top-[-8px] bottom-[-8px] flex-row justify-between z-0"
-                  style={{ width: "97%" }}
+                  style={{ width: "100%", paddingRight: 40 }}
                 >
                   <View className="w-px h-full bg-[#FFFFFF1A]" />
                   <View className="w-px h-full bg-[#FFFFFF1A]" />
@@ -633,12 +664,18 @@ const PlatformCard = ({
 
                 {/* Bars */}
                 <View className="gap-3 z-10 w-full relative">
-                  <View className="flex-row items-center relative gap-3">
+                  <View className="flex-row items-center relative">
                     <View
                       className="bg-[#F59E0B] rounded-[8px] h-10 flex-row items-center px-4"
-                      style={{ width: `${Math.max(30, likesPercent)}%` }}
+                      style={{
+                        width: `${Math.max(25, likesPercent * 0.9)}%`,
+                        marginRight: 12,
+                      }}
                     >
-                      <Text className="text-white text-[13px] font-medium font-inter">
+                      <Text
+                        className="text-white text-[13px] font-medium font-inter"
+                        numberOfLines={1}
+                      >
                         Likes
                       </Text>
                     </View>
@@ -647,12 +684,18 @@ const PlatformCard = ({
                     </Text>
                   </View>
 
-                  <View className="flex-row items-center relative gap-3">
+                  <View className="flex-row items-center relative">
                     <View
                       className="bg-[#04C4FF] rounded-[8px] h-10 flex-row items-center px-4"
-                      style={{ width: `${Math.max(30, commentsPercent)}%` }}
+                      style={{
+                        width: `${Math.max(25, commentsPercent * 0.9)}%`,
+                        marginRight: 12,
+                      }}
                     >
-                      <Text className="text-white text-[13px] font-medium font-inter">
+                      <Text
+                        className="text-white text-[13px] font-medium font-inter"
+                        numberOfLines={1}
+                      >
                         Comments
                       </Text>
                     </View>
@@ -661,12 +704,18 @@ const PlatformCard = ({
                     </Text>
                   </View>
 
-                  <View className="flex-row items-center relative gap-3">
+                  <View className="flex-row items-center relative">
                     <View
                       className="bg-[#FE5802] rounded-[8px] h-10 flex-row items-center px-4"
-                      style={{ width: `${Math.max(30, sharesPercent)}%` }}
+                      style={{
+                        width: `${Math.max(25, sharesPercent * 0.9)}%`,
+                        marginRight: 12,
+                      }}
                     >
-                      <Text className="text-white text-[13px] font-medium font-inter">
+                      <Text
+                        className="text-white text-[13px] font-medium font-inter"
+                        numberOfLines={1}
+                      >
                         Shares
                       </Text>
                     </View>
@@ -687,81 +736,81 @@ const PlatformCard = ({
 // --- Dummy Data for Chart ---
 const dummyChartData: Record<string, { x: number; y: number; y2: number }[]> = {
   W1: [
-    { x: 1, y: 2, y2: 1 },
-    { x: 2, y: 3, y2: 2.2 },
-    { x: 3, y: 3.5, y2: 2.0 },
-    { x: 4, y: 2, y2: 1.5 },
-    { x: 5, y: 3.5, y2: 2.1 },
-    { x: 6, y: 4, y2: 2.3 },
-    { x: 7, y: 4.2, y2: 2.2 },
+    { x: 1, y: 1.5, y2: 0.8 },
+    { x: 2, y: 3.2, y2: 1.5 },
+    { x: 3, y: 1.8, y2: 3.2 },
+    { x: 4, y: 3.8, y2: 1.8 },
+    { x: 5, y: 2.2, y2: 4.5 },
+    { x: 6, y: 4.5, y2: 2.5 },
+    { x: 7, y: 3.5, y2: 4.8 },
   ],
   W2: [
-    { x: 1, y: 1.5, y2: 2.5 },
-    { x: 2, y: 2.5, y2: 3.0 },
-    { x: 3, y: 2.0, y2: 2.8 },
-    { x: 4, y: 3.5, y2: 4.0 },
-    { x: 5, y: 3.0, y2: 3.2 },
-    { x: 6, y: 2.5, y2: 3.8 },
-    { x: 7, y: 3.8, y2: 4.1 },
+    { x: 1, y: 1.8, y2: 2.5 },
+    { x: 2, y: 3.5, y2: 1.8 },
+    { x: 3, y: 2.5, y2: 3.5 },
+    { x: 4, y: 4.5, y2: 2.2 },
+    { x: 5, y: 3.2, y2: 4.2 },
+    { x: 6, y: 5.2, y2: 3.5 },
+    { x: 7, y: 4.2, y2: 5.5 },
   ],
   W3: [
-    { x: 1, y: 3.0, y2: 1.2 },
-    { x: 2, y: 2.8, y2: 1.8 },
-    { x: 3, y: 4.0, y2: 2.5 },
-    { x: 4, y: 3.2, y2: 2.0 },
-    { x: 5, y: 4.5, y2: 3.0 },
-    { x: 6, y: 3.8, y2: 2.8 },
-    { x: 7, y: 2.0, y2: 3.5 },
+    { x: 1, y: 2.5, y2: 3.5 },
+    { x: 2, y: 4.8, y2: 2.2 },
+    { x: 3, y: 3.2, y2: 4.8 },
+    { x: 4, y: 5.5, y2: 3.5 },
+    { x: 5, y: 4.2, y2: 5.5 },
+    { x: 6, y: 6.2, y2: 4.2 },
+    { x: 7, y: 5.2, y2: 6.8 },
   ],
   W4: [
-    { x: 1, y: 2.2, y2: 1.5 },
-    { x: 2, y: 3.5, y2: 2.8 },
-    { x: 3, y: 3.0, y2: 2.2 },
-    { x: 4, y: 4.2, y2: 3.5 },
-    { x: 5, y: 3.8, y2: 3.0 },
-    { x: 6, y: 4.8, y2: 4.0 },
-    { x: 7, y: 4.5, y2: 3.8 },
+    { x: 1, y: 3.2, y2: 4.2 },
+    { x: 2, y: 5.5, y2: 3.2 },
+    { x: 3, y: 4.2, y2: 5.5 },
+    { x: 4, y: 6.5, y2: 4.2 },
+    { x: 5, y: 5.2, y2: 6.5 },
+    { x: 6, y: 7.2, y2: 5.2 },
+    { x: 7, y: 6.2, y2: 7.8 },
   ],
   M1: [
-    { x: 1, y: 2.5, y2: 2.0 },
-    { x: 2, y: 3.0, y2: 2.5 },
-    { x: 3, y: 3.5, y2: 3.0 },
-    { x: 4, y: 4.0, y2: 3.5 },
+    { x: 1, y: 1.5, y2: 2.5 },
+    { x: 2, y: 3.8, y2: 1.8 },
+    { x: 3, y: 2.2, y2: 4.2 },
+    { x: 4, y: 4.5, y2: 3.2 },
   ],
   M2: [
-    { x: 1, y: 2.8, y2: 2.2 },
-    { x: 2, y: 3.2, y2: 2.8 },
-    { x: 3, y: 3.8, y2: 3.5 },
-    { x: 4, y: 4.5, y2: 4.0 },
+    { x: 1, y: 2.2, y2: 3.2 },
+    { x: 2, y: 4.5, y2: 2.5 },
+    { x: 3, y: 3.2, y2: 5.5 },
+    { x: 4, y: 5.8, y2: 3.5 },
   ],
   M3: [
-    { x: 1, y: 3.0, y2: 2.5 },
-    { x: 2, y: 3.5, y2: 3.0 },
-    { x: 3, y: 4.2, y2: 3.8 },
-    { x: 4, y: 5.0, y2: 4.5 },
+    { x: 1, y: 3.2, y2: 4.2 },
+    { x: 2, y: 5.5, y2: 3.5 },
+    { x: 3, y: 4.2, y2: 6.5 },
+    { x: 4, y: 6.8, y2: 4.5 },
   ],
   YTD: [
-    { x: 1, y: 2.0, y2: 1.5 },
-    { x: 2, y: 2.5, y2: 2.0 },
-    { x: 3, y: 3.0, y2: 2.5 },
-    { x: 4, y: 3.5, y2: 3.0 },
-    { x: 5, y: 4.0, y2: 3.5 },
-    { x: 6, y: 4.5, y2: 4.0 },
-    { x: 7, y: 5.0, y2: 4.5 },
-    { x: 8, y: 5.5, y2: 5.0 },
-    { x: 9, y: 5.2, y2: 4.8 },
-    { x: 10, y: 6.0, y2: 5.5 },
-    { x: 11, y: 6.5, y2: 6.0 },
-    { x: 12, y: 7.0, y2: 6.5 },
+    { x: 1, y: 1.5, y2: 2.5 },
+    { x: 2, y: 3.0, y2: 1.8 },
+    { x: 3, y: 2.2, y2: 3.5 },
+    { x: 4, y: 4.5, y2: 2.8 },
+    { x: 5, y: 3.5, y2: 4.8 },
+    { x: 6, y: 5.5, y2: 3.8 },
+    { x: 7, y: 4.8, y2: 6.2 },
+    { x: 8, y: 6.5, y2: 5.2 },
+    { x: 9, y: 5.2, y2: 6.8 },
+    { x: 10, y: 7.5, y2: 5.8 },
+    { x: 11, y: 6.2, y2: 8.2 },
+    { x: 12, y: 8.5, y2: 6.8 },
   ],
   "All time": [
-    { x: 1, y: 4.0, y2: 3.5 },
-    { x: 2, y: 4.5, y2: 4.0 },
-    { x: 3, y: 5.5, y2: 5.0 },
-    { x: 4, y: 6.5, y2: 6.0 },
-    { x: 5, y: 6.0, y2: 5.5 },
-    { x: 6, y: 7.0, y2: 6.5 },
-    { x: 7, y: 8.0, y2: 7.5 },
+    { x: 1, y: 2.5, y2: 3.5 },
+    { x: 2, y: 4.5, y2: 2.8 },
+    { x: 3, y: 3.8, y2: 5.2 },
+    { x: 4, y: 5.8, y2: 4.2 },
+    { x: 5, y: 5.0, y2: 6.5 },
+    { x: 6, y: 7.5, y2: 5.5 },
+    { x: 7, y: 6.8, y2: 8.5 },
   ],
 };
 
