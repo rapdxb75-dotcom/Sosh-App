@@ -354,11 +354,10 @@ export default function CreatePost() {
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Get user email from Redux
-  const globalEmail = useSelector((state: RootState) => state.user.email);
-  const globalUserName = useSelector((state: RootState) => state.user.userName);
-  const globalProfilePicture = useSelector(
-    (state: RootState) => state.user.profilePicture,
-  );
+  const user = useSelector((state: RootState) => state.user);
+  const globalEmail = user.email;
+  const globalUserName = user.userName;
+  const globalProfilePicture = user.profilePicture;
 
   // Social media connections state
   const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
@@ -885,11 +884,15 @@ export default function CreatePost() {
 
       // Determine if it's a reel
       const isReel = activeTab === "Reel";
+      const boardId = user.aiAdditions?.poppyShortCaption?.boardId;
+      const chatId = user.aiAdditions?.poppyShortCaption?.chatId;
 
       const generatedCaption = await poppyService.generateCaption(
         caption,
         isReel,
         token,
+        boardId,
+        chatId,
       );
 
       // Update caption with generated content
