@@ -263,10 +263,9 @@ export default function PostPreview() {
   const { width } = useWindowDimensions();
   const { previewData } = useLocalSearchParams<{ previewData?: string }>();
   const { addNotification } = useNotification();
-  const globalUserName = useSelector((state: RootState) => state.user.userName);
-  const globalProfilePicture = useSelector(
-    (state: RootState) => state.user.profilePicture,
-  );
+  const user = useSelector((state: RootState) => state.user);
+  const globalUserName = user.userName;
+  const globalProfilePicture = user.profilePicture;
   const [isPublishing, setIsPublishing] = useState(false);
   const isBackgroundPublishing = useRef(false);
 
@@ -471,11 +470,15 @@ export default function PostPreview() {
       }
 
       const isReel = data?.activeTab === "Reel";
+      const boardId = user.aiAdditions?.poppyShortCaption?.boardId;
+      const chatId = user.aiAdditions?.poppyShortCaption?.chatId;
 
       const generatedCaption = await poppyService.generateCaption(
         data.caption,
         isReel,
         token,
+        boardId,
+        chatId,
       );
 
       setData((prev) => (prev ? { ...prev, caption: generatedCaption } : prev));

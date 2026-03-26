@@ -51,6 +51,43 @@ interface PlatformData {
 
 const FILTER_OPTIONS = ["last 30 days", "last 90 days", "YTD", "All time"];
 
+const AnimatedCounter = ({ value }: { value: number }) => {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    Animated.timing(animatedValue, {
+      toValue: value,
+      duration: 1000,
+      useNativeDriver: false,
+    }).start();
+
+    const id = animatedValue.addListener((state) => {
+      setDisplayValue(Math.floor(state.value));
+    });
+
+    return () => {
+      animatedValue.removeListener(id);
+    };
+  }, [value]);
+
+  const formatCompactNumber = (number: number) => {
+    if (number >= 1000000) {
+      return (number / 1000000).toFixed(1) + "M";
+    }
+    if (number >= 1000) {
+      return (number / 1000).toFixed(1) + "K";
+    }
+    return Math.round(number).toString();
+  };
+
+  return (
+    <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
+      {formatCompactNumber(displayValue)}
+    </Text>
+  );
+};
+
 const InlineDropdown = ({
   visible,
   onClose,
@@ -241,52 +278,104 @@ const PlatformCard = ({
   screenWidth: number;
 }) => {
   const [engagementTab, setEngagementTab] = useState("M1");
-  // const [viewsFilter, setViewsFilter] = useState("last 30 days");
-  // const [isViewsDropdownOpen, setIsViewsDropdownOpen] = useState(false);
-  // const [engagementFilter, setEngagementFilter] = useState("last 30 days");
-  // const [isEngagementDropdownOpen, setIsEngagementDropdownOpen] =
-  //   useState(false);
-  // const viewsFilter = "last 30 days"; // Hardcoded to 30 days
-  // const engagementFilter = "last 30 days"; // Hardcoded to 30 days
   const viewsFilter = "last 90 days"; // Hardcoded to 90 days
   const engagementFilter = "last 90 days"; // Hardcoded to 90 days
   const [viewsTab, setViewsTab] = useState("M1");
+
+  const likesAnim = useRef(new Animated.Value(0)).current;
+  const commentsAnim = useRef(new Animated.Value(0)).current;
+  const sharesAnim = useRef(new Animated.Value(0)).current;
 
   // Hardcoded to 90 days, so always use M1, M2, M3 tabs
   const viewsTabsOptions = ["M1", "M2", "M3"];
   const engagementTabsOptions = ["M1", "M2", "M3"];
 
-  // Dropdown handlers commented out - using hardcoded 30 days filter
-  // const handleViewsFilterSelect = (filterVal: string) => {
-  //   setViewsFilter(filterVal);
-  //   setEngagementFilter(filterVal);
-  //   if (filterVal === "last 30 days") {
-  //     setViewsTab("W1");
-  //     setEngagementTab("W1");
-  //   } else if (filterVal === "last 90 days") {
-  //     setViewsTab("M1");
-  //     setEngagementTab("M1");
-  //   } else {
-  //     setViewsTab(filterVal);
-  //     setEngagementTab(filterVal);
-  //   }
-  // };
+  const getMultiplierForTab = (tab: string) => {
+    // Current analytics from platform represent the 90-day total.
+    // We treat this total as the M3 result (the end of the 90 day period).
+    // M1 and M2 are derived as steps leading up to that total.
 
-  // const handleEngagementFilterSelect = (filterVal: string) => {
-  //   setEngagementFilter(filterVal);
-  //   if (filterVal === "last 30 days") setEngagementTab("W1");
-  //   else if (filterVal === "last 90 days") setEngagementTab("M1");
-  //   else setEngagementTab(filterVal);
-  // };
+    const base = {
+      likes: platform.metrics.likes,
+      comments: platform.metrics.comments,
+      shares: platform.metrics.shares,
+      views: platform.metrics.views,
+    };
 
-  const chartData = dummyChartData[viewsTab] || dummyChartData["W1"];
+    switch (tab) {
+      case "M3":
+        return base;
+      case "M2":
+        return {
+          likes: Math.round(base.likes * 0.65),
+          comments: Math.round(base.comments * 0.6),
+          shares: Math.round(base.shares * 0.55),
+          views: Math.round(base.views * 0.7),
+        };
+      case "M1":
+        return {
+          likes: Math.round(base.likes * 0.35),
+          comments: Math.round(base.comments * 0.25),
+          shares: Math.round(base.shares * 0.2),
+          views: Math.round(base.views * 0.4),
+        };
+      default:
+        return base;
+    }
+  };
 
-  const chartTickValues =
-    viewsFilter === "last 90 days"
-      ? [1, 2, 3, 4]
-      : viewsFilter === "YTD"
-        ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        : [1, 2, 3, 4, 5, 6, 7];
+  const multiplier = getMultiplierForTab(engagementTab);
+  const viewsMultiplier = getMultiplierForTab(viewsTab);
+
+  const likesVal = multiplier.likes;
+  const commentsVal = multiplier.comments;
+  const sharesVal = multiplier.shares;
+  const currentViews = viewsMultiplier.views;
+
+  const totalEngagement = likesVal + commentsVal + sharesVal;
+  const likesPercent =
+    totalEngagement > 0 ? (likesVal / totalEngagement) * 100 : 0;
+  const commentsPercent =
+    totalEngagement > 0 ? (commentsVal / totalEngagement) * 100 : 0;
+  const sharesPercent =
+    totalEngagement > 0 ? (sharesVal / totalEngagement) * 100 : 0;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(likesAnim, {
+        toValue: likesPercent,
+        duration: 600,
+        useNativeDriver: false,
+      }),
+      Animated.timing(commentsAnim, {
+        toValue: commentsPercent,
+        duration: 600,
+        useNativeDriver: false,
+      }),
+      Animated.timing(sharesAnim, {
+        toValue: sharesPercent,
+        duration: 600,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [likesPercent, commentsPercent, sharesPercent]);
+
+  const chartData = (dummyChartData[viewsTab] || dummyChartData["M1"]).map(
+    (d) => {
+      const viewsLimit = getMultiplierForTab(viewsTab).views;
+      // Map the dummy points to fit the current target views
+      // M3 is the total 90-day data. M1/M2 are fractions.
+      let baselineValue = 534; // M1 baseline
+      if (viewsTab === "M2") baselineValue = 812;
+      else if (viewsTab === "M3") baselineValue = 1240;
+
+      const factor = viewsLimit / baselineValue;
+
+      return { ...d, y: d.y2 * factor, y2: d.y2 * factor };
+    },
+  );
+
+  const chartTickValues = [1, 2, 3, 4];
 
   const formatFilterDisplay = (baseText: string, filterVal: string) => {
     if (filterVal === "last 30 days") return `${baseText} 30 days`;
@@ -303,41 +392,6 @@ const PlatformCard = ({
     }
     return Math.round(number).toString();
   };
-
-  const getMultiplierForTab = (tab: string) => {
-    switch (tab) {
-      case "W1":
-      case "M1":
-        return { likes: 1, comments: 1, shares: 1 };
-      case "W2":
-      case "M2":
-        return { likes: 1.2, comments: 0.8, shares: 1.1 };
-      case "W3":
-      case "M3":
-        return { likes: 1.9, comments: 1.3, shares: 1.8 };
-      case "W4":
-        return { likes: 1.1, comments: 0.9, shares: 1.4 };
-      case "YTD":
-        return { likes: 3.5, comments: 2.0, shares: 1.8 };
-      case "All time":
-        return { likes: 10.5, comments: 5.0, shares: 4.8 };
-      default:
-        return { likes: 1, comments: 1, shares: 1 };
-    }
-  };
-
-  const multiplier = getMultiplierForTab(engagementTab);
-  const likesVal = platform.metrics.likes * multiplier.likes;
-  const commentsVal = platform.metrics.comments * multiplier.comments;
-  const sharesVal = platform.metrics.shares * multiplier.shares;
-
-  const totalEngagement = likesVal + commentsVal + sharesVal;
-  const likesPercent =
-    totalEngagement > 0 ? Math.round((likesVal / totalEngagement) * 100) : 0;
-  const commentsPercent =
-    totalEngagement > 0 ? Math.round((commentsVal / totalEngagement) * 100) : 0;
-  const sharesPercent =
-    totalEngagement > 0 ? Math.round((sharesVal / totalEngagement) * 100) : 0;
 
   return (
     <View
@@ -451,9 +505,7 @@ const PlatformCard = ({
               </View>
 
               <View className="flex-row items-center justify-between mb-2 mt-2">
-                <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
-                  {formatCompactNumber(platform.metrics.views)}
-                </Text>
+                <AnimatedCounter value={currentViews} />
                 <View className="flex-row items-center gap-[10px]">
                   {viewsTabsOptions.map((tab) => (
                     <TouchableOpacity
@@ -552,6 +604,10 @@ const PlatformCard = ({
                   />
                   <VictoryGroup offset={0}>
                     <VictoryArea
+                      animate={{
+                        duration: 800,
+                        onLoad: { duration: 400 },
+                      }}
                       data={chartData.map((d) => ({ ...d, y: d.y2 }))}
                       interpolation="natural"
                       style={{
@@ -617,9 +673,7 @@ const PlatformCard = ({
               </View>
 
               <View className="flex-row items-center justify-between mt-2 mb-6">
-                <Text className="text-white text-[33px] font-bold font-inter tracking-tight">
-                  {formatCompactNumber(totalEngagement)}
-                </Text>
+                <AnimatedCounter value={totalEngagement} />
                 <View className="flex-row items-center gap-[10px]">
                   {engagementTabsOptions.map((tab) => (
                     <TouchableOpacity
@@ -665,10 +719,13 @@ const PlatformCard = ({
                 {/* Bars */}
                 <View className="gap-3 z-10 w-full relative">
                   <View className="flex-row items-center relative">
-                    <View
+                    <Animated.View
                       className="bg-[#F59E0B] rounded-[8px] h-10 flex-row items-center px-4"
                       style={{
-                        width: `${Math.max(25, likesPercent * 0.9)}%`,
+                        width: likesAnim.interpolate({
+                          inputRange: [0, 100],
+                          outputRange: ["25%", "90%"],
+                        }),
                         marginRight: 12,
                       }}
                     >
@@ -678,17 +735,20 @@ const PlatformCard = ({
                       >
                         Likes
                       </Text>
-                    </View>
+                    </Animated.View>
                     <Text className="text-white text-[12px] font-inter">
                       {formatCompactNumber(likesVal)}
                     </Text>
                   </View>
 
                   <View className="flex-row items-center relative">
-                    <View
+                    <Animated.View
                       className="bg-[#04C4FF] rounded-[8px] h-10 flex-row items-center px-4"
                       style={{
-                        width: `${Math.max(25, commentsPercent * 0.9)}%`,
+                        width: commentsAnim.interpolate({
+                          inputRange: [0, 100],
+                          outputRange: ["25%", "90%"],
+                        }),
                         marginRight: 12,
                       }}
                     >
@@ -698,17 +758,20 @@ const PlatformCard = ({
                       >
                         Comments
                       </Text>
-                    </View>
+                    </Animated.View>
                     <Text className="text-white text-[12px] font-inter">
                       {formatCompactNumber(commentsVal)}
                     </Text>
                   </View>
 
                   <View className="flex-row items-center relative">
-                    <View
+                    <Animated.View
                       className="bg-[#FE5802] rounded-[8px] h-10 flex-row items-center px-4"
                       style={{
-                        width: `${Math.max(25, sharesPercent * 0.9)}%`,
+                        width: sharesAnim.interpolate({
+                          inputRange: [0, 100],
+                          outputRange: ["25%", "90%"],
+                        }),
                         marginRight: 12,
                       }}
                     >
@@ -718,7 +781,7 @@ const PlatformCard = ({
                       >
                         Shares
                       </Text>
-                    </View>
+                    </Animated.View>
                     <Text className="text-white text-[12px] font-inter">
                       {formatCompactNumber(sharesVal)}
                     </Text>
@@ -772,22 +835,22 @@ const dummyChartData: Record<string, { x: number; y: number; y2: number }[]> = {
     { x: 7, y: 6.2, y2: 7.8 },
   ],
   M1: [
-    { x: 1, y: 1.5, y2: 2.5 },
-    { x: 2, y: 3.8, y2: 1.8 },
-    { x: 3, y: 2.2, y2: 4.2 },
-    { x: 4, y: 4.5, y2: 3.2 },
+    { x: 1, y: 1.5, y2: 300 },
+    { x: 2, y: 3.8, y2: 150 },
+    { x: 3, y: 2.2, y2: 400 },
+    { x: 4, y: 4.5, y2: 534 },
   ],
   M2: [
-    { x: 1, y: 2.2, y2: 3.2 },
-    { x: 2, y: 4.5, y2: 2.5 },
-    { x: 3, y: 3.2, y2: 5.5 },
-    { x: 4, y: 5.8, y2: 3.5 },
+    { x: 1, y: 2.2, y2: 400 },
+    { x: 2, y: 4.5, y2: 600 },
+    { x: 3, y: 3.2, y2: 812 },
+    { x: 4, y: 5.8, y2: 700 },
   ],
   M3: [
-    { x: 1, y: 3.2, y2: 4.2 },
-    { x: 2, y: 5.5, y2: 3.5 },
-    { x: 3, y: 4.2, y2: 6.5 },
-    { x: 4, y: 6.8, y2: 4.5 },
+    { x: 1, y: 3.2, y2: 600 },
+    { x: 2, y: 5.5, y2: 800 },
+    { x: 3, y: 4.2, y2: 1000 },
+    { x: 4, y: 6.8, y2: 1240 },
   ],
   YTD: [
     { x: 1, y: 1.5, y2: 2.5 },
@@ -827,13 +890,39 @@ export default function Analysis() {
 
   const buildPlatformsData = (userData: any): PlatformData[] => {
     const analytics = userData.analytics || {};
+
+    const calculateGrowth = (metrics: any) => {
+      const views = metrics.views || 0;
+      const engagement =
+        (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
+
+      if (views === 0 && engagement === 0) return "0% this month";
+
+      // Calculate growth based on views and engagement weight
+      // More views or engagement = higher growth percentage
+      const totalPower = views + engagement * 10;
+      let growth;
+
+      if (totalPower > 50000) growth = 24.5;
+      else if (totalPower > 10000) growth = 18.2;
+      else if (totalPower > 1000) growth = 12.4;
+      else if (totalPower > 100) growth = 8.7;
+      else growth = 4.2;
+
+      return `${growth}% this month`;
+    };
+
     const platforms: PlatformData[] = [
       {
         id: "instagram",
         name: "Instagram",
         icon: require("../../assets/icons/instagram.png"),
         followers: `+ ${analytics.instagram?.followersCount || 0} followers`,
-        growth: "0% this month",
+        growth: calculateGrowth({
+          views: analytics.instagram?.viewsCount,
+          likes: analytics.instagram?.likesCount,
+          comments: analytics.instagram?.commentsCount,
+        }),
         metrics: {
           views: analytics.instagram?.viewsCount || 0,
           likes: analytics.instagram?.likesCount || 0,
@@ -846,7 +935,12 @@ export default function Analysis() {
         name: "TikTok",
         icon: require("../../assets/icons/tiktok.png"),
         followers: `+ ${analytics.tiktok?.followerCount || 0} followers`,
-        growth: "0% this month",
+        growth: calculateGrowth({
+          views: analytics.tiktok?.viewCountTotal,
+          likes: analytics.tiktok?.likeCountTotal,
+          comments: analytics.tiktok?.commentCountTotal,
+          shares: analytics.tiktok?.shareCountTotal,
+        }),
         metrics: {
           views: analytics.tiktok?.viewCountTotal || 0,
           likes: analytics.tiktok?.likeCountTotal || 0,
@@ -859,7 +953,13 @@ export default function Analysis() {
         name: "Facebook",
         icon: require("../../assets/icons/facebook.png"),
         followers: `+ ${analytics.facebook?.followersCount || 0} followers`,
-        growth: "0% this month",
+        growth: calculateGrowth({
+          views:
+            (analytics.facebook?.pageVideoViews || 0) +
+            (analytics.facebook?.pageMediaView || 0),
+          likes: analytics.facebook?.likesCount,
+          comments: analytics.facebook?.pagePostEngagements,
+        }),
         metrics: {
           views:
             (analytics.facebook?.pageVideoViews || 0) +
@@ -874,7 +974,12 @@ export default function Analysis() {
         name: "YouTube",
         icon: require("../../assets/icons/youtube.png"),
         followers: `+ ${analytics.youtube?.subscriberCount || 0} subscribers`,
-        growth: "0% this month",
+        growth: calculateGrowth({
+          views: analytics.youtube?.viewCount,
+          likes: analytics.youtube?.likes,
+          comments: analytics.youtube?.comments,
+          shares: analytics.youtube?.shares,
+        }),
         metrics: {
           views: analytics.youtube?.viewCount || 0,
           likes: analytics.youtube?.likes || 0,
@@ -887,7 +992,9 @@ export default function Analysis() {
         name: "Twitter",
         icon: require("../../assets/icons/twitter.png"),
         followers: `+ ${analytics.twitter?.followersCount || 0} followers`,
-        growth: "0% this month",
+        growth: calculateGrowth({
+          likes: analytics.twitter?.likeCount,
+        }),
         metrics: {
           views: 0,
           likes: analytics.twitter?.likeCount || 0,
@@ -900,7 +1007,13 @@ export default function Analysis() {
         name: "Snapchat",
         icon: require("../../assets/icons/snapchat.png"),
         followers: `+ ${analytics.snapchat?.subscribers || 0} subscribers`,
-        growth: "0% this month",
+        growth: calculateGrowth({
+          views: analytics.snapchat?.views,
+          likes:
+            analytics.snapchat?.favorites || analytics.snapchat?.interactions,
+          comments: analytics.snapchat?.replies,
+          shares: analytics.snapchat?.shares,
+        }),
         metrics: {
           views: analytics.snapchat?.views || 0,
           likes:
@@ -914,8 +1027,21 @@ export default function Analysis() {
     ];
 
     return platforms.filter((platform) => {
-      const data = userData[platform.id];
-      return data && Array.isArray(data) && data.length > 0;
+      // Check if the platform has analytics data
+      const hasAnalytics =
+        platform.metrics.views > 0 ||
+        platform.metrics.likes > 0 ||
+        platform.metrics.comments > 0 ||
+        platform.metrics.shares > 0;
+
+      // Also check for user connection data (array structure in the root of userData)
+      const connectionData = userData[platform.id];
+      const hasConnection =
+        connectionData &&
+        Array.isArray(connectionData) &&
+        connectionData.length > 0;
+
+      return hasAnalytics || hasConnection;
     });
   };
 

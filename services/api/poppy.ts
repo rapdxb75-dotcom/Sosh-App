@@ -8,17 +8,26 @@ class PoppyService {
    * @param captionPrompt The user's caption prompt
    * @param isReel Whether this is for a reel (true) or post/story (false)
    * @param token Bearer token for authentication
+   * @param boardId The board ID from user's aiAdditions
+   * @param chatId The chat node ID from user's aiAdditions
    * @returns Promise<string> The generated caption text
    */
   async generateCaption(
     captionPrompt: string,
     isReel: boolean,
     token: string,
+    boardId?: string,
+    chatId?: string,
   ): Promise<string> {
     const url = "https://n8n-production-0558.up.railway.app/webhook/poppyAi";
 
     try {
-      console.log("🎨 Generating caption...", { captionPrompt, isReel });
+      console.log("🎨 Generating caption...", {
+        captionPrompt,
+        isReel,
+        boardId,
+        chatId,
+      });
 
       const response = await fetch(url, {
         method: "POST",
@@ -29,6 +38,8 @@ class PoppyService {
         body: JSON.stringify({
           isReel,
           captionpromt: captionPrompt,
+          boardId,
+          chatId,
         }),
       });
 
