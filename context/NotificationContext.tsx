@@ -32,6 +32,7 @@ interface NotificationContextType {
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
   markAsRead: () => void;
+  unreadCount: number;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(

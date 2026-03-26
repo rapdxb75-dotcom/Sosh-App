@@ -11,6 +11,7 @@ export interface PreviewData {
   selectedPlatforms: Record<string, boolean>;
   date: Date | null;
   thumbNailOffset?: number;
+  cover_img?: string;
   instagramUsername?: string;
   videoResizeMode?: "cover" | "contain";
 }

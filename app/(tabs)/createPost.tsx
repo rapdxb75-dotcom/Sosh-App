@@ -307,6 +307,11 @@ const INITIAL_TAB_DATA = {
     singleMedia: null as string | null,
     carouselMedia: null as string[] | null,
     media: null,
+    photoMedia: null,
+    videoMedia: null,
+    cover_img: null,
+    thumbNailOffset: 0,
+    tags: [],
   },
   Reel: {
     postType: "Single",
@@ -324,6 +329,8 @@ const INITIAL_TAB_DATA = {
     cover_img: null as string | null,
     thumbNailOffset: 0 as number,
     tags: [] as string[],
+    photoMedia: null,
+    videoMedia: null,
   },
   Story: {
     postType: "Single", // Single=Photo, Carousel=Video
@@ -340,6 +347,9 @@ const INITIAL_TAB_DATA = {
     photoMedia: null as string | null,
     videoMedia: null as string | null,
     tags: [] as string[],
+    media: null,
+    cover_img: null,
+    thumbNailOffset: 0,
   },
 };
 
@@ -427,12 +437,12 @@ export default function CreatePost() {
               } else {
                 next.Post.carouselCaption = previewState.caption || "";
               }
-            } else {
-              const tabKey = tab as "Reel" | "Story";
+            } else if (tab === "Reel" || tab === "Story") {
+              const tabKey = tab;
               next[tabKey] = {
                 ...prev[tabKey],
                 caption: previewState.caption || "",
-              };
+              } as any;
             }
             return next;
           });
@@ -1383,6 +1393,16 @@ export default function CreatePost() {
         error?.code === "ECONNABORTED" &&
         error?.message?.includes("timeout")
       ) {
+        const isCarousel = Array.isArray(currentMedia);
+        const contentType =
+          activeTab === "Reel"
+            ? "Reel"
+            : activeTab === "Story"
+              ? "Story"
+              : isCarousel
+                ? "Carousel Post"
+                : "Post";
+
         // Backend often processes the post even if the connection times out
         addNotification({
           type: "success",
@@ -1473,13 +1493,29 @@ export default function CreatePost() {
     const nextVideoResizeMode: "cover" | "contain" =
       videoResizeMode === ResizeMode.COVER ? "cover" : "contain";
 
+    // Filter out restricted platforms for Carousel if conditions met
+    let finalPlatforms = { ...selectedPlatforms };
+    if (
+      activeTab === "Post" &&
+      postType === "Carousel" &&
+      Array.isArray(currentMedia)
+    ) {
+      const hasVideo = currentMedia.some((url) => isVideoUrl(url));
+      if (hasVideo) {
+        finalPlatforms.facebook = false;
+      }
+      if (currentMedia.length > 4) {
+        finalPlatforms.x = false;
+      }
+    }
+
     const previewPayload: PreviewData = {
       activeTab,
       postType,
       currentMedia,
       caption,
       activeTags,
-      selectedPlatforms,
+      selectedPlatforms: finalPlatforms,
       date,
       thumbNailOffset: thumbNailOffset || scrubberPositionMs || 0,
       cover_img: cover_img,
@@ -1525,6 +1561,22 @@ export default function CreatePost() {
 
   const togglePlatform = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // Auto-deselect platforms that are about to be hidden/restricted
+    if (
+      activeTab === "Post" &&
+      postType === "Carousel" &&
+      Array.isArray(currentMedia)
+    ) {
+      if (id === "facebook") {
+        const hasVideo = currentMedia.some((url) => isVideoUrl(url));
+        if (hasVideo) return;
+      }
+      if (id === "x" && currentMedia.length > 4) {
+        return;
+      }
+    }
+
     const newPlatforms = {
       ...selectedPlatforms,
       [id]: !selectedPlatforms[id],
@@ -2533,33 +2585,30 @@ export default function CreatePost() {
                         return filteredPlatforms.map((platform) => {
                           const isSelected = selectedPlatforms[platform.id];
 
-                          // Determine if platform should be disabled due to content constraints
-                          let isDisabled = false;
-
+                          // Determine if platform should be hidden due to carousel constraints
                           if (
                             activeTab === "Post" &&
                             postType === "Carousel" &&
                             currentMedia &&
                             Array.isArray(currentMedia)
                           ) {
-                            // Facebook doesn't support carousel with videos
+                            // 1. When select video so facebook button do not show
                             if (platform.id === "facebook") {
                               const hasVideo = currentMedia.some((url) =>
                                 isVideoUrl(url),
                               );
-                              if (hasVideo) {
-                                isDisabled = true;
-                              }
+                              if (hasVideo) return null;
                             }
 
-                            // Twitter (X) only supports max 4 media items
+                            // 2. When choose more than 4 items then twitter button do not show
                             if (
                               platform.id === "x" &&
                               currentMedia.length > 4
                             ) {
-                              isDisabled = true;
+                              return null;
                             }
                           }
+
                           return (
                             <TouchableOpacity
                               key={platform.id}

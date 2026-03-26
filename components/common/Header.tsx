@@ -85,15 +85,23 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
 
   const handleLogout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addNotification({
-      type: "neutral",
-      title: "Logged Out",
-      message: "You have been logged out successfully.",
-    });
-    dispatch(clearUserData());
-    await storageService.logout();
     setShowDropdown(false);
-    router.replace("/");
+
+    // Slight delay to allow dropdown to close before navigation starts
+    setTimeout(async () => {
+      router.replace("/login");
+
+      // Clear data AFTER navigation has started to prevent UI flicker on the current screen
+      setTimeout(async () => {
+        addNotification({
+          type: "neutral",
+          title: "Logged Out",
+          message: "You have been logged out successfully.",
+        });
+        dispatch(clearUserData());
+        await storageService.logout();
+      }, 100);
+    }, 100);
   };
 
   return (
