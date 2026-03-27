@@ -892,10 +892,15 @@ export default function CreatePost() {
         return;
       }
 
-      // Determine if it's a reel
+      // Determine specific AI settings based on the current tab
       const isReel = activeTab === "Reel";
-      const boardId = user.aiAdditions?.poppyShortCaption?.boardId;
-      const chatId = user.aiAdditions?.poppyShortCaption?.chatId;
+      const settings =
+        activeTab === "Post"
+          ? user.aiAdditions?.poppyPostCaption
+          : user.aiAdditions?.poppyShortCaption;
+
+      const boardId = settings?.boardId;
+      const chatId = settings?.chatId;
 
       const generatedCaption = await poppyService.generateCaption(
         caption,
@@ -1377,14 +1382,8 @@ export default function CreatePost() {
       console.error("Post generation error:", error);
 
       // If app went to background during publishing, backend likely processed it.
-      // We clear fields and avoid showing an error toast to prevent confusion.
+      // We keep the fields intact so the user doesn't lose data if they return to the app.
       if (isBackgroundPublishing.current) {
-        setTabData(INITIAL_TAB_DATA);
-        setTagInputText("");
-        setCoverDurationMs(0);
-        setScrubberPositionMs(0);
-        coverDurationMsRef.current = 0;
-        scrubberPositionMsRef.current = 0;
         return;
       }
 
