@@ -278,17 +278,43 @@ const PlatformCard = ({
   screenWidth: number;
 }) => {
   const [engagementTab, setEngagementTab] = useState("M1");
-  const viewsFilter = "last 90 days"; // Hardcoded to 90 days
-  const engagementFilter = "last 90 days"; // Hardcoded to 90 days
+  // const viewsFilter = "last 90 days"; // Hardcoded to 90 days
+  // const engagementFilter = "last 90 days"; // Hardcoded to 90 days
   const [viewsTab, setViewsTab] = useState("M1");
+
+  const getFilterDays = (platformId: string) => {
+    switch (platformId.toLowerCase()) {
+      case "facebook":
+        return "85 days";
+      case "instagram":
+        return "90 days";
+      case "youtube":
+        return "90 days";
+      case "tiktok":
+        return "60 days";
+      case "snapchat":
+        return "90 days";
+      case "twitter":
+      case "x":
+        return "90 days";
+      default:
+        return "90 days";
+    }
+  };
+
+  const platformDays = getFilterDays(platform.id);
+  const viewsFilter = `last ${platformDays}`;
+  const engagementFilter = `last ${platformDays}`;
 
   const likesAnim = useRef(new Animated.Value(0)).current;
   const commentsAnim = useRef(new Animated.Value(0)).current;
   const sharesAnim = useRef(new Animated.Value(0)).current;
 
   // Hardcoded to 90 days, so always use M1, M2, M3 tabs
-  const viewsTabsOptions = ["M1", "M2", "M3"];
-  const engagementTabsOptions = ["M1", "M2", "M3"];
+  // const viewsTabsOptions = ["M1", "M2", "M3"];
+  // const engagementTabsOptions = ["M1", "M2", "M3"];
+  const viewsTabsOptions: string[] = [];
+  const engagementTabsOptions: string[] = [];
 
   const getMultiplierForTab = (tab: string) => {
     // Current analytics from platform represent the 90-day total.
@@ -302,6 +328,9 @@ const PlatformCard = ({
       views: platform.metrics.views,
     };
 
+    return base;
+
+    /*
     switch (tab) {
       case "M3":
         return base;
@@ -322,6 +351,7 @@ const PlatformCard = ({
       default:
         return base;
     }
+    */
   };
 
   const multiplier = getMultiplierForTab(engagementTab);
@@ -378,8 +408,9 @@ const PlatformCard = ({
   const chartTickValues = [1, 2, 3, 4];
 
   const formatFilterDisplay = (baseText: string, filterVal: string) => {
-    if (filterVal === "last 30 days") return `${baseText} 30 days`;
-    if (filterVal === "last 90 days") return `${baseText} 90 days`;
+    // if (filterVal === "last 30 days") return `${baseText} 30 days`;
+    // if (filterVal === "last 90 days") return `${baseText} 90 days`;
+    // return `${baseText} ${filterVal}`;
     return `${baseText} ${filterVal}`;
   };
 
