@@ -482,6 +482,10 @@ export default function CreatePost() {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
       if (nextAppState === "background" && isPublishing) {
         isBackgroundPublishing.current = true;
+      } else if (nextAppState === "active" && isBackgroundPublishing.current) {
+        // App returned to foreground while a background publish was in progress.
+        // We ensure isPublishing remains true so the loader continues to show.
+        setIsPublishing(true);
       }
     });
 

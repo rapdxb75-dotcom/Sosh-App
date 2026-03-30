@@ -1,6 +1,7 @@
 import { Inter_400Regular, Inter_600SemiBold } from "@expo-google-fonts/inter";
 import { Questrial_400Regular } from "@expo-google-fonts/questrial";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
 import { Asset } from "expo-asset";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -11,6 +12,8 @@ import { Image, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { Provider, useSelector } from "react-redux";
 import { toastConfig } from "../components/common/CustomToast";
+import ErrorBoundary from "../components/common/ErrorBoundary";
+import NoInternet from "../components/common/NoInternet";
 import NotificationModal from "../components/common/NotificationModal";
 import { PRELOAD_ASSETS } from "../constants/Assets";
 import { NotificationProvider } from "../context/NotificationContext";
@@ -23,6 +26,10 @@ import {
 } from "../services/firebase";
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
+import { initializeErrorHandler } from "../utils/errorHandler";
+
+// Initialize global exception handlers
+initializeErrorHandler();
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Ignore duplicate calls in development fast-refresh cycles.
@@ -80,8 +87,23 @@ export default function RootLayout() {
     Inter_400Regular,
   });
   const [assetsReady, setAssetsReady] = useState(false);
+  const [isInternetConnected, setIsInternetConnected] = useState<
+    boolean | null
+  >(null);
   const hasHiddenSplashRef = useRef(false);
-  const isAppReady = (loaded || error) && assetsReady;
+  const isAppReady =
+    (loaded || error) && assetsReady && isInternetConnected !== null;
+
+  useEffect(() => {
+    // Subscribe to network state changes
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsInternetConnected(state.isConnected);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Preload assets once on mount
   useEffect(() => {
@@ -132,44 +154,62 @@ export default function RootLayout() {
     return null;
   }
 
-  return (
-    <Provider store={store}>
-      <NotificationProvider>
-        <FirebaseDataFetcher />
-        <View
-          onLayout={onLayoutRootView}
-          style={{ flex: 1, backgroundColor: "#000" }}
-        >
-          <StatusBar style="light" translucent backgroundColor="transparent" />
+  // Handle Offline UI
+  if (isInternetConnected === false) {
+    return (
+      <View
+        onLayout={onLayoutRootView}
+        style={{ flex: 1, backgroundColor: "#000" }}
+      >
+        <NoInternet onRetry={() => NetInfo.fetch()} />
+      </View>
+    );
+  }
 
-          <View style={{ flex: 1 }}>
-            <Image
-              source={require("../assets/images/background.png")}
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                width: "100%",
-                height: "100%",
-              }}
-              resizeMode="cover"
+  return (
+    <ErrorBoundary>
+      <Provider store={store}>
+        <NotificationProvider>
+          <FirebaseDataFetcher />
+          <View
+            onLayout={onLayoutRootView}
+            style={{ flex: 1, backgroundColor: "#000" }}
+          >
+            <StatusBar
+              style="light"
+              translucent
+              backgroundColor="transparent"
             />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: {
-                  backgroundColor: "transparent",
-                },
-                animation: "none",
-              }}
-            />
+
+            <View style={{ flex: 1 }}>
+              <Image
+                source={require("../assets/images/background.png")}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: "100%",
+                  height: "100%",
+                }}
+                resizeMode="cover"
+              />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: "transparent",
+                  },
+                  animation: "none",
+                }}
+              />
+            </View>
+            <NotificationModal />
+            <Toast config={toastConfig} />
           </View>
-          <NotificationModal />
-          <Toast config={toastConfig} />
-        </View>
-      </NotificationProvider>
-    </Provider>
+        </NotificationProvider>
+      </Provider>
+    </ErrorBoundary>
   );
 }

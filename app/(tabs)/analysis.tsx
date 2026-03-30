@@ -787,7 +787,9 @@ const PlatformCard = ({
                         className="text-white text-[13px] font-medium font-inter"
                         numberOfLines={1}
                       >
-                        Comments
+                        {platform.id === "snapchat"
+                          ? "Story Views"
+                          : "Comments"}
                       </Text>
                     </Animated.View>
                     <Text className="text-white text-[12px] font-inter">
@@ -1039,40 +1041,34 @@ export default function Analysis() {
         icon: require("../../assets/icons/snapchat.png"),
         followers: `+ ${analytics.snapchat?.subscribers || 0} subscribers`,
         growth: calculateGrowth({
-          views: analytics.snapchat?.views,
-          likes:
-            analytics.snapchat?.favorites || analytics.snapchat?.interactions,
+          views:
+            analytics.snapchat?.spotlightViews || analytics.snapchat?.views,
+          likes: analytics.snapchat?.favorites,
           comments: analytics.snapchat?.replies,
           shares: analytics.snapchat?.shares,
         }),
         metrics: {
-          views: analytics.snapchat?.views || 0,
-          likes:
-            analytics.snapchat?.favorites ||
-            analytics.snapchat?.interactions ||
+          views:
+            analytics.snapchat?.spotlightViews ||
+            analytics.snapchat?.views ||
             0,
-          comments: analytics.snapchat?.replies || 0,
+          likes: analytics.snapchat?.favorites || 0,
+          comments: analytics.snapchat?.storyViews || 0,
           shares: analytics.snapchat?.shares || 0,
         },
       },
     ];
 
     return platforms.filter((platform) => {
-      // Check if the platform has analytics data
-      const hasAnalytics =
-        platform.metrics.views > 0 ||
-        platform.metrics.likes > 0 ||
-        platform.metrics.comments > 0 ||
-        platform.metrics.shares > 0;
-
-      // Also check for user connection data (array structure in the root of userData)
+      // Show only connected accounts
+      // Check for user connection data (array structure in the root of userData)
       const connectionData = userData[platform.id];
       const hasConnection =
         connectionData &&
         Array.isArray(connectionData) &&
         connectionData.length > 0;
 
-      return hasAnalytics || hasConnection;
+      return hasConnection;
     });
   };
 
