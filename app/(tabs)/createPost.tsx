@@ -1364,16 +1364,11 @@ export default function CreatePost() {
         );
       }
 
-      addNotification({
-        type: "success",
-        title: `${contentType} Created`,
-        message: notificationMessage,
-      });
-      Toast.show({
-        type: "success",
-        text1: `${contentType} Created`,
-        text2: toastMessage,
-      });
+      // Toast.show({
+      //   type: "success",
+      //   text1: `${contentType} Created`,
+      //   text2: toastMessage,
+      // });
 
       // Clear all fields upon successful publish
       setTabData(INITIAL_TAB_DATA);
@@ -1407,16 +1402,11 @@ export default function CreatePost() {
                 : "Post";
 
         // Backend often processes the post even if the connection times out
-        addNotification({
-          type: "success",
-          title: `${contentType} Created`,
-          message: `Your ${contentType.toLowerCase()} is being processed (Connection timeout).`,
-        });
-        Toast.show({
-          type: "success",
-          text1: `${contentType} Posted`,
-          text2: "Your post is being processed.",
-        });
+        // Toast.show({
+        //   type: "success",
+        //   text1: `${contentType} Posted`,
+        //   text2: "Your post is being processed.",
+        // });
 
         // Clear all fields as it likely succeeded on backend
         setTabData(INITIAL_TAB_DATA);
@@ -1439,16 +1429,11 @@ export default function CreatePost() {
             "Could not prepare reduced video URL. Please try a different file.",
         });
       }
-      addNotification({
-        type: "error",
-        title: `${activeTab} Creation Failed`,
-        message: `Failed to create ${activeTab.toLowerCase()}. Please try again.`,
-      });
-      Toast.show({
-        type: "error",
-        text1: `${activeTab} Creation Failed`,
-        text2: `Failed to create ${activeTab.toLowerCase()}. Please try again.`,
-      });
+      // Toast.show({
+      //   type: "error",
+      //   text1: `${activeTab} Creation Failed`,
+      //   text2: `Failed to create ${activeTab.toLowerCase()}. Please try again.`,
+      // });
     } finally {
       if (!isRetryAfterBackground) {
         setIsPublishing(false);

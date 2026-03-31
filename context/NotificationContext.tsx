@@ -1,11 +1,12 @@
+import messaging from "@react-native-firebase/messaging";
 import {
-    createContext,
-    ReactNode,
-    useCallback,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
 } from "react";
 import { useSelector } from "react-redux";
 import storageService from "../services/storage";
@@ -104,6 +105,44 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+
+  // Set up the listener for foreground FCM messages
+  useEffect(() => {
+    const unsubscribe = messaging().onMessage(async (remoteMessage) => {
+      console.log(
+        "🔔 [NotificationContext] Foreground FCM message:",
+        JSON.stringify(remoteMessage, null, 2),
+      );
+
+      const title =
+        remoteMessage.notification?.title ||
+        remoteMessage.data?.title ||
+        "Notification";
+      const body =
+        remoteMessage.notification?.body ||
+        remoteMessage.data?.body ||
+        remoteMessage.data?.message ||
+        remoteMessage.data?.text ||
+        "";
+
+      if (title || body) {
+        // Determine notification type from FCM data field
+        const isSuccess = remoteMessage.data?.success !== "false";
+        const type: NotificationType = isSuccess ? "success" : "error";
+
+        // Automatically add FCM notifications to our local notification model
+        addNotification({
+          type,
+          title: title,
+          message: body,
+        });
+
+        // Toast is now handled in setupForegroundMessageListener within firebase.ts
+      }
+    });
+
+    return unsubscribe;
+  }, [addNotification]);
 
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => {

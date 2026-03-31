@@ -917,16 +917,11 @@ export default function PostPreview() {
         );
       }
 
-      addNotification({
-        type: "success",
-        title: `${contentType} Created`,
-        message: notificationMessage,
-      });
-      Toast.show({
-        type: "success",
-        text1: `${contentType} Created`,
-        text2: toastMessage,
-      });
+      // Toast.show({
+      //   type: "success",
+      //   text1: `${contentType} Created`,
+      //   text2: toastMessage,
+      // });
 
       markPreviewPostSuccessReset();
       clearPreviewData();
@@ -948,16 +943,11 @@ export default function PostPreview() {
         error?.message?.includes("timeout")
       ) {
         // Backend often processes the post even if the connection times out
-        addNotification({
-          type: "success",
-          title: `${activeTab} Created`,
-          message: `Your ${activeTab.toLowerCase()} is being processed (Connection timeout).`,
-        });
-        Toast.show({
-          type: "success",
-          text1: `${activeTab} Posted`,
-          text2: "Your post is being processed.",
-        });
+        // Toast.show({
+        //   type: "success",
+        //   text1: `${activeTab} Posted`,
+        //   text2: "Your post is being processed.",
+        // });
 
         // Clear and return as if successful
         markPreviewPostSuccessReset();

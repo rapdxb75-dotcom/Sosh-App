@@ -156,8 +156,11 @@ export const setupForegroundMessageListener = () => {
       "";
 
     if (title || body) {
+      const isSuccess = remoteMessage.data?.success !== "false";
+      const type = isSuccess ? "success" : "error";
+
       Toast.show({
-        type: "success",
+        type,
         text1: title,
         text2: body,
         position: "top",
