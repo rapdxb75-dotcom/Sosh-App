@@ -1,11 +1,11 @@
 import crashlytics from "@react-native-firebase/crashlytics";
 import { Component, ErrorInfo, ReactNode } from "react";
 import {
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import NoInternet from "./NoInternet";
 
@@ -81,7 +81,7 @@ class ErrorBoundary extends Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#000",
   },
   content: {
     flex: 1,
@@ -93,22 +93,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
-    color: "#000",
+    color: "#fff",
   },
   subtitle: {
     fontSize: 16,
     textAlign: "center",
     marginBottom: 30,
-    color: "#666",
+    color: "rgba(255, 255, 255, 0.6)",
   },
   button: {
-    backgroundColor: "#000",
+    backgroundColor: "#fff",
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 8,
   },
   buttonText: {
-    color: "#fff",
+    color: "#000",
     fontSize: 16,
     fontWeight: "600",
   },
