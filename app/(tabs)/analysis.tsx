@@ -15,15 +15,23 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Defs, Stop, LinearGradient as SvgGradient } from "react-native-svg";
+import {
+  Circle,
+  Defs,
+  G,
+  Stop,
+  LinearGradient as SvgGradient,
+} from "react-native-svg";
 import { useSelector } from "react-redux";
 import {
+  createContainer,
+  LineSegment,
   VictoryArea,
   VictoryAxis,
   VictoryChart,
   VictoryGroup,
+  VictoryScatter,
   VictoryTooltip,
-  VictoryVoronoiContainer,
 } from "victory-native";
 import Header from "../../components/common/Header";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
@@ -47,7 +55,28 @@ interface PlatformData {
 
 // --- Constants ---
 
+const CursorVoronoiContainer = createContainer("cursor", "voronoi");
+
 // --- Components ---
+
+const CustomTooltipWithDot = (props: any) => {
+  const { x, y } = props;
+  return (
+    <G>
+      {x !== undefined && y !== undefined && (
+        <Circle
+          cx={x}
+          cy={y}
+          r={4}
+          fill="#F59E0B"
+          stroke="#FFFFFF"
+          strokeWidth={1}
+        />
+      )}
+      <VictoryTooltip {...props} />
+    </G>
+  );
+};
 
 const FILTER_OPTIONS = ["last 30 days", "last 90 days", "YTD", "All time"];
 
@@ -390,20 +419,46 @@ const PlatformCard = ({
     ]).start();
   }, [likesPercent, commentsPercent, sharesPercent]);
 
-  const chartData = (dummyChartData[viewsTab] || dummyChartData["M1"]).map(
-    (d) => {
-      const viewsLimit = getMultiplierForTab(viewsTab).views;
-      // Map the dummy points to fit the current target views
-      // M3 is the total 90-day data. M1/M2 are fractions.
-      let baselineValue = 534; // M1 baseline
-      if (viewsTab === "M2") baselineValue = 812;
-      else if (viewsTab === "M3") baselineValue = 1240;
+  const totalDays = parseInt(platformDays, 10) || 90;
+  const originalDummy = dummyChartData[viewsTab] || dummyChartData["M1"];
 
-      const factor = viewsLimit / baselineValue;
+  const interpolateY2 = (pts: { y2: number }[], t: number) => {
+    const indexFloat = t * (pts.length - 1);
+    const i = Math.floor(indexFloat);
+    if (i >= pts.length - 1) return pts[pts.length - 1].y2;
+    const ft = indexFloat - i;
+    const f = (1 - Math.cos(ft * Math.PI)) * 0.5;
+    return pts[i].y2 * (1 - f) + pts[i + 1].y2 * f;
+  };
 
-      return { ...d, y: d.y2 * factor, y2: d.y2 * factor };
-    },
-  );
+  const chartData = Array.from({ length: totalDays }).map((_, i) => {
+    const fraction = i / (totalDays - 1);
+    const y2Base = interpolateY2(originalDummy, fraction);
+
+    const randomSeed = Math.sin(i * 100);
+    const noise = randomSeed * (y2Base * 0.05);
+    const y2 = Math.max(0, y2Base + noise);
+
+    const viewsLimit = getMultiplierForTab(viewsTab).views;
+    let baselineValue = 534;
+    if (viewsTab === "M2") baselineValue = 812;
+    else if (viewsTab === "M3") baselineValue = 1240;
+
+    const factor = viewsLimit / baselineValue;
+
+    const date = new Date();
+    date.setDate(date.getDate() - (totalDays - 1 - i));
+    const month = date.toLocaleString("default", { month: "short" });
+    const dayName = date.getDate();
+    const dateLabel = `${month} ${dayName}`;
+
+    return {
+      x: i + 1,
+      y: y2 * factor,
+      y2: y2 * factor,
+      dateLabel,
+    };
+  });
 
   const chartTickValues = [1, 2, 3, 4];
 
@@ -575,30 +630,45 @@ const PlatformCard = ({
                   padding={{ top: 25, bottom: 30, left: 20, right: 20 }}
                   domainPadding={{ y: [0, 20] }}
                   containerComponent={
-                    <VictoryVoronoiContainer
-                      labels={({ datum }) => `Views: ${Math.round(datum.y2)}`}
+                    <CursorVoronoiContainer
+                      voronoiDimension="x"
+                      cursorDimension="x"
+                      voronoiBlacklist={["area"]}
+                      cursorComponent={
+                        <LineSegment
+                          style={{
+                            stroke: "rgba(255, 255, 255, 0.4)",
+                            strokeWidth: 1,
+                            strokeDasharray: "4 4",
+                          }}
+                        />
+                      }
+                      labels={({ datum }) =>
+                        `${datum.dateLabel}\n${Math.round(datum.y2)}`
+                      }
                       labelComponent={
-                        <VictoryTooltip
+                        <CustomTooltipWithDot
                           renderInPortal={false}
                           constrainToVisibleArea={true}
                           centerOffset={{ x: 0, y: -10 }}
                           flyoutStyle={{
-                            fill: "#1A1A1A",
-                            stroke: "#F59E0B",
-                            strokeWidth: 1.2,
+                            fill: "#1E1E1E",
+                            fillOpacity: 1,
+                            stroke: "rgba(255, 255, 255, 0.15)",
+                            strokeWidth: 1,
                           }}
                           style={{
                             fill: "#FFFFFF",
-                            fontSize: 10,
-                            fontWeight: "600",
+                            fontSize: 11,
+                            fontWeight: "400",
                           }}
-                          pointerLength={5}
-                          cornerRadius={8}
+                          pointerLength={0}
+                          cornerRadius={12}
                           flyoutPadding={{
-                            top: 5,
-                            bottom: 5,
-                            left: 8,
-                            right: 8,
+                            top: 8,
+                            bottom: 8,
+                            left: 12,
+                            right: 12,
                           }}
                         />
                       }
@@ -606,19 +676,13 @@ const PlatformCard = ({
                   }
                 >
                   <VictoryAxis
-                    tickValues={chartTickValues}
+                    tickValues={[]}
                     style={{
                       axis: { stroke: "transparent" },
                       ticks: { stroke: "transparent" },
-                      tickLabels: {
-                        fill: "rgba(255, 255, 255, 0.4)",
-                        fontSize: 13,
-                        fontFamily: "Inter_400Regular",
-                        padding: 5,
-                      },
+                      tickLabels: { fill: "transparent" },
                       grid: { stroke: "transparent" },
                     }}
-                    tickFormat={(t) => Math.round(t)}
                   />
                   <VictoryAxis
                     dependentAxis
@@ -635,6 +699,7 @@ const PlatformCard = ({
                   />
                   <VictoryGroup offset={0}>
                     <VictoryArea
+                      name="area"
                       animate={{
                         duration: 800,
                         onLoad: { duration: 400 },
@@ -646,6 +711,18 @@ const PlatformCard = ({
                           fill: "url(#gradViewsCard)",
                           stroke: "#F59E0B",
                           strokeWidth: 2,
+                        },
+                      }}
+                    />
+                    <VictoryScatter
+                      name="scatter"
+                      data={chartData.map((d) => ({ ...d, y: d.y2 }))}
+                      size={0}
+                      style={{
+                        data: {
+                          fill: "transparent",
+                          stroke: "transparent",
+                          strokeWidth: 0,
                         },
                       }}
                     />
