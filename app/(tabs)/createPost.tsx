@@ -500,10 +500,171 @@ export default function CreatePost() {
     ResizeMode.CONTAIN,
   );
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const lastResultIndex = useRef<number>(0);
-  const lastProcessedResult = useRef<number>(0);
   const activeTabRef = useRef(activeTab);
   const postTypeRef = useRef<string>("Single");
+  const isListeningRef = useRef(false);
+  const isManualStopRef = useRef(false);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const committedSpeechTextRef = useRef("");
+  const interimSpeechTextRef = useRef("");
+
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
+
+  useEffect(() => {
+    return () => {
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const appendSpeechChunk = useCallback((base: string, chunk: string) => {
+    const cleanBase = base.trim();
+    const cleanChunk = chunk.trim();
+
+    if (!cleanChunk) return cleanBase;
+    if (!cleanBase) return cleanChunk;
+
+    const toWordPairs = (value: string) =>
+      value
+        .split(/\s+/)
+        .map((raw) => ({
+          raw,
+          norm: raw.toLowerCase().replace(/[^a-z0-9']/gi, ""),
+        }))
+        .filter((word) => word.norm.length > 0);
+
+    const baseWords = toWordPairs(cleanBase);
+    const chunkWords = toWordPairs(cleanChunk);
+
+    if (!chunkWords.length) {
+      return cleanBase;
+    }
+
+    const maxOverlap = Math.min(baseWords.length, chunkWords.length);
+
+    const arraysMatch = (
+      left: Array<{ norm: string }>,
+      right: Array<{ norm: string }>,
+    ) => left.every((word, index) => word.norm === right[index]?.norm);
+
+    const collapseRepeatedPattern = (
+      words: Array<{ raw: string; norm: string }>,
+    ) => {
+      if (words.length < 2) return words;
+
+      for (
+        let patternLength = 1;
+        patternLength <= words.length / 2;
+        patternLength++
+      ) {
+        if (words.length % patternLength !== 0) continue;
+
+        const pattern = words.slice(0, patternLength);
+        let isRepeatingPattern = true;
+
+        for (let i = patternLength; i < words.length; i += patternLength) {
+          const candidate = words.slice(i, i + patternLength);
+          if (!arraysMatch(pattern, candidate)) {
+            isRepeatingPattern = false;
+            break;
+          }
+        }
+
+        if (isRepeatingPattern) {
+          return pattern;
+        }
+      }
+
+      return words;
+    };
+
+    const normalizedChunkWords = collapseRepeatedPattern(chunkWords);
+
+    if (
+      baseWords.length >= normalizedChunkWords.length &&
+      arraysMatch(
+        baseWords.slice(-normalizedChunkWords.length),
+        normalizedChunkWords,
+      )
+    ) {
+      return cleanBase;
+    }
+
+    const overlapLimit = Math.min(
+      baseWords.length,
+      normalizedChunkWords.length,
+    );
+
+    for (let overlap = overlapLimit; overlap > 0; overlap--) {
+      const baseSuffix = baseWords.slice(-overlap);
+      const chunkPrefix = normalizedChunkWords.slice(0, overlap);
+
+      if (arraysMatch(baseSuffix, chunkPrefix)) {
+        const remainingChunk = normalizedChunkWords
+          .slice(overlap)
+          .map((word) => word.raw)
+          .join(" ");
+        return remainingChunk ? `${cleanBase} ${remainingChunk}` : cleanBase;
+      }
+    }
+
+    if (cleanBase.toLowerCase().endsWith(cleanChunk.toLowerCase())) {
+      return cleanBase;
+    }
+
+    return `${cleanBase} ${cleanChunk}`;
+  }, []);
+
+  const startRecognitionSession = useCallback(async () => {
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      return;
+    }
+
+    await speechRecognitionModule.start({
+      lang: Platform.OS === "ios" ? "en-US" : undefined,
+      interimResults: true,
+      maxAlternatives: 1,
+      continuous: true,
+      requiresOnDeviceRecognition: Platform.OS === "ios",
+      addsPunctuation: true,
+      contextualStrings: [],
+    });
+  }, []);
+
+  const commitInterimSpeech = useCallback(() => {
+    const interimText = interimSpeechTextRef.current.trim();
+    if (!interimText) return;
+
+    committedSpeechTextRef.current = appendSpeechChunk(
+      committedSpeechTextRef.current,
+      interimText,
+    );
+    interimSpeechTextRef.current = "";
+    setCaption(committedSpeechTextRef.current);
+  }, [appendSpeechChunk]);
+
+  const scheduleRecognitionRestart = useCallback(() => {
+    if (isManualStopRef.current || !isListeningRef.current) {
+      return;
+    }
+
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+    }
+
+    restartTimeoutRef.current = setTimeout(() => {
+      if (isManualStopRef.current || !isListeningRef.current) {
+        return;
+      }
+
+      void startRecognitionSession().catch((error) => {
+        console.log("Auto-restart voice recognition failed:", error);
+      });
+    }, 300);
+  }, [startRecognitionSession]);
 
   // Cover scrubber — all mutable values in refs so PanResponder never has stale closures
   const coverVideoRef = useRef<any>(null);
@@ -729,56 +890,76 @@ export default function CreatePost() {
 
   // Event: Process speech results
   useOptionalSpeechRecognitionEvent("result", (event) => {
-    if (isListening) {
-      let interim = "";
-      let final = "";
-
-      const startIdx = Math.max(0, lastProcessedResult.current);
-
-      for (let i = startIdx; i < event.results.length; i++) {
-        const result = event.results[i];
-        const text = result?.transcript || "";
-
-        if (text) {
-          if ((result as any).isFinal === true) {
-            final += text;
-            lastProcessedResult.current = i + 1;
-          } else {
-            interim += text;
-          }
-        }
-      }
-
-      setCaption((prev) => {
-        const base = prev.substring(0, lastResultIndex.current);
-
-        if (final) {
-          const sep = base && base.trim() ? " " : "";
-          const newText = base + sep + final;
-          lastResultIndex.current = newText.length;
-          return newText;
-        } else if (interim) {
-          const sep = base && base.trim() && interim.trim() ? " " : "";
-          return base + sep + interim;
-        }
-
-        return prev;
-      });
+    if (!isListeningRef.current || isManualStopRef.current) {
+      return;
     }
+
+    const transcript = String(event.results?.[0]?.transcript || "").trim();
+    if (!transcript) {
+      return;
+    }
+
+    if (event.isFinal) {
+      committedSpeechTextRef.current = appendSpeechChunk(
+        committedSpeechTextRef.current,
+        transcript,
+      );
+      interimSpeechTextRef.current = "";
+      setCaption(committedSpeechTextRef.current);
+      return;
+    }
+
+    if (interimSpeechTextRef.current.trim() === transcript) {
+      return;
+    }
+
+    interimSpeechTextRef.current = transcript;
+
+    const nextPreviewText = interimSpeechTextRef.current
+      ? appendSpeechChunk(
+          committedSpeechTextRef.current,
+          interimSpeechTextRef.current,
+        )
+      : committedSpeechTextRef.current;
+
+    setCaption(nextPreviewText);
   });
 
   // Event: Recognition ended
   useOptionalSpeechRecognitionEvent("end", () => {
-    setIsListening(false);
+    if (isManualStopRef.current) {
+      setIsListening(false);
+      isListeningRef.current = false;
+      return;
+    }
+
+    commitInterimSpeech();
+    scheduleRecognitionRestart();
   });
 
   // Event: Error occurred
   useOptionalSpeechRecognitionEvent("error", (event) => {
+    const errorMessage = String(event?.error || "").toLowerCase();
+    const isRecoverable =
+      isListeningRef.current &&
+      !isManualStopRef.current &&
+      !errorMessage.includes("permission") &&
+      !errorMessage.includes("not-allowed") &&
+      !errorMessage.includes("denied") &&
+      !errorMessage.includes("unavailable");
+
+    if (isRecoverable) {
+      commitInterimSpeech();
+      scheduleRecognitionRestart();
+      return;
+    }
+
     Alert.alert("Error", event.error || "Speech recognition failed");
     setIsListening(false);
+    isListeningRef.current = false;
   });
 
-  const startListening = async () => {
+  const startListening = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
@@ -798,42 +979,64 @@ export default function CreatePost() {
         return;
       }
 
-      await speechRecognitionModule.start({
-        lang: Platform.OS === "ios" ? "en-US" : undefined,
-        interimResults: true,
-        maxAlternatives: 1,
-        continuous: true,
-        requiresOnDeviceRecognition: Platform.OS === "ios",
-        addsPunctuation: true,
-        contextualStrings: [],
-      });
+      isManualStopRef.current = false;
+
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+
+      // Fetch the actual current caption since startListening is a useCallback without dependencies
+      let currentCaption = "";
+      if (activeTabRef.current === "Post") {
+        currentCaption =
+          postTypeRef.current === "Single"
+            ? (tabData.Post as any).singleCaption
+            : (tabData.Post as any).carouselCaption;
+      } else if (activeTabRef.current === "Reel") {
+        currentCaption = (tabData.Reel as any).caption;
+      } else if (activeTabRef.current === "Story") {
+        currentCaption = (tabData.Story as any).caption;
+      }
+
+      committedSpeechTextRef.current = currentCaption || "";
+      interimSpeechTextRef.current = "";
+
+      await startRecognitionSession();
 
       setIsListening(true);
-      lastResultIndex.current = caption.length;
-      lastProcessedResult.current = 0;
+      isListeningRef.current = true;
     } catch (error: any) {
       Alert.alert("Error", error?.message || "Failed to start recording");
     }
-  };
+  }, [startRecognitionSession, tabData]);
 
-  const stopListening = async () => {
+  const stopListening = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    isManualStopRef.current = true;
+
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+    }
+
+    commitInterimSpeech();
 
     if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
       setIsListening(false);
+      isListeningRef.current = false;
       return;
     }
 
     try {
       await speechRecognitionModule.stop();
       setIsListening(false);
-      lastResultIndex.current = caption.length;
-      lastProcessedResult.current = 0;
+      isListeningRef.current = false;
     } catch (error) {
       console.log("Stop Voice Error:", error);
       setIsListening(false);
+      isListeningRef.current = false;
     }
-  };
+  }, [commitInterimSpeech]);
 
   // Stop speech recognition when switching tabs
   useEffect(() => {
