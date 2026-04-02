@@ -1,4 +1,6 @@
-const POPPY_API_KEY = "zKNHI3ZmmGQTWTRnlllJM6ozIEpuTCNgATdGo8o2ic";
+const POPPY_API_KEY =
+  process.env.EXPO_PUBLIC_POPPY_API_KEY ||
+  "zKNHI3ZmmGQTWTRnlllJM6ozIEpuTCNgATdGo8o2ic";
 
 import { updatePoppyTokenCredits } from "../firebase";
 
