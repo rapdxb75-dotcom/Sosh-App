@@ -288,7 +288,7 @@ const getPublishSuccessCopy = ({
   };
 };
 
-const INITIAL_TAB_DATA = {
+const getInitialTabData = () => ({
   Post: {
     postType: "Single",
     singleCaption: "",
@@ -351,7 +351,7 @@ const INITIAL_TAB_DATA = {
     cover_img: null,
     thumbNailOffset: 0,
   },
-};
+});
 
 interface SocialMediaData {
   [key: string]: string[] | undefined;
@@ -418,7 +418,7 @@ export default function CreatePost() {
       scrollViewRef.current?.scrollTo({ y: 0, animated: false });
 
       if (consumePreviewPostSuccessReset()) {
-        setTabData(INITIAL_TAB_DATA);
+        setTabData(getInitialTabData());
         setTagInputText("");
         setCoverDurationMs(0);
         setScrubberPositionMs(0);
@@ -469,7 +469,7 @@ export default function CreatePost() {
     : previewWidth * (5 / 4); // 4:5 portrait
 
   // Tab Data State
-  const [tabData, setTabData] = useState(INITIAL_TAB_DATA);
+  const [tabData, setTabData] = useState(() => getInitialTabData());
 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCaptionModal, setShowCaptionModal] = useState(false);
@@ -1574,7 +1574,7 @@ export default function CreatePost() {
       // });
 
       // Clear all fields upon successful publish
-      setTabData(INITIAL_TAB_DATA);
+      setTabData(getInitialTabData());
       setTagInputText("");
       setCoverDurationMs(0);
       setScrubberPositionMs(0);
@@ -1584,8 +1584,14 @@ export default function CreatePost() {
       console.error("Post generation error:", error);
 
       // If app went to background during publishing, backend likely processed it.
-      // We keep the fields intact so the user doesn't lose data if they return to the app.
+      // We clear the fields assuming it succeeded, to prevent stale data.
       if (isBackgroundPublishing.current) {
+        setTabData(getInitialTabData());
+        setTagInputText("");
+        setCoverDurationMs(0);
+        setScrubberPositionMs(0);
+        coverDurationMsRef.current = 0;
+        scrubberPositionMsRef.current = 0;
         return;
       }
 
@@ -1612,7 +1618,7 @@ export default function CreatePost() {
         // });
 
         // Clear all fields as it likely succeeded on backend
-        setTabData(INITIAL_TAB_DATA);
+        setTabData(getInitialTabData());
         setTagInputText("");
         setCoverDurationMs(0);
         setScrubberPositionMs(0);
@@ -2071,8 +2077,10 @@ export default function CreatePost() {
                         setTabData((prev) => ({
                           ...prev,
                           [activeTab]: {
-                            ...INITIAL_TAB_DATA[
-                              activeTab as keyof typeof INITIAL_TAB_DATA
+                            ...getInitialTabData()[
+                              activeTab as keyof ReturnType<
+                                typeof getInitialTabData
+                              >
                             ],
                           },
                         }));
