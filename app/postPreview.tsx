@@ -4,40 +4,40 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-  Camera,
-  ChevronLeft,
-  MoreHorizontal,
-  Volume2,
-  VolumeX,
-  X,
+    Camera,
+    ChevronLeft,
+    MoreHorizontal,
+    Volume2,
+    VolumeX,
+    X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Animated,
-  AppState,
-  Image,
-  ImageBackground,
-  Keyboard,
-  KeyboardAvoidingView,
-  Modal,
-  PanResponder,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-  useWindowDimensions,
+    ActivityIndicator,
+    Alert,
+    Animated,
+    AppState,
+    Image,
+    ImageBackground,
+    Keyboard,
+    KeyboardAvoidingView,
+    Modal,
+    PanResponder,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import Svg, {
-  Circle,
-  Defs,
-  Stop,
-  LinearGradient as SvgLinearGradient,
+    Circle,
+    Defs,
+    Stop,
+    LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -46,17 +46,17 @@ import { useNotification } from "../context/NotificationContext";
 import createPostService from "../services/api/createPost";
 import poppyService from "../services/api/poppy";
 import {
-  isSpeechRecognitionAvailable,
-  speechRecognitionModule,
-  useOptionalSpeechRecognitionEvent,
+    isSpeechRecognitionAvailable,
+    speechRecognitionModule,
+    useOptionalSpeechRecognitionEvent,
 } from "../services/speechRecognition";
 import storageService from "../services/storage";
 import {
-  type PreviewData,
-  clearPreviewData,
-  getPreviewData,
-  markPreviewPostSuccessReset,
-  setPreviewData,
+    type PreviewData,
+    clearPreviewData,
+    getPreviewData,
+    markPreviewPostSuccessReset,
+    setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
 
@@ -897,13 +897,16 @@ export default function PostPreview() {
           activePlatforms,
           !date,
           mediaPayload as any,
+          date,
         );
       } else if (activeTab === "Post" && isCarousel) {
         await createPostService.createCarousel(
           caption,
           activeTags,
           activePlatforms,
+          !date,
           Array.isArray(mediaPayload) ? mediaPayload : [mediaPayload],
+          date,
         );
       } else {
         await createPostService.createPost(

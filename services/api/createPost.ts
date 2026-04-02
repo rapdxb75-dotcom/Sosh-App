@@ -189,6 +189,7 @@ const createPostService = {
    * @param selectedPlatforms Array of platform names
    * @param publishNow Boolean to publish immediately
    * @param mediaPayload Binary or Base64 string of the media
+   * @param scheduleDate Optional publish schedule date
    * @returns Promise with API response
    */
   createStory: async (
@@ -196,6 +197,7 @@ const createPostService = {
     selectedPlatforms: string[],
     publishNow: boolean,
     mediaPayload: any,
+    scheduleDate: Date | null,
   ) => {
     try {
       const token = await storageService.getToken();
@@ -205,6 +207,11 @@ const createPostService = {
         formData.append("email", email);
       }
       formData.append("publishnow", String(publishNow));
+
+      // Schedule date
+      if (!publishNow && scheduleDate) {
+        formData.append("scheduleDate", scheduleDate.toISOString());
+      }
 
       // Append platforms
       selectedPlatforms.forEach((platform) => {
@@ -240,14 +247,18 @@ const createPostService = {
    * @param captionPrompt Post caption
    * @param tags Array of tags
    * @param selectedPlatforms Array of platform names
+   * @param publishNow Boolean to publish immediately
    * @param mediaPayloads Array of binary media payloads
+   * @param scheduleDate Optional publish schedule date
    * @returns Promise with API response
    */
   createCarousel: async (
     captionPrompt: string,
     tags: string[],
     selectedPlatforms: string[],
+    publishNow: boolean,
     mediaPayloads: any[],
+    scheduleDate: Date | null,
   ) => {
     try {
       const token = await storageService.getToken();
@@ -256,6 +267,13 @@ const createPostService = {
 
       formData.append("captionPromt", captionPrompt);
       formData.append("max_tokens", "1024");
+      formData.append("publishnow", String(publishNow));
+
+      // Schedule date
+      if (!publishNow && scheduleDate) {
+        formData.append("scheduleDate", scheduleDate.toISOString());
+      }
+
       tags.forEach((tag) => {
         const formattedTag = tag.startsWith("@") ? tag : `@${tag}`;
         formData.append("userTags", formattedTag);
@@ -276,6 +294,21 @@ const createPostService = {
       // Append multiple media files
       mediaPayloads.forEach((media) => {
         formData.append("mediaUrl", media);
+      });
+
+      // Log the payload being sent
+      console.log("🚀 Creating Carousel Payload:");
+      (formData as any)._parts?.forEach((part: any) => {
+        // Truncate base64 strings or large files for cleaner logging
+        const key = part[0];
+        const value = part[1];
+        if (typeof value === "string" && value.length > 100) {
+          console.log(
+            `  ${key}: [File/Base64 data truncated, length: ${value.length}]`,
+          );
+        } else {
+          console.log(`  ${key}:`, value);
+        }
       });
 
       const response = await apiClient.post<CreatePostResponse>(

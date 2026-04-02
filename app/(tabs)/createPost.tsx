@@ -1547,13 +1547,16 @@ export default function CreatePost() {
           activePlatforms,
           !date,
           mediaPayload as any,
+          date,
         );
       } else if (activeTab === "Post" && isCarousel) {
         await createPostService.createCarousel(
           caption,
           activeTags,
           activePlatforms,
+          !date,
           Array.isArray(mediaPayload) ? mediaPayload : [mediaPayload],
+          date,
         );
       } else {
         await createPostService.createPost(
