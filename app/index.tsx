@@ -38,5 +38,5 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={hasToken ? "/(tabs)/home" : "/login"} />;
+  return <Redirect href={hasToken ? "/(tabs)/home" : "/welcome"} />;
 }
