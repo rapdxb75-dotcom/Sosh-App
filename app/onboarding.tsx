@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { MotiView } from 'moti';
 import { useRouter } from "expo-router";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react-native";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, Check, Mic, MicOff } from "lucide-react-native";
+import { useState, useCallback, useEffect } from "react";
 import {
   Dimensions,
   Image,
@@ -15,15 +15,19 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ActivityIndicator,
 } from "react-native";
+import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
+import { BlurView } from 'expo-blur';
 import { FontFamily, normalize } from "../constants/Fonts";
+import { FontAwesome5, MaterialCommunityIcons, FontAwesome6 } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const STEPS = [
   {
     id: 1,
-    title: "Tell Us About Your Brand 🚀",
+    title: "Tell Us About Your Brand",
     description: "In a few sentences, tell us about your brand or business. What's your niche, what do you do, and what's your mission or purpose behind it all?",
     subtitle: "Section 1: Your Business",
     type: "textarea",
@@ -32,7 +36,7 @@ const STEPS = [
   },
   {
     id: 2,
-    title: "Who Is Your Audience? 🎯",
+    title: "Who Is Your Audience?",
     subtitle: "Section 1: Your Business",
     type: "mixed",
     key: "audience",
@@ -41,7 +45,7 @@ const STEPS = [
         id: "2a",
         label: "What age range best describes your target audience? (Select all that apply)",
         type: "multi-select-chips",
-        options: ["🎒 Under 18", "🎓 18-24", "💼 25-34", "🏡 35-44", "📈 45-54", "🌅 55+"],
+        options: ["👶 Under 18", "🎓 18-24", "💼 25-34", "🏠 35-44", "🏢 45-54", "👴 55+"],
       },
       {
         id: "2b",
@@ -53,7 +57,7 @@ const STEPS = [
   },
   {
     id: 3,
-    title: "Your Social Media Presence 📱",
+    title: "Your Social Media Presence",
     subtitle: "Section 1: Your Business",
     type: "mixed",
     key: "social media",
@@ -62,7 +66,7 @@ const STEPS = [
         id: "3a",
         label: "Select the platforms you're active on and your approximate follower count",
         type: "platform-select",
-        options: ["📸 Instagram", "🎵 TikTok", "▶️ YouTube", "🐦 X / Twitter", "👥 Facebook", "💼 LinkedIn", "👻 Snapchat"]
+        options: ["Instagram", "TikTok", "YouTube", "X", "Facebook", "LinkedIn", "Snapchat"]
       },
       {
         id: "3b",
@@ -74,22 +78,22 @@ const STEPS = [
   },
   {
     id: 4,
-    title: "Your Brand Personality 🎉",
+    title: "Your Brand Personality",
     description: "Pick up to 5 words that best describe your brand's personality.",
     subtitle: "Section 2: Your Personality",
     type: "multi-select",
     key: "brandPersonality",
     options: [
-      "🎉 Fun / Playful",
-      "💥 Bold / Controversial",
-      "💼 Professional / Polished",
-      "✨ Luxurious / Premium",
+      "✨ Fun / Playful",
+      "🔥 Bold / Controversial",
+      "👔 Professional / Polished",
+      "💎 Luxurious / Premium",
       "📚 Educational / Informative",
       "🤓 Nerdy / Technical",
-      "🔥 Inspirational / Motivational",
+      "🌈 Inspirational / Motivational",
       "😏 Witty / Sarcastic",
-      "🎤 Raw / Unfiltered",
-      "🧘 Calm / Chill",
+      "🎬 Raw / Unfiltered",
+      "🍃 Calm / Chill",
       "🤝 Friendly / Approachable",
       "⚡ High Energy / Hype"
     ],
@@ -97,7 +101,7 @@ const STEPS = [
   },
   {
     id: 5,
-    title: "Your Content Style 📝",
+    title: "Your Content Style",
     subtitle: "Section 2: Your Personality",
     type: "mixed",
     key: "contentStyle",
@@ -107,35 +111,35 @@ const STEPS = [
         label: "What types of content do you post or plan to post? (Select all that apply)",
         type: "multi-select-chips",
         options: [
-          "📝 Tutorials / How-tos",
-          "😂 Memes / Funny Skits",
-          "🎬 Behind the Scenes",
-          "🛤️ Personal Stories / Journey",
-          "📹 Vlogs / Day-in-the-Life",
-          "🛍️ Product Showcases / Demos",
+          "🎓 Tutorials / How-tos",
+          "🤣 Memes / Funny Skits",
+          "🏗️ Behind the Scenes",
+          "📖 Personal Stories",
+          "🤳 Vlogs / Day-in-the-Life",
+          "🛍️ Product Showcases",
           "💡 Tips & Advice",
-          "📰 News / Updates in My Niche",
-          "🎤 Interviews / Conversations",
-          "🌟 Motivational / Inspirational",
-          "🗣️ Reviews / Hot Takes",
-          "📖 Storytelling / Narrative",
-          "📱 Raw / Unedited Clips",
-          "🌴 Lifestyle / Aesthetic",
-          "🎥 Cinematic / High-Production",
-          "✏️ Other"
+          "🌍 News / Updates",
+          "🎙️ Interviews / Talks",
+          "💪 Motivational",
+          "🔥 Reviews / Hot Takes",
+          "📝 Storytelling",
+          "📼 Raw / Unedited Clips",
+          "✨ Lifestyle / Aesthetic",
+          "📽️ Cinematic",
+          "❓ Other"
         ]
       },
       {
         id: "5b",
         label: "What makes your content different from others in your niche?",
         type: "textarea",
-        placeholder: "Example: I use a professional Sony camera while most people in my niche only shoot on iPhones. I also show the behind-the-scenes..."
+        placeholder: "Example: I use a professional Sony camera while most people in my niche only shoot on iPhones..."
       },
     ],
   },
   {
     id: 6,
-    title: "The Feeling You Create ✨",
+    title: "The Feeling You Create",
     description: "When people watch your content, how do you want them to feel? (Select up to 3)",
     subtitle: "Section 2: Your Personality",
     type: "multi-select",
@@ -144,40 +148,40 @@ const STEPS = [
       "🚀 Inspired to chase something",
       "🧠 Like they learned something new",
       "😂 Entertained / Laughing",
-      "💪 Motivated to take action",
-      "😱 FOMO — they wish they were there",
+      "⚡ Motivated to take action",
+      "👀 FOMO — they wish they were there",
       "🤝 Part of a community",
-      "👑 Empowered / Confident",
-      "😌 Relaxed / At peace",
-      "🔍 Curious / Wanting more",
-      "🤯 Impressed / In awe"
+      "💪 Empowered / Confident",
+      "🧘 Relaxed / At peace",
+      "🤔 Curious / Wanting more",
+      "🤩 Impressed / In awe"
     ],
     limit: 3,
   },
   {
     id: 7,
-    title: "Your Language & Boundaries 🛡️",
+    title: "Your Language and Boundaries",
     subtitle: "Section 3: The Details",
     type: "mixed",
     key: "languageBoundaries",
     parts: [
       {
         id: "7a",
-        label: "Do you use any specific slang, catchphrases, or language your audience would recognize? How do you talk?",
+        label: "Do you use any specific slang, catchphrases, or language your audience would recognize?",
         type: "textarea",
-        placeholder: "Example: I use Chicago slang, say 'y'all' a lot, talk directly to one person using 'you'..."
+        placeholder: "Example: I use Chicago slang, say 'y'all' a lot..."
       },
       {
         id: "7b",
         label: "Are there any topics, themes, or content styles you want to AVOID?",
         type: "textarea",
-        placeholder: "Example: I don't talk about politics or religion. I also avoid drama and gossip..."
+        placeholder: "Example: I don't talk about politics or religion..."
       },
     ],
   },
   {
     id: 8,
-    title: "Your Competitive Landscape 🔍",
+    title: "Your Competitive Landscape",
     subtitle: "Section 3: The Details",
     type: "mixed",
     key: "competitors",
@@ -186,26 +190,26 @@ const STEPS = [
         id: "8a",
         label: "Name 2-3 competitors or creators in your niche that you pay attention to.",
         type: "textarea",
-        placeholder: "Example: @houseofjandra, @whatsgoodchicago, @mirandavang"
+        placeholder: "Example: @houseofjandra, @whatsgoodchicago..."
       },
       {
         id: "8b",
-        label: "What do they do well on social media that you respect or want to learn from?",
+        label: "What do they do well on social media that you respect?",
         type: "textarea",
-        placeholder: "Example: They all post consistently almost every day and use really strong text-on-screen hooks..."
+        placeholder: "Example: They all post consistently almost every day..."
       },
       {
         id: "8c",
         label: "What do YOU do better, or what sets you apart from them?",
         type: "textarea",
-        placeholder: "Example: My visuals are way stronger because I shoot with a professional camera instead of just an iPhone..."
+        placeholder: "Example: My visuals are way stronger..."
       },
     ],
   },
   {
     id: 9,
-    title: "Caption Style ✍️",
-    subtitle: "Section 4 — Your Caption Preferences",
+    title: "Caption Style",
+    subtitle: "Section 4 : Your Caption Preferences",
     type: "mixed",
     key: "captionStyle",
     parts: [
@@ -214,10 +218,10 @@ const STEPS = [
         label: "How long do you like your captions?",
         type: "select",
         options: [
-          "⚡ Short & punchy — 1-2 lines max",
+          "⚡ Short & punchy",
           "📝 Medium — a few sentences",
           "📖 Long-form — full stories",
-          "🔄 Depends on the post — mix it up"
+          "🔀 Depends on the post"
         ]
       },
       {
@@ -225,18 +229,18 @@ const STEPS = [
         label: "How do you feel about emojis in your captions?",
         type: "select",
         options: [
-          "🎉 Love them — use them freely",
-          "✨ A few here and there",
-          "🚫 Minimal to none — keep it clean",
-          "🎯 Match the vibe of each post"
+          "😍 Love them — use them freely",
+          "⚖️ A few here and there",
+          "🚫 Minimal to none",
+          "🎭 Match the vibe of each post"
         ]
       },
     ],
   },
   {
     id: 10,
-    title: "How You Engage 💡",
-    subtitle: "Section 4 — Your Caption Preferences",
+    title: "How You Engage",
+    subtitle: "Section 4 : Your Caption Preferences",
     type: "mixed",
     key: "engagement",
     parts: [
@@ -245,12 +249,12 @@ const STEPS = [
         label: "How do you like to end your captions?", 
         type: "select", 
         options: [
-          "💬 Ask a question to spark conversation",
-          "📢 Tell them to follow / like / share",
-          "🔗 Direct them elsewhere (link in bio)",
-          "📊 Use a poll or 'this or that'",
-          "🤫 No CTA — let content speak",
-          "🔄 Mix it up depending on post"
+          "❓ Ask a question",
+          "📣 Call to action (like/follow)",
+          "🔗 Direct elsewhere (link in bio)",
+          "🗳️ Use a poll or 'this or that'",
+          "🙊 No CTA — let content speak",
+          "🔀 Mix it up"
         ] 
       },
       { 
@@ -258,11 +262,11 @@ const STEPS = [
         label: "What do you like the body of your captions to sound like?", 
         type: "select", 
         options: [
-          "📖 Personal thought or story",
-          "🎯 Describe what's happening",
-          "🗣️ Start a debate or ask audience",
-          "📚 Share tips, value, or info",
-          "📸 Keep it minimal — visuals only"
+          "💭 Personal thought or story",
+          "📽️ Describe what's happening",
+          "🗣️ Start a debate",
+          "💡 Share tips, value, or info",
+          "➖ Keep it minimal"
         ] 
       },
     ],
@@ -299,6 +303,48 @@ export default function Onboarding() {
     }
   };
 
+  const [isListening, setIsListening] = useState(false);
+  const [activeInputKey, setActiveInputKey] = useState<{parent: string, partId?: string} | null>(null);
+
+  const startListening = async (parentKey: string, partId?: string) => {
+    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!result.granted) return;
+
+    setActiveInputKey({ parent: parentKey, partId });
+    setIsListening(true);
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: true,
+    });
+  };
+
+  const stopListening = () => {
+    ExpoSpeechRecognitionModule.stop();
+    setIsListening(false);
+    setActiveInputKey(null);
+  };
+
+  useSpeechRecognitionEvent("result", (event) => {
+    if (activeInputKey) {
+      const transcript = event.results[0]?.transcript;
+      if (transcript) {
+        if (activeInputKey.partId) {
+          updateAnswer(activeInputKey.parent, { 
+            ...(answers[activeInputKey.parent] || {}), 
+            [activeInputKey.partId]: transcript 
+          });
+        } else {
+          updateAnswer(activeInputKey.parent, transcript);
+        }
+      }
+    }
+  });
+
+  useSpeechRecognitionEvent("error", () => {
+    setIsListening(false);
+    setActiveInputKey(null);
+  });
+
   const updateAnswer = (key: string, value: any) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
   };
@@ -312,24 +358,50 @@ export default function Onboarding() {
     }
   };
 
+  const getPlatformIcon = (platform: string, isSelected: boolean) => {
+    const color = isSelected ? "black" : "white";
+    const size = 22;
+    switch (platform) {
+      case "Instagram": return <FontAwesome5 name="instagram" color={color} size={size} />;
+      case "TikTok": return <FontAwesome6 name="tiktok" color={color} size={size} />;
+      case "YouTube": return <FontAwesome5 name="youtube" color={color} size={size} />;
+      case "X": return <FontAwesome6 name="x-twitter" color={color} size={size} />;
+      case "Facebook": return <FontAwesome5 name="facebook" color={color} size={size} />;
+      case "LinkedIn": return <FontAwesome5 name="linkedin" color={color} size={size} />;
+      case "Snapchat": return <FontAwesome5 name="snapchat" color={color} size={size} />;
+      default: return null;
+    }
+  };
+
   const renderInput = (part: any, parentKey: string) => {
     const value = answers[parentKey]?.[part.id] || "";
+    const isThisInputListening = isListening && activeInputKey?.parent === parentKey && activeInputKey?.partId === part.id;
 
     if (part.type === "textarea") {
       return (
         <View key={part.id} className="mb-6">
           <Text className="text-white/60 mb-3 text-sm font-medium">{part.label}</Text>
-          <View className="rounded-[20px] bg-white/10 overflow-hidden border border-white/10">
-            <TextInput
-              multiline
-              numberOfLines={4}
-              placeholder={part.placeholder}
-              placeholderTextColor="#ffffff40"
-              className="px-4 py-4 text-white min-h-[120px] text-base"
-              style={{ textAlignVertical: "top" }}
-              value={value}
-              onChangeText={(txt) => updateAnswer(parentKey, { ...answers[parentKey], [part.id]: txt })}
-            />
+          <View className="rounded-[24px] bg-white/5 overflow-hidden border border-white/10 shadow-xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+            <BlurView intensity={20} tint="dark" className="p-1">
+              <View className="flex-row">
+                <TextInput
+                  multiline
+                  numberOfLines={4}
+                  placeholder={part.placeholder}
+                  placeholderTextColor="#ffffff40"
+                  className="flex-1 px-4 py-4 text-white min-h-[120px] text-base"
+                  style={{ textAlignVertical: "top" }}
+                  value={value}
+                  onChangeText={(txt) => updateAnswer(parentKey, { ...answers[parentKey], [part.id]: txt })}
+                />
+                <TouchableOpacity 
+                  onPress={() => isThisInputListening ? stopListening() : startListening(parentKey, part.id)}
+                  className={`m-2 w-10 h-10 rounded-full items-center justify-center ${isThisInputListening ? 'bg-red-500' : 'bg-white/10'}`}
+                >
+                  {isThisInputListening ? <ActivityIndicator size="small" color="white" /> : <Mic color="white" size={18} />}
+                </TouchableOpacity>
+              </View>
+            </BlurView>
           </View>
         </View>
       );
@@ -344,23 +416,29 @@ export default function Onboarding() {
             {part.options.map((platform: string) => {
               const isSelected = !!selectedPlatforms[platform];
               return (
-                <View key={platform} className="gap-2">
-                  <TouchableOpacity
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      const updated = { ...selectedPlatforms };
-                      if (isSelected) delete updated[platform];
-                      else updated[platform] = { selected: true, count: "" };
-                      updateAnswer(parentKey, { ...answers[parentKey], [part.id]: updated });
-                    }}
-                    className={`flex-row items-center justify-between p-4 rounded-[20px] border ${isSelected ? "bg-white border-white" : "bg-white/5 border-white/10"
-                      }`}
-                  >
-                    <Text className={`font-semibold ${isSelected ? "text-black" : "text-white"}`}>
-                      {platform}
-                    </Text>
-                    {isSelected && <Check size={18} color="black" />}
-                  </TouchableOpacity>
+                <View key={platform} className="gap-2 w-full">
+                  <View className={`rounded-[20px] overflow-hidden border h-16 w-full ${isSelected ? "bg-white border-white" : "border-white/10"}`}>
+                    <BlurView intensity={isSelected ? 0 : 20} tint="dark" className="h-full w-full">
+                      <TouchableOpacity
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          const updated = { ...selectedPlatforms };
+                          if (isSelected) delete updated[platform];
+                          else updated[platform] = { selected: true, count: "" };
+                          updateAnswer(parentKey, { ...answers[parentKey], [part.id]: updated });
+                        }}
+                        className={`flex-row items-center justify-between px-4 h-full w-full ${isSelected ? "bg-white" : ""}`}
+                      >
+                        <View className="flex-row items-center gap-3">
+                          {getPlatformIcon(platform, isSelected)}
+                          <Text className={`font-semibold text-lg ${isSelected ? "text-black" : "text-white"}`}>
+                            {platform}
+                          </Text>
+                        </View>
+                        {isSelected && <Check size={18} color="black" />}
+                      </TouchableOpacity>
+                    </BlurView>
+                  </View>
 
                   {isSelected && (
                     <View className="mx-2 mt-1 flex-row flex-wrap gap-2">
@@ -375,10 +453,9 @@ export default function Onboarding() {
                               updated[platform] = { ...updated[platform], count: range };
                               updateAnswer(parentKey, { ...answers[parentKey], [part.id]: updated });
                             }}
-                            className={`px-3 py-1.5 rounded-lg border ${isRangeSelected ? "bg-white/90 border-white" : "bg-white/5 border-white/10"
-                              }`}
+                            className={`px-3 py-2 rounded-full border ${isRangeSelected ? "bg-white/20 border-white" : "border-white/10 bg-white/5"}`}
                           >
-                            <Text className={`text-[10px] uppercase font-bold ${isRangeSelected ? "text-black" : "text-white/60"}`}>
+                            <Text className={`text-xs font-bold ${isRangeSelected ? "text-white" : "text-white/40"}`}>
                               {range}
                             </Text>
                           </TouchableOpacity>
@@ -403,22 +480,24 @@ export default function Onboarding() {
             {part.options.map((option: string) => {
               const isSelected = selected.includes(option);
               return (
-                <TouchableOpacity
-                  key={option}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    const updatedList = isSelected
-                      ? selected.filter((o: string) => o !== option)
-                      : [...selected, option];
-                    updateAnswer(parentKey, { ...answers[parentKey], [part.id]: updatedList });
-                  }}
-                  className={`px-4 py-2 rounded-full border ${isSelected ? "bg-white border-white" : "border-white/20"
-                    }`}
-                >
-                  <Text className={`text-sm ${isSelected ? "text-black font-semibold" : "text-white"}`}>
-                    {option}
-                  </Text>
-                </TouchableOpacity>
+                <View key={option} className={`rounded-full overflow-hidden border h-12 ${isSelected ? "bg-white border-white" : "border-white/20"}`}>
+                  <BlurView intensity={isSelected ? 0 : 20} tint="dark" className="h-full">
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        const updatedList = isSelected
+                          ? selected.filter((o: string) => o !== option)
+                          : [...selected, option];
+                        updateAnswer(parentKey, { ...answers[parentKey], [part.id]: updatedList });
+                      }}
+                      className={`px-5 h-full items-center justify-center ${isSelected ? "bg-white" : ""}`}
+                    >
+                      <Text className={`text-base font-medium ${isSelected ? "text-black" : "text-white"}`}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  </BlurView>
+                </View>
               );
             })}
           </View>
@@ -434,19 +513,21 @@ export default function Onboarding() {
             {part.options.map((option: string) => {
               const isSelected = answers[parentKey]?.[part.id] === option;
               return (
-                <TouchableOpacity
-                  key={option}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    updateAnswer(parentKey, { ...answers[parentKey], [part.id]: option });
-                  }}
-                  className={`px-4 py-2 rounded-full border ${isSelected ? "bg-white border-white" : "border-white/20"
-                    }`}
-                >
-                  <Text className={`text-sm ${isSelected ? "text-black font-semibold" : "text-white"}`}>
-                    {option}
-                  </Text>
-                </TouchableOpacity>
+                <View key={option} className={`rounded-full overflow-hidden border h-12 ${isSelected ? "bg-white border-white" : "border-white/20"}`}>
+                  <BlurView intensity={isSelected ? 0 : 20} tint="dark" className="h-full">
+                    <TouchableOpacity
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        updateAnswer(parentKey, { ...answers[parentKey], [part.id]: option });
+                      }}
+                      className={`px-5 h-full items-center justify-center ${isSelected ? "bg-white" : ""}`}
+                    >
+                      <Text className={`text-base font-medium ${isSelected ? "text-black" : "text-white"}`}>
+                        {option}
+                      </Text>
+                    </TouchableOpacity>
+                  </BlurView>
+                </View>
               );
             })}
           </View>
@@ -454,17 +535,27 @@ export default function Onboarding() {
       );
     }
 
+    const isThisGenericListening = isListening && activeInputKey?.parent === parentKey && activeInputKey?.partId === part.id;
+
     return (
       <View key={part.id} className="mb-6">
         <Text className="text-white/60 mb-3 text-sm font-medium">{part.label}</Text>
-        <View className="rounded-full bg-white/10 overflow-hidden border border-white/10 px-4 h-12 justify-center">
-          <TextInput
-            placeholder={part.placeholder}
-            placeholderTextColor="#ffffff40"
-            className="text-white text-base py-0 h-full"
-            value={value}
-            onChangeText={(txt) => updateAnswer(parentKey, { ...answers[parentKey], [part.id]: txt })}
-          />
+        <View className="rounded-full bg-white/5 overflow-hidden border border-white/10 h-14 justify-center" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+          <BlurView intensity={20} tint="dark" className="flex-row items-center px-4 h-full">
+            <TextInput
+              placeholder={part.placeholder}
+              placeholderTextColor="#ffffff40"
+              className="flex-1 text-white text-base py-0 h-full"
+              value={value}
+              onChangeText={(txt) => updateAnswer(parentKey, { ...answers[parentKey], [part.id]: txt })}
+            />
+            <TouchableOpacity 
+              onPress={() => isThisGenericListening ? stopListening() : startListening(parentKey, part.id)}
+              className={`w-9 h-9 rounded-full items-center justify-center ${isThisGenericListening ? 'bg-red-500' : 'bg-white/10'}`}
+            >
+              {isThisGenericListening ? <ActivityIndicator size="small" color="white" /> : <Mic color="white" size={16} />}
+            </TouchableOpacity>
+          </BlurView>
         </View>
       </View>
     );
@@ -524,17 +615,27 @@ export default function Onboarding() {
             )}
 
             {stepData.type === "textarea" && (
-              <View className="rounded-[20px] bg-white/10 overflow-hidden border border-white/10">
-                <TextInput
-                  multiline
-                  numberOfLines={6}
-                  placeholder={stepData.placeholder}
-                  placeholderTextColor="#ffffff40"
-                  className="px-6 py-6 text-white min-h-[200px] text-lg"
-                  style={{ textAlignVertical: "top" }}
-                  value={answers[stepData.key] || ""}
-                  onChangeText={(txt) => updateAnswer(stepData.key, txt)}
-                />
+              <View className="rounded-[24px] bg-white/5 overflow-hidden border border-white/10 shadow-2xl" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}>
+                <BlurView intensity={30} tint="dark" className="p-1">
+                  <View className="flex-row">
+                    <TextInput
+                      multiline
+                      numberOfLines={6}
+                      placeholder={stepData.placeholder}
+                      placeholderTextColor="#ffffff40"
+                      className="flex-1 px-6 py-6 text-white min-h-[220px] text-lg"
+                      style={{ textAlignVertical: "top" }}
+                      value={answers[stepData.key] || ""}
+                      onChangeText={(txt) => updateAnswer(stepData.key, txt)}
+                    />
+                    <TouchableOpacity 
+                      onPress={() => (isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId) ? stopListening() : startListening(stepData.key)}
+                      className={`m-4 w-12 h-12 rounded-full items-center justify-center ${(isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId) ? 'bg-red-500' : 'bg-white/10'}`}
+                    >
+                      {(isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId) ? <ActivityIndicator size="small" color="white" /> : <Mic color="white" size={20} />}
+                    </TouchableOpacity>
+                  </View>
+                </BlurView>
               </View>
             )}
 
@@ -543,20 +644,22 @@ export default function Onboarding() {
                 {stepData.options?.map((option: string) => {
                   const isSelected = (answers[stepData.key] || []).includes(option);
                   return (
-                    <TouchableOpacity
-                      key={option}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        updateMultiAnswer(stepData.key, option, stepData.limit);
-                      }}
-                      className={`w-full p-5 rounded-[20px] flex-row items-center justify-between border ${isSelected ? "bg-white border-white" : "bg-white/5 border-white/10"
-                        }`}
-                    >
-                      <Text className={`text-lg font-medium ${isSelected ? "text-black" : "text-white"}`}>
-                        {option}
-                      </Text>
-                      {isSelected && <Check size={20} color="black" />}
-                    </TouchableOpacity>
+                    <View key={option} className={`w-full overflow-hidden rounded-[24px] border h-20 ${isSelected ? "bg-white border-white" : "border-white/10 shadow-lg"}`}>
+                      <BlurView intensity={isSelected ? 0 : 30} tint="dark" className="h-full">
+                        <TouchableOpacity
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateMultiAnswer(stepData.key, option, stepData.limit);
+                          }}
+                          className={`px-5 flex-row items-center justify-between h-full ${isSelected ? "bg-white" : ""}`}
+                        >
+                          <Text className={`text-xl font-medium ${isSelected ? "text-black" : "text-white"}`}>
+                            {option}
+                          </Text>
+                          {isSelected && <Check size={24} color="black" strokeWidth={3} />}
+                        </TouchableOpacity>
+                      </BlurView>
+                    </View>
                   );
                 })}
                 {stepData.limit && (

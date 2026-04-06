@@ -1,6 +1,8 @@
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
+import { MotiView } from "moti";
 import {
+  Dimensions,
   Image,
   ImageBackground,
   SafeAreaView,
@@ -9,14 +11,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Svg, {
-  Defs,
-  Rect,
-  Stop,
-  LinearGradient as SvgLinearGradient,
-} from "react-native-svg";
 import { FontFamily, normalize } from "../constants/Fonts";
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 export default function Welcome() {
   const router = useRouter();
 
@@ -38,119 +35,168 @@ export default function Welcome() {
       />
 
       <SafeAreaView className="flex-1">
-        <View className="flex-1 px-8 py-10 items-center justify-between">
+        <View className="flex-1 px-8 items-center">
 
-          {/* Header Graphic */}
-          <View className="flex-1 justify-center items-center">
-            <Image
-              source={require("../assets/images/welcome_bg.png")}
-              style={{
-                width: normalize(390),
-                height: normalize(480),
+          {/* Layered Hero Section */}
+          <View
+            style={{
+              width: SCREEN_WIDTH,
+              height: SCREEN_HEIGHT * 0.53,
+              marginTop: SCREEN_HEIGHT * 0.06,
+            }}
+            className="items-center justify-center mt-4"
+          >
+            {/* 1. Phone Mockup (Base) - Mild Fade Pulse */}
+            <MotiView
+              from={{ opacity: 0.9 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 3000,
+                loop: true,
               }}
-              resizeMode="contain"
-            />
+              style={{ width: SCREEN_WIDTH * 0.7, height: SCREEN_HEIGHT * 0.5 }}
+            >
+              <Image
+                source={require("../assets/images/welcome_bg1.png")}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="contain"
+              />
+            </MotiView>
+
+            {/* 2. Floating Icons Group - Safely Away from Borders */}
+            {/* Left Icons */}
+            <MotiView
+              from={{ opacity: 0.7 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 2500,
+                delay: 300,
+                loop: true,
+              }}
+              style={{ position: 'absolute', left: SCREEN_WIDTH * 0.04, top: SCREEN_HEIGHT * 0.12 }}
+            >
+              <Image source={require("../assets/welcome_page/facebook.png")} style={{ width: 65, height: 65 }} resizeMode="contain" />
+            </MotiView>
+
+            <MotiView
+              from={{ opacity: 0.6 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 3500,
+                delay: 500,
+                loop: true,
+              }}
+              style={{ position: 'absolute', left: SCREEN_WIDTH * 0.02, top: SCREEN_HEIGHT * 0.28 }}
+            >
+              <Image source={require("../assets/welcome_page/instagram.png")} style={{ width: 75, height: 75 }} resizeMode="contain" />
+            </MotiView>
+
+            <MotiView
+              from={{ opacity: 0.75 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 2800,
+                delay: 400,
+                loop: true,
+              }}
+              style={{ position: 'absolute', left: SCREEN_WIDTH * 0.05, top: SCREEN_HEIGHT * 0.43 }}
+            >
+              <Image source={require("../assets/welcome_page/tiktok.png")} style={{ width: 60, height: 60 }} resizeMode="contain" />
+            </MotiView>
+
+            {/* Right Icons */}
+            <MotiView
+              from={{ opacity: 0.65 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 2700,
+                delay: 400,
+                loop: true,
+              }}
+              style={{ position: 'absolute', right: SCREEN_WIDTH * 0.03, top: SCREEN_HEIGHT * 0.14 }}
+            >
+              <Image source={require("../assets/welcome_page/youtube.png")} style={{ width: 70, height: 70 }} resizeMode="contain" />
+            </MotiView>
+
+            <MotiView
+              from={{ opacity: 0.8 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 3200,
+                delay: 600,
+                loop: true,
+              }}
+              style={{ position: 'absolute', right: -1, top: SCREEN_HEIGHT * 0.3 }}
+            >
+              <Image source={require("../assets/welcome_page/snapchat.png")} style={{ width: 75, height: 75 }} resizeMode="contain" />
+            </MotiView>
+
+            <MotiView
+              from={{ opacity: 0.7 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                type: 'timing',
+                duration: 2400,
+                delay: 500,
+                loop: true,
+              }}
+              style={{ position: 'absolute', right: SCREEN_WIDTH * 0.06, top: SCREEN_HEIGHT * 0.43 }}
+            >
+              <Image source={require("../assets/welcome_page/twitter.png")} style={{ width: 55, height: 55 }} resizeMode="contain" />
+            </MotiView>
           </View>
 
-          {/* Text Content */}
-          <View className="items-center mb-4">
-            <Text
-              style={styles.heading}
-              className="text-white text-center"
-            >
-              Post Smarter
-            </Text>
-            <Text
-              style={styles.heading}
-              className="text-white text-center"
-            >
-              Not Harder
-            </Text>
-          </View>
+          {/* Spacer to push content to bottom */}
+          <View className="flex-1" />
 
-          {/* Action Button */}
-          <View className="w-full gap-4">
-            <TouchableOpacity
-              className="w-full h-16 overflow-hidden rounded-full shadow-lg"
-              onPress={() => router.push("/login")}
-            >
-              <ImageBackground
-                source={require("../assets/images/post_without.jpg")}
-                className="w-full h-full items-center justify-center"
-                resizeMode="cover"
+          {/* Group headline and button together */}
+          <View className="w-full items-center mb-8">
+            {/* Text Content */}
+            <View className="items-center mb-8">
+              <Text
+                style={styles.heading}
+                className="text-white text-center"
               >
-                <View className="absolute inset-0 bg-[#00000020]" />
-                <Text className="text-white font-semibold text-xl tracking-tight">
-                  Get Started
-                </Text>
-              </ImageBackground>
-            </TouchableOpacity>
-
-            <View
-              style={{
-                shadowColor: "#000000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.25,
-                shadowRadius: 10,
-                elevation: 5,
-              }}
-              className="w-full h-16 rounded-full bg-[#FFFFFF1A] overflow-hidden hidden"
-            >
-              {/* Optional: 'Join the Community' button if needed, currently hidden to match reference image */}
-              <BlurView
-                intensity={30}
-                tint="light"
-                className="flex-1 items-center justify-center"
+                Post Smarter
+              </Text>
+              <Text
+                style={styles.heading}
+                className="text-white text-center"
               >
-                <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                  <Svg height="100%" width="100%">
-                    <Defs>
-                      <SvgLinearGradient
-                        id="welcomeBorderGrad"
-                        x1="0%"
-                        y1="0%"
-                        x2="0%"
-                        y2="100%"
-                      >
-                        <Stop
-                          offset="0%"
-                          stopColor="rgba(255, 255, 255, 0.4)"
-                          stopOpacity="1"
-                        />
-                        <Stop
-                          offset="100%"
-                          stopColor="rgba(0, 0, 0, 0.2)"
-                          stopOpacity="1"
-                        />
-                      </SvgLinearGradient>
-                    </Defs>
-                    <Rect
-                      x="0.5"
-                      y="0.5"
-                      width="99.7%"
-                      height="99.2%"
-                      rx="32"
-                      ry="32"
-                      stroke="url(#welcomeBorderGrad)"
-                      strokeWidth="1.5"
-                      fill="transparent"
-                    />
-                  </Svg>
-                </View>
-                <TouchableOpacity
-                  className="w-full h-full items-center justify-center"
-                  onPress={() => router.push("/signup")}
-                >
-                  <Text className="text-white font-medium text-base">
-                    Join the Community
-                  </Text>
-                </TouchableOpacity>
-              </BlurView>
+                Not Harder
+              </Text>
             </View>
 
-            <Text className="text-white/40 text-center text-xs mt-2">
-              Ready to take control of your social presence?
-            </Text>
+            {/* Action Button */}
+            <View className="w-full gap-4">
+              <TouchableOpacity
+                onPress={() => router.push("/login")}
+                activeOpacity={0.8}
+                className="w-full h-16 rounded-full overflow-hidden shadow-2xl"
+              >
+                <ImageBackground
+                  source={require("../assets/images/post_without.jpg")}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                >
+                  <BlurView intensity={20} className="w-full h-full items-center justify-center">
+                    <Text className="text-white font-bold text-xl tracking-wide">
+                      Get Started
+                    </Text>
+                  </BlurView>
+                </ImageBackground>
+              </TouchableOpacity>
+
+              <Text className="text-white/30 text-center text-[13px] font-medium italic">
+                Ready to take control of your social presence?
+              </Text>
+            </View>
           </View>
         </View>
       </SafeAreaView>
@@ -161,8 +207,9 @@ export default function Welcome() {
 const styles = StyleSheet.create({
   heading: {
     fontFamily: FontFamily.questrial,
-    fontSize: normalize(32),
-    lineHeight: 40,
-    fontWeight: '500',
+    fontSize: normalize(36),
+    lineHeight: 44,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
 });
