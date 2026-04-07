@@ -277,13 +277,13 @@ const getPublishSuccessCopy = ({
 
   if (scheduledAt) {
     return {
-      notificationMessage: `Your ${contentType} has been scheduled to post on ${destination} at ${scheduledAt}.`,
+      notificationMessage: `Your ${contentType} has been scheduled successfully to post on ${destination} at ${scheduledAt}.🎉`,
       toastMessage: `Scheduled on ${destination} at ${scheduledAt}`,
     };
   }
 
   return {
-    notificationMessage: `Your ${contentType} has been published to ${destination}.`,
+    notificationMessage: `Your ${contentType} has been successfully published to ${destination}.🎉`,
     toastMessage: `Published to ${destination}`,
   };
 };
@@ -1570,6 +1570,15 @@ export default function CreatePost() {
         );
       }
 
+      // Add notification if app is in background state
+      if (isBackgroundPublishing.current) {
+        addNotification({
+          type: "success",
+          title: "Post is Live",
+          message: notificationMessage,
+        });
+      }
+
       // Toast.show({
       //   type: "success",
       //   text1: `${contentType} Created`,
@@ -1589,6 +1598,11 @@ export default function CreatePost() {
       // If app went to background during publishing, backend likely processed it.
       // We clear the fields assuming it succeeded, to prevent stale data.
       if (isBackgroundPublishing.current) {
+        addNotification({
+          type: "error",
+          title: `${activeTab} Creation Failed`,
+          message: `Failed to create your ${activeTab.toLowerCase()} in the background. Please try again.`,
+        });
         setTabData(getInitialTabData());
         setTagInputText("");
         setCoverDurationMs(0);
