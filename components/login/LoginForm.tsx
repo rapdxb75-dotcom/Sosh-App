@@ -5,20 +5,20 @@ import { jwtDecode } from "jwt-decode";
 import { Eye, EyeOff } from "lucide-react-native";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    ImageBackground,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Image,
+  ImageBackground,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Svg, {
-    Defs,
-    Rect,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Defs,
+  Rect,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useDispatch } from "react-redux";
@@ -27,12 +27,12 @@ import { useNotification } from "../../context/NotificationContext";
 import authService from "../../services/api/auth";
 import chatService from "../../services/api/chat";
 import {
-    getCurrentUserData,
-    initializeFCM,
-    initializeFirebase,
+  getCurrentUserData,
+  initializeFCM,
+  initializeFirebase,
 } from "../../services/firebase";
 import storageService from "../../services/storage";
-import { setUserData } from "../../store/userSlice";
+import { clearUserData, setUserData } from "../../store/userSlice";
 
 export default function LoginForm() {
   const router = useRouter();
