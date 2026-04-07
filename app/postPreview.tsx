@@ -4,40 +4,40 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    Camera,
-    ChevronLeft,
-    MoreHorizontal,
-    Volume2,
-    VolumeX,
-    X,
+  Camera,
+  ChevronLeft,
+  MoreHorizontal,
+  Volume2,
+  VolumeX,
+  X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    AppState,
-    Image,
-    ImageBackground,
-    Keyboard,
-    KeyboardAvoidingView,
-    Modal,
-    PanResponder,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
-    useWindowDimensions,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  AppState,
+  Image,
+  ImageBackground,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import Svg, {
-    Circle,
-    Defs,
-    Stop,
-    LinearGradient as SvgLinearGradient,
+  Circle,
+  Defs,
+  Stop,
+  LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
@@ -46,17 +46,17 @@ import { useNotification } from "../context/NotificationContext";
 import createPostService from "../services/api/createPost";
 import poppyService from "../services/api/poppy";
 import {
-    isSpeechRecognitionAvailable,
-    speechRecognitionModule,
-    useOptionalSpeechRecognitionEvent,
+  isSpeechRecognitionAvailable,
+  speechRecognitionModule,
+  useOptionalSpeechRecognitionEvent,
 } from "../services/speechRecognition";
 import storageService from "../services/storage";
 import {
-    type PreviewData,
-    clearPreviewData,
-    getPreviewData,
-    markPreviewPostSuccessReset,
-    setPreviewData,
+  type PreviewData,
+  clearPreviewData,
+  getPreviewData,
+  markPreviewPostSuccessReset,
+  setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
 
@@ -199,13 +199,13 @@ const getPublishSuccessCopy = ({
 
   if (scheduledAt) {
     return {
-      notificationMessage: `Your ${contentType} has been scheduled to post on ${destination} at ${scheduledAt}.`,
+      notificationMessage: `Your ${contentType} has been scheduled successfully to post on ${destination} at ${scheduledAt}.🎉`,
       toastMessage: `Scheduled on ${destination} at ${scheduledAt}`,
     };
   }
 
   return {
-    notificationMessage: `Your ${contentType} has been published to ${destination}.`,
+    notificationMessage: `Your ${contentType} has been successfully published to ${destination}.🎉`,
     toastMessage: `Published to ${destination}`,
   };
 };
@@ -920,6 +920,15 @@ export default function PostPreview() {
         );
       }
 
+      // Add notification if app is in background state
+      if (isBackgroundPublishing.current) {
+        addNotification({
+          type: "success",
+          title: "Post is Live",
+          message: notificationMessage,
+        });
+      }
+
       // Toast.show({
       //   type: "success",
       //   text1: `${contentType} Created`,
@@ -934,6 +943,11 @@ export default function PostPreview() {
 
       // If app went to background during publishing, backend likely processed it.
       if (isBackgroundPublishing.current) {
+        addNotification({
+          type: "error",
+          title: `${activeTab} Creation Failed`,
+          message: `Failed to create your ${activeTab.toLowerCase()} in the background. Please try again.`,
+        });
         markPreviewPostSuccessReset();
         clearPreviewData();
         router.back();
@@ -945,6 +959,16 @@ export default function PostPreview() {
         error?.code === "ECONNABORTED" &&
         error?.message?.includes("timeout")
       ) {
+        const isCarousel = Array.isArray(currentMedia);
+        const contentType =
+          activeTab === "Reel"
+            ? "Reel"
+            : activeTab === "Story"
+              ? "Story"
+              : isCarousel
+                ? "Carousel Post"
+                : "Post";
+
         // Backend often processes the post even if the connection times out
         // Toast.show({
         //   type: "success",
