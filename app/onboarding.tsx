@@ -1,7 +1,4 @@
-import {
-  FontAwesome5,
-  FontAwesome6
-} from "@expo/vector-icons";
+import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -25,7 +22,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
+import { useDispatch, useSelector } from "react-redux";
 import { FontFamily, normalize } from "../constants/Fonts";
+import { useNotification } from "../context/NotificationContext";
+import authService from "../services/api/auth";
+import storageService from "../services/storage";
+import { RootState } from "../store/store";
+import { clearUserData, setUserData } from "../store/userSlice";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -306,21 +310,144 @@ const STEPS = [
 
 export default function Onboarding() {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const { addNotification } = useNotification();
+  const registrationBuffer = useSelector(
+    (state: RootState) => state.user.registrationBuffer,
+  );
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
+  const [loading, setLoading] = useState(false);
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
   const stepData = STEPS[currentStep];
 
-  const handleNext = () => {
+  const handleNext = async () => {
     Haptics.selectionAsync();
     setDirection("forward");
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      // Completed
-      router.replace("/(tabs)/home");
+      // Final Finish
+      if (loading) return;
+
+      if (!registrationBuffer) {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Registration data not found. Please try signing up again.",
+        });
+        router.replace("/signup");
+        return;
+      }
+
+      try {
+        setLoading(true);
+
+        const onboardingData = {
+          step1: { brandDescription: answers["brandDescription"] || "" },
+          step2: {
+            targetAudienceAge: answers["audience"]?.["2a"] || [],
+            idealFollowerDescription: answers["audience"]?.["2b"] || "",
+          },
+          step3: {
+            activePlatforms: answers["social media"]?.["3a"] || {},
+            primaryGoal: answers["social media"]?.["3b"] || "",
+          },
+          step4: { brandPersonalityTraits: answers["brandPersonality"] || [] },
+          step5: {
+            contentCategories: answers["contentStyle"]?.["5a"] || [],
+            competitiveDifferentiator: answers["contentStyle"]?.["5b"] || "",
+          },
+          step6: { desiredAudienceFeelings: answers["audienceFeeling"] || [] },
+          step7: {
+            brandLanguage: answers["languageBoundaries"]?.["7a"] || "",
+            avoidedTopics: answers["languageBoundaries"]?.["7b"] || "",
+          },
+          step8: {
+            monitoredCompetitors: answers["competitors"]?.["8a"] || "",
+            respectedCompetitorTraits: answers["competitors"]?.["8b"] || "",
+            userEdgeFactor: answers["competitors"]?.["8c"] || "",
+          },
+          step9: {
+            preferredCaptionLength: answers["captionStyle"]?.["9a"] || "",
+            emojiUsagePreference: answers["captionStyle"]?.["9b"] || "",
+          },
+          step10: {
+            preferredCTAStyle: answers["engagement"]?.["10a"] || "",
+            captionBodyTone: answers["engagement"]?.["10b"] || "",
+          },
+        };
+
+        // 1. Register with all data
+        const registerResponse = await authService.register({
+          ...registrationBuffer,
+          subscription: "Pro",
+          onboardingData,
+        });
+
+        console.log("✅ Registration successful:", registerResponse);
+
+        // 2. Login automatically
+        const loginResponse = await authService.login({
+          email: registrationBuffer.email,
+          password: registrationBuffer.password,
+        });
+
+        console.log("✅ Login successful, token:", !!loginResponse.token);
+
+        // 3. Save session
+        if (loginResponse.token) {
+          // Clear any old user data first
+          dispatch(clearUserData());
+
+          await storageService.setToken(loginResponse.token);
+          await storageService.setEmail(registrationBuffer.email);
+          await storageService.setUsername(registrationBuffer.userName);
+
+          dispatch(
+            setUserData({
+              userName: registrationBuffer.userName,
+              email: registrationBuffer.email,
+            }),
+          );
+
+          addNotification({
+            type: "success",
+            title: "Signup Successful",
+            message:
+              "Welcome to Sosh! Your account has been created successfully.",
+          });
+
+          Toast.show({
+            type: "success",
+            text1: "Welcome to Sosh! 👋",
+            text2: "Account created successfully.",
+          });
+
+          router.replace("/(tabs)/home");
+        }
+      } catch (error: any) {
+        console.error("Finish Error:", error);
+        const errorMessage =
+          error.response?.data?.message ||
+          "Something went wrong. Please try again.";
+
+        addNotification({
+          type: "error",
+          title: "Signup Failed",
+          message: errorMessage,
+        });
+
+        Toast.show({
+          type: "error",
+          text1: "Registration Failed",
+          text2: errorMessage,
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -874,13 +1001,20 @@ export default function Onboarding() {
           <TouchableOpacity
             onPress={handleNext}
             activeOpacity={0.7}
-            className="flex-1 h-16 rounded-full bg-white items-center justify-center flex-row gap-2"
+            disabled={loading}
+            className={`flex-1 h-16 rounded-full items-center justify-center flex-row gap-2 ${loading ? "bg-white/50" : "bg-white"}`}
           >
-            <Text className="text-black font-bold text-lg">
-              {currentStep === STEPS.length - 1 ? "Finish" : "Next"}
-            </Text>
-            {currentStep < STEPS.length - 1 && (
-              <ArrowRight color="black" size={20} />
+            {loading ? (
+              <ActivityIndicator color="black" />
+            ) : (
+              <>
+                <Text className="text-black font-bold text-lg">
+                  {currentStep === STEPS.length - 1 ? "Finish" : "Next"}
+                </Text>
+                {currentStep < STEPS.length - 1 && (
+                  <ArrowRight color="black" size={20} />
+                )}
+              </>
             )}
           </TouchableOpacity>
         </View>

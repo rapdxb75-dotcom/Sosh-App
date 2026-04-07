@@ -20,18 +20,23 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
+import { useDispatch } from "react-redux";
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
+import { setRegistrationBuffer } from "../../store/userSlice";
 
 export default function SignupForm() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState({
     fullName: "",
+    userName: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -43,6 +48,7 @@ export default function SignupForm() {
     let isValid = true;
     const newErrors = {
       fullName: "",
+      userName: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -50,6 +56,11 @@ export default function SignupForm() {
 
     if (!fullName.trim()) {
       newErrors.fullName = "Full Name is required";
+      isValid = false;
+    }
+
+    if (!userName.trim()) {
+      newErrors.userName = "Username is required";
       isValid = false;
     }
 
@@ -79,21 +90,23 @@ export default function SignupForm() {
     if (isValid) {
       try {
         setLoading(true);
-        // Placeholder for API Call
-        setTimeout(() => {
-          setLoading(false);
-          Toast.show({
-            type: "success",
-            text1: "Account Created",
-            text2: "Welcome to Sosh! 👋",
-          });
-          router.replace("/onboarding");
-        }, 1500);
+        // Store data temporarily and move to onboarding
+        dispatch(
+          setRegistrationBuffer({
+            fullName,
+            userName,
+            email,
+            password,
+          }),
+        );
+
+        setLoading(false);
+        router.replace("/onboarding");
       } catch (error) {
         setLoading(false);
         Toast.show({
           type: "error",
-          text1: "Signup Failed",
+          text1: "Setup Failed",
           text2: "Something went wrong. Please try again.",
         });
       }
@@ -204,7 +217,37 @@ export default function SignupForm() {
               </BlurView>
             </View>
             {errors.fullName ? (
-              <Text className="text-red-500 text-xs ml-2 mt-1">{errors.fullName}</Text>
+              <Text className="text-red-500 text-xs ml-2 mt-1">
+                {errors.fullName}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Username Field */}
+          <View>
+            <Text className="text-white font-semibold mb-2 ml-1 px-1 text-sm">
+              Username
+            </Text>
+            <View className="overflow-hidden rounded-[20px]">
+              <BlurView intensity={20} tint="light">
+                <TextInput
+                  placeholder="johndoe"
+                  placeholderTextColor="#ffffff80"
+                  style={styles.input}
+                  className="w-full h-[48px] px-4 py-0 text-white"
+                  value={userName}
+                  onChangeText={(text) => {
+                    setUserName(text);
+                    if (errors.userName) setErrors({ ...errors, userName: "" });
+                  }}
+                  autoCapitalize="none"
+                />
+              </BlurView>
+            </View>
+            {errors.userName ? (
+              <Text className="text-red-500 text-xs ml-2 mt-1">
+                {errors.userName}
+              </Text>
             ) : null}
           </View>
 
@@ -231,7 +274,9 @@ export default function SignupForm() {
               </BlurView>
             </View>
             {errors.email ? (
-              <Text className="text-red-500 text-xs ml-2 mt-1">{errors.email}</Text>
+              <Text className="text-red-500 text-xs ml-2 mt-1">
+                {errors.email}
+              </Text>
             ) : null}
           </View>
 
@@ -258,7 +303,9 @@ export default function SignupForm() {
                     if (errors.password) setErrors({ ...errors, password: "" });
                   }}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
                   {showPassword ? (
                     <Eye size={18} color="#FFFFFF80" />
                   ) : (
@@ -268,7 +315,9 @@ export default function SignupForm() {
               </BlurView>
             </View>
             {errors.password ? (
-              <Text className="text-red-500 text-xs ml-2 mt-1">{errors.password}</Text>
+              <Text className="text-red-500 text-xs ml-2 mt-1">
+                {errors.password}
+              </Text>
             ) : null}
           </View>
 
@@ -329,7 +378,9 @@ export default function SignupForm() {
           {loading ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text className="text-white font-semibold text-lg">Create account</Text>
+            <Text className="text-white font-semibold text-lg">
+              Create account
+            </Text>
           )}
         </ImageBackground>
       </TouchableOpacity>
@@ -345,7 +396,7 @@ export default function SignupForm() {
       <View className="flex-row gap-4 justify-between">
         <TouchableOpacity
           className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => { }}
+          onPress={() => {}}
         >
           <AntDesign name="google" size={20} color="white" />
           <Text className="text-white font-medium">Sign up with Google</Text>
@@ -353,7 +404,7 @@ export default function SignupForm() {
 
         <TouchableOpacity
           className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => { }}
+          onPress={() => {}}
         >
           <AntDesign name="apple" size={20} color="white" />
           <Text className="text-white font-medium">Sign up with Apple</Text>
@@ -364,7 +415,9 @@ export default function SignupForm() {
       <View className="flex-row justify-center items-center mt-4">
         <Text className="text-white/40 text-sm">Already have an account? </Text>
         <TouchableOpacity onPress={() => router.push("/login")}>
-          <Text className="text-white font-semibold text-sm underline">Sign in</Text>
+          <Text className="text-white font-semibold text-sm underline">
+            Sign in
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

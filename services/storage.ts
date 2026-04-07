@@ -6,6 +6,7 @@ const PROFILE_PICTURE_KEY = "profile_picture";
 const NOTIFICATIONS_KEY = "app_notifications";
 const UNREAD_NOTIFICATIONS_COUNT_KEY = "app_unread_notifications_count";
 const EMAIL_KEY = "user_email";
+const HAS_LAUNCHED_KEY = "has_launched";
 
 const storageService = {
   /**
@@ -157,6 +158,30 @@ const storageService = {
     } catch (error) {
       console.error("Error getting unread count", error);
       return 0;
+    }
+  },
+
+  /**
+   * Set if the app has launched before
+   */
+  setHasLaunched: async (value: boolean) => {
+    try {
+      await AsyncStorage.setItem(HAS_LAUNCHED_KEY, JSON.stringify(value));
+    } catch (error) {
+      console.error("Error saving launch status", error);
+    }
+  },
+
+  /**
+   * Get if the app has launched before
+   */
+  getHasLaunched: async () => {
+    try {
+      const value = await AsyncStorage.getItem(HAS_LAUNCHED_KEY);
+      return value !== null ? JSON.parse(value) : false;
+    } catch (error) {
+      console.error("Error getting launch status", error);
+      return false;
     }
   },
 
