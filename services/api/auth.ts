@@ -17,8 +17,53 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface RegisterPayload {
+  fullName: string;
+  userName: string;
+  email: string;
+  password: string;
+  subscription?: string;
+  onboardingData?: {
+    step1: { brandDescription: string };
+    step2: { targetAudienceAge: string[]; idealFollowerDescription: string };
+    step3: {
+      activePlatforms: Record<
+        string,
+        { selected: boolean; followerCount: string }
+      >;
+      primaryGoal: string;
+    };
+    step4: { brandPersonalityTraits: string[] };
+    step5: { contentCategories: string[]; competitiveDifferentiator: string };
+    step6: { desiredAudienceFeelings: string[] };
+    step7: { brandLanguage: string; avoidedTopics: string };
+    step8: {
+      monitoredCompetitors: string;
+      respectedCompetitorTraits: string;
+      userEdgeFactor: string;
+    };
+    step9: { preferredCaptionLength: string; emojiUsagePreference: string };
+    step10: { preferredCTAStyle: string; captionBodyTone: string };
+  };
+}
+
 // Authentication Service
 const authService = {
+  /**
+   * Register a new user
+   * @param payload RegisterPayload
+   * @returns Promise<any>
+   */
+  register: async (payload: RegisterPayload) => {
+    try {
+      const response = await apiClient.post("/web-register", payload);
+      return response.data;
+    } catch (error) {
+      console.error("Register API Error:", error);
+      throw error;
+    }
+  },
+
   /**
    * Login user with email and password
    * @param payload LoginPayload

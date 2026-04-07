@@ -28,15 +28,22 @@ interface UserState {
       model: string;
     };
   };
+  registrationBuffer: {
+    fullName: string;
+    userName: string;
+    email: string;
+    password: string;
+  } | null;
 }
 
 const initialState: UserState = {
-  userName: "RAPDXB",
+  userName: "",
   email: "",
   profilePicture: null,
   loading: false,
   isLoggedIn: false,
   aiAdditions: undefined,
+  registrationBuffer: null,
 };
 
 // Async thunk to initialize user data from storage
@@ -48,7 +55,7 @@ export const initializeUser = createAsyncThunk("user/initialize", async () => {
     storageService.getToken(),
   ]);
   return {
-    userName: userName || "RAPDXB",
+    userName: userName || "",
     email: email || "",
     profilePicture,
     isLoggedIn: !!token,
@@ -83,11 +90,18 @@ const userSlice = createSlice({
       state.isLoggedIn = true;
     },
     clearUserData: (state) => {
-      state.userName = "RAPDXB";
+      state.userName = "";
       state.email = "";
       state.profilePicture = null;
       state.isLoggedIn = false;
       state.aiAdditions = undefined;
+      state.registrationBuffer = null;
+    },
+    setRegistrationBuffer: (
+      state,
+      action: PayloadAction<UserState["registrationBuffer"]>,
+    ) => {
+      state.registrationBuffer = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -100,7 +114,8 @@ const userSlice = createSlice({
   },
 });
 
-export const { setUserData, clearUserData } = userSlice.actions;
+export const { setUserData, clearUserData, setRegistrationBuffer } =
+  userSlice.actions;
 
 // Action to update state AND storage
 export const updateUser =
