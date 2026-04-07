@@ -1,21 +1,16 @@
-import { useRouter } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import {
-    Image,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    TouchableOpacity,
-    TouchableWithoutFeedback,
-    View,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  TouchableWithoutFeedback,
+  View,
 } from "react-native";
-import LoginForm from "../components/login/LoginForm";
+import SignupForm from "../components/signup/SignupForm";
 
-export default function Login() {
-  const router = useRouter();
-
+export default function Signup() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={{ flex: 1, backgroundColor: "#000" }}>
@@ -25,25 +20,17 @@ export default function Login() {
           resizeMode="cover"
         />
         <SafeAreaView className="flex-1">
-          <View className="px-6 py-2">
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              className="w-10 h-10 items-center justify-center rounded-full bg-white/10"
-            >
-              <ArrowLeft color="white" size={24} />
-            </TouchableOpacity>
-          </View>
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{ flex: 1 }}
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
-            <ScrollView 
+            <ScrollView
               className="flex-1 px-6 pb-8"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ flexGrow: 1 }}
             >
-              <LoginForm />
+              <SignupForm />
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>

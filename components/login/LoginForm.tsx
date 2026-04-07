@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { AntDesign } from "@expo/vector-icons";
 import Svg, {
   Defs,
   Rect,
@@ -375,6 +376,44 @@ export default function LoginForm() {
           )}
         </ImageBackground>
       </TouchableOpacity>
+
+      {/* Divider */}
+      <View className="flex-row items-center my-2">
+        <View className="flex-1 h-[1px] bg-white/20" />
+        <Text className="text-white/40 px-4 text-xs font-medium">OR</Text>
+        <View className="flex-1 h-[1px] bg-white/20" />
+      </View>
+
+      {/* Social Logins */}
+      <View className="flex-row gap-4 justify-between">
+        <TouchableOpacity
+          className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
+          onPress={() => {
+            /* Google login logic */
+          }}
+        >
+          <AntDesign name="google" size={20} color="white" />
+          <Text className="text-white font-medium">Sign in with Google</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
+          onPress={() => {
+            /* Apple login logic */
+          }}
+        >
+          <AntDesign name="apple" size={20} color="white" />
+          <Text className="text-white font-medium">Sign in with Apple</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Signup Link */}
+      <View className="flex-row justify-center items-center mt-4">
+        <Text className="text-white/40 text-sm">Don't have an account? </Text>
+        <TouchableOpacity onPress={() => router.push("/signup")}>
+          <Text className="text-white font-semibold text-sm underline">Sign up</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
