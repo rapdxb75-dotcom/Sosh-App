@@ -396,7 +396,7 @@ export default function SignupForm() {
       <View className="flex-row gap-4 justify-between">
         <TouchableOpacity
           className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => {}}
+          onPress={() => { }}
         >
           <AntDesign name="google" size={20} color="white" />
           <Text className="text-white font-medium">Sign up with Google</Text>
@@ -404,7 +404,7 @@ export default function SignupForm() {
 
         <TouchableOpacity
           className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => {}}
+          onPress={() => { }}
         >
           <AntDesign name="apple" size={20} color="white" />
           <Text className="text-white font-medium">Sign up with Apple</Text>
@@ -428,7 +428,8 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: FontFamily.questrial,
     fontSize: FontSize.heading,
-    lineHeight: 56,
+    // lineHeight: normalize(64),
+    // includeFontPadding: false,
   },
   input: {
     fontFamily: FontFamily.interRegular,
