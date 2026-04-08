@@ -427,7 +427,8 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: FontFamily.questrial,
     fontSize: FontSize.heading,
-    lineHeight: 56,
+    // lineHeight: normalize(64),
+    // includeFontPadding: false,
   },
   input: {
     fontFamily: FontFamily.interRegular,
