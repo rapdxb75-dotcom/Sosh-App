@@ -78,6 +78,7 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
       sound: true,
       badge: true,
       alert: true,
+      announcement: true,
     });
 
     return (
@@ -275,7 +276,7 @@ export const listenToUserData = (
 ) => {
   if (!userEmail) {
     console.log("No user email provided for listener");
-    return () => {}; // Return empty unsubscribe function
+    return () => { }; // Return empty unsubscribe function
   }
 
   const { db } = initializeFirebase();

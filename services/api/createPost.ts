@@ -68,7 +68,8 @@ const createPostService = {
 
       // Schedule date
       if (!publishNow && scheduleDate) {
-        formData.append("scheduleDate", scheduleDate.toISOString());
+        formData.append("scheduleDate", formatDateWithOffset(scheduleDate));
+        formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
       }
 
       // Media (single or carousel)
@@ -159,7 +160,8 @@ const createPostService = {
 
       // Schedule date
       if (!publishNow && scheduleDate) {
-        formData.append("scheduleDate", scheduleDate.toISOString());
+        formData.append("scheduleDate", formatDateWithOffset(scheduleDate));
+        formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
       }
 
       // Media
@@ -210,7 +212,8 @@ const createPostService = {
 
       // Schedule date
       if (!publishNow && scheduleDate) {
-        formData.append("scheduleDate", scheduleDate.toISOString());
+        formData.append("scheduleDate", formatDateWithOffset(scheduleDate));
+        formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
       }
 
       // Append platforms
@@ -271,7 +274,8 @@ const createPostService = {
 
       // Schedule date
       if (!publishNow && scheduleDate) {
-        formData.append("scheduleDate", scheduleDate.toISOString());
+        formData.append("scheduleDate", formatDateWithOffset(scheduleDate));
+        formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
       }
 
       tags.forEach((tag) => {
@@ -328,6 +332,26 @@ const createPostService = {
       throw error;
     }
   },
+};
+
+/**
+ * Helper to format date in ISO 8601 with local timezone offset
+ */
+const formatDateWithOffset = (date: Date): string => {
+  const offset = -date.getTimezoneOffset();
+  const diff = offset >= 0 ? "+" : "-";
+  const pad = (num: number) => (num < 10 ? "0" : "") + num;
+
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
+  const hours = pad(date.getHours());
+  const minutes = pad(date.getMinutes());
+  const seconds = pad(date.getSeconds());
+  const offsetHours = pad(Math.floor(Math.abs(offset) / 60));
+  const offsetMinutes = pad(Math.abs(offset) % 60);
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${diff}${offsetHours}:${offsetMinutes}`;
 };
 
 export default createPostService;
