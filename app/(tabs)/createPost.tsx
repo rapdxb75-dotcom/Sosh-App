@@ -277,13 +277,13 @@ const getPublishSuccessCopy = ({
 
   if (scheduledAt) {
     return {
-      notificationMessage: `Your ${contentType} has been scheduled successfully to post on ${destination} at ${scheduledAt}.🎉`,
+      notificationMessage: `Your ${contentType} has been scheduled successfully to post on ${destination} at ${scheduledAt}.`,
       toastMessage: `Scheduled on ${destination} at ${scheduledAt}`,
     };
   }
 
   return {
-    notificationMessage: `Your ${contentType} has been successfully published to ${destination}.🎉`,
+    notificationMessage: `Your ${contentType} has been successfully published to ${destination}.`,
     toastMessage: `Published to ${destination}`,
   };
 };
@@ -689,7 +689,7 @@ export default function CreatePost() {
     }
 
     Promise.all(promises)
-      .catch(() => {}) // suppress "Seeking interrupted"
+      .catch(() => { }) // suppress "Seeking interrupted"
       .finally(() => {
         isSeekingRef.current = false;
       });
@@ -738,7 +738,7 @@ export default function CreatePost() {
             scrubberPositionMsRef.current = actualMs;
             setScrubberPositionMs(actualMs);
             if (thumbVideoRef.current) {
-              thumbVideoRef.current.setPositionAsync(actualMs).catch(() => {});
+              thumbVideoRef.current.setPositionAsync(actualMs).catch(() => { });
             }
           } else {
             // Fallback just in case getStatus fails
@@ -917,9 +917,9 @@ export default function CreatePost() {
 
     const nextPreviewText = interimSpeechTextRef.current
       ? appendSpeechChunk(
-          committedSpeechTextRef.current,
-          interimSpeechTextRef.current,
-        )
+        committedSpeechTextRef.current,
+        interimSpeechTextRef.current,
+      )
       : committedSpeechTextRef.current;
 
     setCaption(nextPreviewText);
@@ -1736,7 +1736,7 @@ export default function CreatePost() {
       videoResizeMode: nextVideoResizeMode,
       instagramUsername:
         Array.isArray(socialMediaData.instagram) &&
-        socialMediaData.instagram.length >= 3
+          socialMediaData.instagram.length >= 3
           ? socialMediaData.instagram[2]
           : socialMediaData.instagram?.[0],
     };
@@ -2095,9 +2095,9 @@ export default function CreatePost() {
                           ...prev,
                           [activeTab]: {
                             ...getInitialTabData()[
-                              activeTab as keyof ReturnType<
-                                typeof getInitialTabData
-                              >
+                            activeTab as keyof ReturnType<
+                              typeof getInitialTabData
+                            >
                             ],
                           },
                         }));
@@ -2109,12 +2109,12 @@ export default function CreatePost() {
                     style={
                       isActive
                         ? {
-                            shadowColor: "#04C4FF",
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.31,
-                            shadowRadius: 14,
-                            elevation: 8,
-                          }
+                          shadowColor: "#04C4FF",
+                          shadowOffset: { width: 0, height: 0 },
+                          shadowOpacity: 0.31,
+                          shadowRadius: 14,
+                          elevation: 8,
+                        }
                         : undefined
                     }
                   >
@@ -2133,131 +2133,158 @@ export default function CreatePost() {
           {(activeTab === "Post" ||
             activeTab === "Reel" ||
             activeTab === "Story") && (
-            <View key={activeTab}>
-              <View
-                key={`first-card-${activeTab}`}
-                className="glass-card-container"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.45,
-                  shadowRadius: 24,
-                  elevation: 8,
-                }}
-              >
-                <BlurView intensity={14} tint="dark" className="flex-1">
-                  <View className="glass-card-gradient">
-                    {(activeTab === "Post" || activeTab === "Story") && (
-                      <>
-                        <Text className="input-label">Post type</Text>
-                        <View className="glass-input flex-row rounded-full p-1 mb-6">
-                          <BlurView
-                            intensity={5}
-                            tint="light"
-                            className="flex-1 flex-row"
-                          >
-                            <TouchableOpacity
-                              className={`post-type-btn ${postType === "Single" ? "post-type-btn-active" : ""}`}
-                              onPress={() => {
-                                Haptics.impactAsync(
-                                  Haptics.ImpactFeedbackStyle.Light,
-                                );
-                                setPostType("Single");
-                              }}
+              <View key={activeTab}>
+                <View
+                  key={`first-card-${activeTab}`}
+                  className="glass-card-container"
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.45,
+                    shadowRadius: 24,
+                    elevation: 8,
+                  }}
+                >
+                  <BlurView intensity={14} tint="dark" className="flex-1">
+                    <View className="glass-card-gradient">
+                      {(activeTab === "Post" || activeTab === "Story") && (
+                        <>
+                          <Text className="input-label">Post type</Text>
+                          <View className="glass-input flex-row rounded-full p-1 mb-6">
+                            <BlurView
+                              intensity={5}
+                              tint="light"
+                              className="flex-1 flex-row"
                             >
-                              <Text
-                                className={`post-type-btn-label ${postType === "Single" ? "post-type-btn-label-active" : ""}`}
+                              <TouchableOpacity
+                                className={`post-type-btn ${postType === "Single" ? "post-type-btn-active" : ""}`}
+                                onPress={() => {
+                                  Haptics.impactAsync(
+                                    Haptics.ImpactFeedbackStyle.Light,
+                                  );
+                                  setPostType("Single");
+                                }}
                               >
-                                {activeTab === "Story"
-                                  ? "Photo"
-                                  : "Single post"}
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              className={`post-type-btn ${postType === "Carousel" ? "post-type-btn-active" : ""}`}
-                              onPress={() => {
-                                Haptics.impactAsync(
-                                  Haptics.ImpactFeedbackStyle.Light,
-                                );
-                                setPostType("Carousel");
-                              }}
-                            >
-                              <Text
-                                className={`post-type-btn-label ${postType === "Carousel" ? "post-type-btn-label-active" : ""}`}
+                                <Text
+                                  className={`post-type-btn-label ${postType === "Single" ? "post-type-btn-label-active" : ""}`}
+                                >
+                                  {activeTab === "Story"
+                                    ? "Photo"
+                                    : "Single post"}
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                className={`post-type-btn ${postType === "Carousel" ? "post-type-btn-active" : ""}`}
+                                onPress={() => {
+                                  Haptics.impactAsync(
+                                    Haptics.ImpactFeedbackStyle.Light,
+                                  );
+                                  setPostType("Carousel");
+                                }}
                               >
-                                {activeTab === "Story"
-                                  ? "Video"
-                                  : "Carousel post"}
-                              </Text>
-                            </TouchableOpacity>
-                          </BlurView>
-                        </View>
-                      </>
-                    )}
+                                <Text
+                                  className={`post-type-btn-label ${postType === "Carousel" ? "post-type-btn-label-active" : ""}`}
+                                >
+                                  {activeTab === "Story"
+                                    ? "Video"
+                                    : "Carousel post"}
+                                </Text>
+                              </TouchableOpacity>
+                            </BlurView>
+                          </View>
+                        </>
+                      )}
 
-                    {/* Choose Template */}
-                    {/* <Text className="input-label">Choose template</Text>
+                      {/* Choose Template */}
+                      {/* <Text className="input-label">Choose template</Text>
                                         <TouchableOpacity className="glass-input mb-6" onPress={() => { }}>
                                             <BlurView intensity={5} tint="light" className="py-4 items-center">
                                                 <Text className="text-white/80 font-inter text-sm">Select template</Text>
                                             </BlurView>
                                         </TouchableOpacity> */}
 
-                    {/* Upload Media */}
-                    <Text className="input-label">
-                      {activeTab === "Reel" ? "Upload video" : "Upload media"}
-                    </Text>
-                    <View
-                      className={`glass-input mb-6 overflow-hidden ${currentMedia ? "" : "border-dashed"}`}
-                    >
-                      <BlurView intensity={5} tint="light">
-                        {currentMedia ? (
-                          <View>
-                            {Array.isArray(currentMedia) ? (
-                              (() => {
-                                const mediaArray = currentMedia as string[];
-                                const gridData = mediaArray.map((uri, idx) => ({
-                                  key: uri,
-                                  uri,
-                                  index: idx,
-                                }));
-                                if (gridData.length < 10) {
-                                  gridData.push({
-                                    key: "ADD_MORE_BUTTON",
-                                    uri: "ADD_MORE_BUTTON",
-                                    index: gridData.length,
-                                  });
-                                }
-                                // Calculate number of rows and derive the explicit height required
-                                const numRows = Math.ceil(gridData.length / 3);
-                                const gridHeight = numRows * itemWidth + 30;
+                      {/* Upload Media */}
+                      <Text className="input-label">
+                        {activeTab === "Reel" ? "Upload video" : "Upload media"}
+                      </Text>
+                      <View
+                        className={`glass-input mb-6 overflow-hidden ${currentMedia ? "" : "border-dashed"}`}
+                      >
+                        <BlurView intensity={5} tint="light">
+                          {currentMedia ? (
+                            <View>
+                              {Array.isArray(currentMedia) ? (
+                                (() => {
+                                  const mediaArray = currentMedia as string[];
+                                  const gridData = mediaArray.map((uri, idx) => ({
+                                    key: uri,
+                                    uri,
+                                    index: idx,
+                                  }));
+                                  if (gridData.length < 10) {
+                                    gridData.push({
+                                      key: "ADD_MORE_BUTTON",
+                                      uri: "ADD_MORE_BUTTON",
+                                      index: gridData.length,
+                                    });
+                                  }
+                                  // Calculate number of rows and derive the explicit height required
+                                  const numRows = Math.ceil(gridData.length / 3);
+                                  const gridHeight = numRows * itemWidth + 30;
 
-                                return (
-                                  <View
-                                    style={{
-                                      height: gridHeight,
-                                      width: "100%",
-                                      paddingTop: 14,
-                                    }}
-                                  >
-                                    <DraggableGrid
-                                      numColumns={3}
-                                      itemHeight={itemWidth}
-                                      data={gridData}
-                                      onDragRelease={(newData) => {
-                                        const updatedMedia = newData
-                                          .filter(
-                                            (item: any) =>
-                                              item.key !== "ADD_MORE_BUTTON",
-                                          )
-                                          .map((item: any) => item.uri);
-                                        updateActiveTab(
-                                          "carouselMedia",
-                                          updatedMedia,
-                                        );
+                                  return (
+                                    <View
+                                      style={{
+                                        height: gridHeight,
+                                        width: "100%",
+                                        paddingTop: 14,
                                       }}
-                                      renderItem={(item: any) => {
-                                        if (item.uri === "ADD_MORE_BUTTON") {
+                                    >
+                                      <DraggableGrid
+                                        numColumns={3}
+                                        itemHeight={itemWidth}
+                                        data={gridData}
+                                        onDragRelease={(newData) => {
+                                          const updatedMedia = newData
+                                            .filter(
+                                              (item: any) =>
+                                                item.key !== "ADD_MORE_BUTTON",
+                                            )
+                                            .map((item: any) => item.uri);
+                                          updateActiveTab(
+                                            "carouselMedia",
+                                            updatedMedia,
+                                          );
+                                        }}
+                                        renderItem={(item: any) => {
+                                          if (item.uri === "ADD_MORE_BUTTON") {
+                                            return (
+                                              <View
+                                                style={{
+                                                  width: itemWidth,
+                                                  height: itemWidth,
+                                                  padding: paddingEdge,
+                                                }}
+                                              >
+                                                <TouchableOpacity
+                                                  key={item.key}
+                                                  style={{ flex: 1 }}
+                                                  className="rounded-xl bg-white/5 items-center justify-center border border-white/20 border-dashed"
+                                                  onPress={() => pickMedia(true)}
+                                                >
+                                                  <Plus
+                                                    color="white"
+                                                    size={24}
+                                                    className="mb-2"
+                                                  />
+                                                  <Text className="text-white font-inter text-xs">
+                                                    Add more
+                                                  </Text>
+                                                </TouchableOpacity>
+                                              </View>
+                                            );
+                                          }
+
                                           return (
                                             <View
                                               style={{
@@ -2266,685 +2293,658 @@ export default function CreatePost() {
                                                 padding: paddingEdge,
                                               }}
                                             >
-                                              <TouchableOpacity
+                                              <View
                                                 key={item.key}
                                                 style={{ flex: 1 }}
-                                                className="rounded-xl bg-white/5 items-center justify-center border border-white/20 border-dashed"
-                                                onPress={() => pickMedia(true)}
+                                                className="relative rounded-xl overflow-hidden"
                                               >
-                                                <Plus
-                                                  color="white"
-                                                  size={24}
-                                                  className="mb-2"
-                                                />
-                                                <Text className="text-white font-inter text-xs">
-                                                  Add more
-                                                </Text>
-                                              </TouchableOpacity>
-                                            </View>
-                                          );
-                                        }
-
-                                        return (
-                                          <View
-                                            style={{
-                                              width: itemWidth,
-                                              height: itemWidth,
-                                              padding: paddingEdge,
-                                            }}
-                                          >
-                                            <View
-                                              key={item.key}
-                                              style={{ flex: 1 }}
-                                              className="relative rounded-xl overflow-hidden"
-                                            >
-                                              {isVideoUrl(item.uri) ? (
-                                                <Video
-                                                  source={{ uri: item.uri }}
-                                                  style={{
-                                                    width: "100%",
-                                                    height: "100%",
-                                                    borderRadius: 12,
-                                                  }}
-                                                  resizeMode={videoResizeMode}
-                                                  shouldPlay
-                                                  isLooping
-                                                  isMuted
-                                                />
-                                              ) : (
-                                                <Image
-                                                  source={{ uri: item.uri }}
-                                                  className="w-full h-full rounded-xl"
-                                                  resizeMode="cover"
-                                                />
-                                              )}
-                                              <TouchableOpacity
-                                                className="absolute top-2 right-2 bg-black/80 p-1.5 rounded-full"
-                                                onPress={() => {
-                                                  const newMedia = (
-                                                    currentMedia as string[]
-                                                  ).filter(
-                                                    (uri) => uri !== item.uri,
-                                                  );
-                                                  updateActiveTab(
-                                                    "carouselMedia",
-                                                    newMedia.length > 0
-                                                      ? newMedia
-                                                      : null,
-                                                  );
-                                                }}
-                                              >
-                                                <X color="white" size={12} />
-                                              </TouchableOpacity>
-                                              {isVideoUrl(item.uri) && (
+                                                {isVideoUrl(item.uri) ? (
+                                                  <Video
+                                                    source={{ uri: item.uri }}
+                                                    style={{
+                                                      width: "100%",
+                                                      height: "100%",
+                                                      borderRadius: 12,
+                                                    }}
+                                                    resizeMode={videoResizeMode}
+                                                    shouldPlay
+                                                    isLooping
+                                                    isMuted
+                                                  />
+                                                ) : (
+                                                  <Image
+                                                    source={{ uri: item.uri }}
+                                                    className="w-full h-full rounded-xl"
+                                                    resizeMode="cover"
+                                                  />
+                                                )}
                                                 <TouchableOpacity
-                                                  className="absolute top-2 right-10 bg-black/80 p-1.5 rounded-full"
+                                                  className="absolute top-2 right-2 bg-black/80 p-1.5 rounded-full"
                                                   onPress={() => {
-                                                    setVideoResizeMode(
-                                                      (prev) =>
-                                                        prev ===
-                                                        ResizeMode.COVER
-                                                          ? ResizeMode.CONTAIN
-                                                          : ResizeMode.COVER,
+                                                    const newMedia = (
+                                                      currentMedia as string[]
+                                                    ).filter(
+                                                      (uri) => uri !== item.uri,
+                                                    );
+                                                    updateActiveTab(
+                                                      "carouselMedia",
+                                                      newMedia.length > 0
+                                                        ? newMedia
+                                                        : null,
                                                     );
                                                   }}
                                                 >
-                                                  {videoResizeMode ===
-                                                  ResizeMode.COVER ? (
-                                                    <Minimize
-                                                      color="white"
-                                                      size={12}
-                                                    />
-                                                  ) : (
-                                                    <Maximize
-                                                      color="white"
-                                                      size={12}
-                                                    />
-                                                  )}
+                                                  <X color="white" size={12} />
                                                 </TouchableOpacity>
-                                              )}
+                                                {isVideoUrl(item.uri) && (
+                                                  <TouchableOpacity
+                                                    className="absolute top-2 right-10 bg-black/80 p-1.5 rounded-full"
+                                                    onPress={() => {
+                                                      setVideoResizeMode(
+                                                        (prev) =>
+                                                          prev ===
+                                                            ResizeMode.COVER
+                                                            ? ResizeMode.CONTAIN
+                                                            : ResizeMode.COVER,
+                                                      );
+                                                    }}
+                                                  >
+                                                    {videoResizeMode ===
+                                                      ResizeMode.COVER ? (
+                                                      <Minimize
+                                                        color="white"
+                                                        size={12}
+                                                      />
+                                                    ) : (
+                                                      <Maximize
+                                                        color="white"
+                                                        size={12}
+                                                      />
+                                                    )}
+                                                  </TouchableOpacity>
+                                                )}
+                                              </View>
                                             </View>
-                                          </View>
-                                        );
-                                      }}
-                                    />
-                                  </View>
-                                );
-                              })()
-                            ) : (
-                              <View
-                                style={{ padding: 14, alignItems: "center" }}
-                              >
+                                          );
+                                        }}
+                                      />
+                                    </View>
+                                  );
+                                })()
+                              ) : (
                                 <View
-                                  style={{
-                                    width: previewWidth,
-                                    height: previewHeight,
-                                    borderRadius: 16,
-                                    overflow: "hidden",
-                                  }}
+                                  style={{ padding: 14, alignItems: "center" }}
                                 >
-                                  {isVideoUrl(currentMedia) ? (
-                                    <Video
-                                      source={{ uri: currentMedia as string }}
-                                      style={{ width: "100%", height: "100%" }}
-                                      resizeMode={videoResizeMode}
-                                      shouldPlay
-                                      isLooping
-                                      isMuted
-                                    />
-                                  ) : (
-                                    <Image
-                                      source={{ uri: currentMedia as string }}
-                                      style={{ width: "100%", height: "100%" }}
-                                      resizeMode="cover"
-                                    />
-                                  )}
-                                  {isVideoUrl(currentMedia) && (
+                                  <View
+                                    style={{
+                                      width: previewWidth,
+                                      height: previewHeight,
+                                      borderRadius: 16,
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {isVideoUrl(currentMedia) ? (
+                                      <Video
+                                        source={{ uri: currentMedia as string }}
+                                        style={{ width: "100%", height: "100%" }}
+                                        resizeMode={videoResizeMode}
+                                        shouldPlay
+                                        isLooping
+                                        isMuted
+                                      />
+                                    ) : (
+                                      <Image
+                                        source={{ uri: currentMedia as string }}
+                                        style={{ width: "100%", height: "100%" }}
+                                        resizeMode="cover"
+                                      />
+                                    )}
+                                    {isVideoUrl(currentMedia) && (
+                                      <TouchableOpacity
+                                        style={{
+                                          position: "absolute",
+                                          top: 8,
+                                          right: 44,
+                                          backgroundColor: "rgba(0,0,0,0.8)",
+                                          padding: 6,
+                                          borderRadius: 100,
+                                        }}
+                                        onPress={() => {
+                                          setVideoResizeMode((prev) =>
+                                            prev === ResizeMode.COVER
+                                              ? ResizeMode.CONTAIN
+                                              : ResizeMode.COVER,
+                                          );
+                                        }}
+                                      >
+                                        {videoResizeMode === ResizeMode.COVER ? (
+                                          <Minimize color="white" size={12} />
+                                        ) : (
+                                          <Maximize color="white" size={12} />
+                                        )}
+                                      </TouchableOpacity>
+                                    )}
                                     <TouchableOpacity
                                       style={{
                                         position: "absolute",
                                         top: 8,
-                                        right: 44,
+                                        right: 8,
                                         backgroundColor: "rgba(0,0,0,0.8)",
                                         padding: 6,
                                         borderRadius: 100,
                                       }}
-                                      onPress={() => {
-                                        setVideoResizeMode((prev) =>
-                                          prev === ResizeMode.COVER
-                                            ? ResizeMode.CONTAIN
-                                            : ResizeMode.COVER,
-                                        );
-                                      }}
+                                      onPress={() =>
+                                        updateActiveTab(
+                                          activeTab === "Post"
+                                            ? "singleMedia"
+                                            : activeTab === "Story"
+                                              ? postType === "Single"
+                                                ? "photoMedia"
+                                                : "videoMedia"
+                                              : "media",
+                                          null,
+                                        )
+                                      }
                                     >
-                                      {videoResizeMode === ResizeMode.COVER ? (
-                                        <Minimize color="white" size={12} />
-                                      ) : (
-                                        <Maximize color="white" size={12} />
-                                      )}
+                                      <X color="white" size={12} />
                                     </TouchableOpacity>
-                                  )}
-                                  <TouchableOpacity
-                                    style={{
-                                      position: "absolute",
-                                      top: 8,
-                                      right: 8,
-                                      backgroundColor: "rgba(0,0,0,0.8)",
-                                      padding: 6,
-                                      borderRadius: 100,
-                                    }}
-                                    onPress={() =>
-                                      updateActiveTab(
-                                        activeTab === "Post"
-                                          ? "singleMedia"
-                                          : activeTab === "Story"
-                                            ? postType === "Single"
-                                              ? "photoMedia"
-                                              : "videoMedia"
-                                            : "media",
-                                        null,
-                                      )
-                                    }
-                                  >
-                                    <X color="white" size={12} />
-                                  </TouchableOpacity>
+                                  </View>
                                 </View>
-                              </View>
-                            )}
-                          </View>
-                        ) : (
-                          <TouchableOpacity
-                            className="py-8 items-center justify-center"
-                            onPress={() => pickMedia(false)}
-                          >
-                            <Upload color="white" size={24} className="mb-2" />
-                            <Text className="text-white font-inter text-sm">
-                              Select {activeTab === "Reel" ? "video" : "media"}{" "}
-                              <Text className="text-white/40">
-                                {postType === "Carousel" &&
-                                activeTab !== "Story"
-                                  ? "(up to 10)"
-                                  : ""}
+                              )}
+                            </View>
+                          ) : (
+                            <TouchableOpacity
+                              className="py-8 items-center justify-center"
+                              onPress={() => pickMedia(false)}
+                            >
+                              <Upload color="white" size={24} className="mb-2" />
+                              <Text className="text-white font-inter text-sm">
+                                Select {activeTab === "Reel" ? "video" : "media"}{" "}
+                                <Text className="text-white/40">
+                                  {postType === "Carousel" &&
+                                    activeTab !== "Story"
+                                    ? "(up to 10)"
+                                    : ""}
+                                </Text>
                               </Text>
-                            </Text>
-                          </TouchableOpacity>
-                        )}
-                      </BlurView>
-                    </View>
+                            </TouchableOpacity>
+                          )}
+                        </BlurView>
+                      </View>
 
-                    {/* Edit Cover Button for Reels */}
-                    {activeTab === "Reel" && (
-                      <TouchableOpacity
-                        className="w-full h-[52px] bg-white/10 rounded-full items-center justify-center mb-6 shadow-sm"
-                        onPress={() => {
-                          Haptics.impactAsync(
-                            Haptics.ImpactFeedbackStyle.Light,
-                          );
-                          setShowCoverModal(true);
-                        }}
-                      >
-                        <Text className="text-white font-inter font-semibold text-base">
-                          Edit cover
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-
-                    {/* Caption */}
-                    {activeTab !== "Story" && (
-                      <>
-                        <Text className="input-label">Caption</Text>
-                        <View
-                          className="flex-row gap-3 mb-6"
-                          style={{ alignItems: "stretch" }}
+                      {/* Edit Cover Button for Reels */}
+                      {activeTab === "Reel" && (
+                        <TouchableOpacity
+                          className="w-full h-[52px] bg-white/10 rounded-full items-center justify-center mb-6 shadow-sm"
+                          onPress={() => {
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Light,
+                            );
+                            setShowCoverModal(true);
+                          }}
                         >
-                          {/* Text Input */}
-                          <View className="flex-1 glass-input">
-                            <BlurView
-                              intensity={5}
-                              tint="light"
-                              className="p-4"
-                            >
-                              <TextInput
-                                className="text-white input-text-regular py-0"
-                                style={{ minHeight: 120, maxHeight: 120 }}
-                                placeholder="Write your caption..."
-                                placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                                multiline
-                                scrollEnabled={true}
-                                textAlignVertical="top"
-                                value={caption}
-                                onChangeText={setCaption}
-                              />
-                            </BlurView>
-                          </View>
+                          <Text className="text-white font-inter font-semibold text-base">
+                            Edit cover
+                          </Text>
+                        </TouchableOpacity>
+                      )}
 
-                          {/* Right Action Buttons - Pill Container */}
+                      {/* Caption */}
+                      {activeTab !== "Story" && (
+                        <>
+                          <Text className="input-label">Caption</Text>
                           <View
-                            className="overflow-hidden w-full"
-                            style={{ width: 42, height: 147, borderRadius: 20 }}
+                            className="flex-row gap-3 mb-6"
+                            style={{ alignItems: "stretch" }}
                           >
-                            <BlurView
-                              intensity={20}
-                              tint="light"
-                              style={{
-                                flex: 1,
-                                paddingHorizontal: 8,
-                                justifyContent: "space-evenly",
-                                alignItems: "center",
-                                backgroundColor: "#FFFFFF1A",
-                              }}
-                            >
-                              {/* Move / Expand */}
-                              <TouchableOpacity
-                                style={{
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  marginBottom: 14,
-                                }}
-                                onPress={() => {
-                                  Haptics.impactAsync(
-                                    Haptics.ImpactFeedbackStyle.Light,
-                                  );
-                                  setShowCaptionModal(true);
-                                }}
+                            {/* Text Input */}
+                            <View className="flex-1 glass-input">
+                              <BlurView
+                                intensity={5}
+                                tint="light"
+                                className="p-4"
                               >
-                                <Image
-                                  source={require("../../assets/icons/move.png")}
-                                  style={{ width: 30, height: 30 }}
-                                  resizeMode="contain"
+                                <TextInput
+                                  className="text-white input-text-regular py-0"
+                                  style={{ minHeight: 120, maxHeight: 120 }}
+                                  placeholder="Write your caption..."
+                                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                  multiline
+                                  scrollEnabled={true}
+                                  textAlignVertical="top"
+                                  value={caption}
+                                  onChangeText={setCaption}
                                 />
-                              </TouchableOpacity>
+                              </BlurView>
+                            </View>
 
-                              {/* AI */}
-                              <TouchableOpacity
+                            {/* Right Action Buttons - Pill Container */}
+                            <View
+                              className="overflow-hidden w-full"
+                              style={{ width: 42, height: 147, borderRadius: 20 }}
+                            >
+                              <BlurView
+                                intensity={20}
+                                tint="light"
                                 style={{
+                                  flex: 1,
+                                  paddingHorizontal: 8,
+                                  justifyContent: "space-evenly",
                                   alignItems: "center",
-                                  justifyContent: "center",
+                                  backgroundColor: "#FFFFFF1A",
                                 }}
-                                onPress={handleGenerateCaption}
-                                disabled={isGeneratingCaption}
                               >
-                                {isGeneratingCaption ? (
-                                  <ActivityIndicator
-                                    size="small"
-                                    color="#fff"
-                                  />
-                                ) : (
+                                {/* Move / Expand */}
+                                <TouchableOpacity
+                                  style={{
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginBottom: 14,
+                                  }}
+                                  onPress={() => {
+                                    Haptics.impactAsync(
+                                      Haptics.ImpactFeedbackStyle.Light,
+                                    );
+                                    setShowCaptionModal(true);
+                                  }}
+                                >
                                   <Image
-                                    source={require("../../assets/icons/chat_ai.png")}
+                                    source={require("../../assets/icons/move.png")}
                                     style={{ width: 30, height: 30 }}
                                     resizeMode="contain"
                                   />
-                                )}
-                              </TouchableOpacity>
+                                </TouchableOpacity>
 
-                              {/* Voice */}
-                              <TouchableOpacity
-                                style={{
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  marginTop: 14,
-                                }}
-                                onPress={
-                                  isListening ? stopListening : startListening
-                                }
-                              >
-                                <Animated.View
-                                  style={{ transform: [{ scale: pulseAnim }] }}
+                                {/* AI */}
+                                <TouchableOpacity
+                                  style={{
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                  onPress={handleGenerateCaption}
+                                  disabled={isGeneratingCaption}
                                 >
-                                  {isListening ? (
-                                    <View
-                                      style={{
-                                        width: 14,
-                                        height: 14,
-                                        backgroundColor: "#ff4444",
-                                        borderRadius: 2,
-                                      }}
+                                  {isGeneratingCaption ? (
+                                    <ActivityIndicator
+                                      size="small"
+                                      color="#fff"
                                     />
                                   ) : (
                                     <Image
-                                      source={require("../../assets/icons/caption_mike.png")}
+                                      source={require("../../assets/icons/chat_ai.png")}
                                       style={{ width: 30, height: 30 }}
                                       resizeMode="contain"
                                     />
                                   )}
-                                </Animated.View>
-                              </TouchableOpacity>
-                            </BlurView>
-                          </View>
-                        </View>
-                      </>
-                    )}
-
-                    {/* Tags */}
-                    {activeTab !== "Story" && (
-                      <>
-                        <Text className="input-label">Tags</Text>
-                        <View className="flex-row gap-3 mb-6">
-                          <View className="flex-1 glass-input flex-row items-center">
-                            <BlurView
-                              intensity={0}
-                              tint="light"
-                              className="flex-1 flex-row px-4"
-                            >
-                              <Text className="text-white/40 mr-2 input-text-regular">
-                                @
-                              </Text>
-                              <TextInput
-                                className="text-white font-inter font-semibold py-0 flex-1"
-                                placeholder="Add a tag"
-                                placeholderTextColor="rgba(255, 255, 255, 0.4)"
-                                value={tagInputText}
-                                onChangeText={setTagInputText}
-                                onSubmitEditing={handleAddTag}
-                                blurOnSubmit={false}
-                              />
-                            </BlurView>
-                          </View>
-                          <TouchableOpacity
-                            className="w-[61px] h-[52px] rounded-[20px] overflow-hidden bg-[#FFFFFF1A]"
-                            onPress={handleAddTag}
-                          >
-                            <BlurView
-                              intensity={14}
-                              tint="light"
-                              className="flex-1 items-center justify-center"
-                            >
-                              <Text className="text-white font-inter font-medium text-sm">
-                                Add
-                              </Text>
-                            </BlurView>
-                          </TouchableOpacity>
-                        </View>
-
-                        {/* Render Added Tags */}
-                        {activeTags && activeTags.length > 0 && (
-                          <View className="flex-row flex-wrap gap-2 mb-6 mt-[-8px]">
-                            {activeTags.map((tag: string, index: number) => (
-                              <View
-                                key={index}
-                                className="flex-row items-center bg-[#FFFFFF1A] px-3 py-2.5 rounded-full"
-                              >
-                                <Text className="text-white font-inter text-lg mr-2">
-                                  @{tag}
-                                </Text>
-                                <TouchableOpacity
-                                  onPress={() => handleRemoveTag(tag)}
-                                  className="bg-black/30 rounded-full p-0.5"
-                                >
-                                  <X color="white" size={16} />
                                 </TouchableOpacity>
-                              </View>
-                            ))}
-                          </View>
-                        )}
-                      </>
-                    )}
-                  </View>
-                </BlurView>
-              </View>
 
-              {/* Second Card: Post Settings */}
-              <View
-                key={`second-card-${activeTab}`}
-                className="glass-card-container"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.45,
-                  shadowRadius: 24,
-                  elevation: 8,
-                }}
-              >
-                <BlurView intensity={14} tint="dark" className="flex-1">
-                  <View className="glass-card-gradient">
-                    {/* Post On (Platforms) */}
-                    <Text className="input-label">Post on</Text>
-                    <View
-                      key={`platforms-${activeTab}-${postType}`}
-                      className="post-on-container"
-                    >
-                      {(() => {
-                        // Check if there are ANY connected accounts at all
-                        const hasAnyConnectedAccounts = Object.keys(
-                          socialMediaData,
-                        ).some(
-                          (key) =>
-                            Array.isArray(socialMediaData[key]) &&
-                            socialMediaData[key]!.length > 0,
-                        );
-
-                        if (!hasAnyConnectedAccounts) {
-                          return (
-                            <View className="w-full py-6 items-center justify-center">
-                              <Text className="text-white/60 text-center font-inter text-base">
-                                No Connected Accounts!{"\n"}Please Connect
-                                First!
-                              </Text>
+                                {/* Voice */}
+                                <TouchableOpacity
+                                  style={{
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    marginTop: 14,
+                                  }}
+                                  onPress={
+                                    isListening ? stopListening : startListening
+                                  }
+                                >
+                                  <Animated.View
+                                    style={{ transform: [{ scale: pulseAnim }] }}
+                                  >
+                                    {isListening ? (
+                                      <View
+                                        style={{
+                                          width: 14,
+                                          height: 14,
+                                          backgroundColor: "#ff4444",
+                                          borderRadius: 2,
+                                        }}
+                                      />
+                                    ) : (
+                                      <Image
+                                        source={require("../../assets/icons/caption_mike.png")}
+                                        style={{ width: 30, height: 30 }}
+                                        resizeMode="contain"
+                                      />
+                                    )}
+                                  </Animated.View>
+                                </TouchableOpacity>
+                              </BlurView>
                             </View>
-                          );
-                        }
+                          </View>
+                        </>
+                      )}
 
-                        const filteredPlatforms = [
-                          {
-                            id: "instagram",
-                            name: "Instagram",
-                            icon: require("../../assets/icons/instagram.png"),
-                          },
-                          {
-                            id: "tiktok",
-                            name: "TikTok",
-                            icon: require("../../assets/icons/tiktok.png"),
-                          },
-                          {
-                            id: "youtube",
-                            name: "Youtube",
-                            icon: require("../../assets/icons/youtube.png"),
-                          },
-                          {
-                            id: "snapchat",
-                            name: "Snapchat",
-                            icon: require("../../assets/icons/snapchat.png"),
-                          },
-                          {
-                            id: "x",
-                            name: "X",
-                            icon: require("../../assets/icons/twitter.png"),
-                          },
-                          {
-                            id: "facebook",
-                            name: "Facebook",
-                            icon: require("../../assets/icons/facebook.png"),
-                          },
-                        ].filter((p) => {
-                          // Check if platform key exists for Twitter (stored as 'twitter' in backend)
-                          const platformKey = p.id === "x" ? "twitter" : p.id;
-
-                          // Only show connected accounts
-                          const isConnected =
-                            socialMediaData[platformKey] &&
-                            Array.isArray(socialMediaData[platformKey]) &&
-                            socialMediaData[platformKey]!.length > 0;
-
-                          if (!isConnected) return false;
-
-                          // Platform-specific content type restrictions
-                          if (activeTab === "Post") {
-                            if (postType === "Single") {
-                              // Single Post: disable YouTube and Snapchat
-                              return !["youtube", "snapchat"].includes(p.id);
-                            } else if (postType === "Carousel") {
-                              // Carousel: Only Instagram, Facebook, X (Twitter)
-                              return ["instagram", "facebook", "x"].includes(
-                                p.id,
-                              );
-                            }
-                          }
-
-                          if (activeTab === "Reel") {
-                            // Reel: All except X (Twitter)
-                            return p.id !== "x";
-                          }
-
-                          if (activeTab === "Story") {
-                            // Story: Only Instagram, Facebook, Snapchat
-                            return [
-                              "instagram",
-                              "facebook",
-                              "snapchat",
-                            ].includes(p.id);
-                          }
-
-                          return true;
-                        });
-
-                        return filteredPlatforms.map((platform) => {
-                          const isSelected = selectedPlatforms[platform.id];
-
-                          // Determine if platform should be hidden due to carousel constraints
-                          if (
-                            activeTab === "Post" &&
-                            postType === "Carousel" &&
-                            currentMedia &&
-                            Array.isArray(currentMedia)
-                          ) {
-                            // 1. When select video so facebook button do not show
-                            if (platform.id === "facebook") {
-                              const hasVideo = currentMedia.some((url) =>
-                                isVideoUrl(url),
-                              );
-                              if (hasVideo) return null;
-                            }
-
-                            // 2. When choose more than 4 items then twitter button do not show
-                            if (
-                              platform.id === "x" &&
-                              currentMedia.length > 4
-                            ) {
-                              return null;
-                            }
-                          }
-
-                          return (
+                      {/* Tags */}
+                      {activeTab !== "Story" && (
+                        <>
+                          <Text className="input-label">Tags</Text>
+                          <View className="flex-row gap-3 mb-6">
+                            <View className="flex-1 glass-input flex-row items-center">
+                              <BlurView
+                                intensity={0}
+                                tint="light"
+                                className="flex-1 flex-row px-4"
+                              >
+                                <Text className="text-white/40 mr-2 input-text-regular">
+                                  @
+                                </Text>
+                                <TextInput
+                                  className="text-white font-inter font-semibold py-0 flex-1"
+                                  placeholder="Add a tag"
+                                  placeholderTextColor="rgba(255, 255, 255, 0.4)"
+                                  value={tagInputText}
+                                  onChangeText={setTagInputText}
+                                  onSubmitEditing={handleAddTag}
+                                  blurOnSubmit={false}
+                                />
+                              </BlurView>
+                            </View>
                             <TouchableOpacity
-                              key={platform.id}
-                              className={`post-on-btn ${isSelected ? "post-on-btn-selected" : ""}`}
-                              onPress={() => togglePlatform(platform.id)}
+                              className="w-[61px] h-[52px] rounded-[20px] overflow-hidden bg-[#FFFFFF1A]"
+                              onPress={handleAddTag}
                             >
                               <BlurView
-                                intensity={isSelected ? 0 : 5}
+                                intensity={14}
                                 tint="light"
-                                className="post-on-content"
+                                className="flex-1 items-center justify-center"
                               >
-                                <Image
-                                  source={platform.icon}
-                                  className={`post-on-icon ${isSelected ? "post-on-icon-selected" : ""}`}
-                                  resizeMode="contain"
-                                />
-                                <Text
-                                  className={`post-on-platform-name ${isSelected ? "post-on-platform-name-selected" : "post-on-platform-name-default"}`}
-                                >
-                                  {platform.name}
+                                <Text className="text-white font-inter font-medium text-sm">
+                                  Add
                                 </Text>
                               </BlurView>
                             </TouchableOpacity>
-                          );
-                        });
-                      })()}
+                          </View>
+
+                          {/* Render Added Tags */}
+                          {activeTags && activeTags.length > 0 && (
+                            <View className="flex-row flex-wrap gap-2 mb-6 mt-[-8px]">
+                              {activeTags.map((tag: string, index: number) => (
+                                <View
+                                  key={index}
+                                  className="flex-row items-center bg-[#FFFFFF1A] px-3 py-2.5 rounded-full"
+                                >
+                                  <Text className="text-white font-inter text-lg mr-2">
+                                    @{tag}
+                                  </Text>
+                                  <TouchableOpacity
+                                    onPress={() => handleRemoveTag(tag)}
+                                    className="bg-black/30 rounded-full p-0.5"
+                                  >
+                                    <X color="white" size={16} />
+                                  </TouchableOpacity>
+                                </View>
+                              ))}
+                            </View>
+                          )}
+                        </>
+                      )}
                     </View>
-                  </View>
-                </BlurView>
-              </View>
+                  </BlurView>
+                </View>
 
-              {/* Third Card: Schedule */}
-              <View
-                key={`third-card-${activeTab}`}
-                className="glass-card-container"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.45,
-                  shadowRadius: 24,
-                  elevation: 8,
-                }}
-              >
-                <BlurView intensity={14} tint="dark" className="flex-1">
-                  <View className="glass-card-gradient">
-                    {/* Schedule */}
-                    <Text className="input-label">Schedule</Text>
-                    <TouchableOpacity
-                      className="schedule-input flex-row items-center w-full"
-                      onPress={() => setShowDatePicker(true)}
-                    >
-                      <BlurView
-                        intensity={5}
-                        tint="light"
-                        className="flex-1 flex-row items-center px-4 py-3"
+                {/* Second Card: Post Settings */}
+                <View
+                  key={`second-card-${activeTab}`}
+                  className="glass-card-container"
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.45,
+                    shadowRadius: 24,
+                    elevation: 8,
+                  }}
+                >
+                  <BlurView intensity={14} tint="dark" className="flex-1">
+                    <View className="glass-card-gradient">
+                      {/* Post On (Platforms) */}
+                      <Text className="input-label">Post on</Text>
+                      <View
+                        key={`platforms-${activeTab}-${postType}`}
+                        className="post-on-container"
                       >
-                        <Image
-                          source={require("../../assets/icons/calender.png")}
-                          className="w-5 h-5 mr-3"
-                          resizeMode="contain"
-                          style={{ tintColor: "rgba(255, 255, 255, 0.6)" }}
-                        />
-                        <Text className="text-white/60 input-text-regular">
-                          {date ? date.toLocaleString() : "Select date & time"}
-                        </Text>
-                      </BlurView>
-                    </TouchableOpacity>
-                  </View>
-                </BlurView>
-              </View>
-              {/* Generate Post Button */}
-              <TouchableOpacity
-                className="w-full h-14 overflow-hidden rounded-full mb-6"
-                onPress={handlePreviewPost}
-                disabled={isPublishing}
-              >
-                <ImageBackground
-                  source={require("../../assets/images/generate_post.jpg")}
-                  className="w-full h-full items-center justify-center"
-                  resizeMode="cover"
+                        {(() => {
+                          // Check if there are ANY connected accounts at all
+                          const hasAnyConnectedAccounts = Object.keys(
+                            socialMediaData,
+                          ).some(
+                            (key) =>
+                              Array.isArray(socialMediaData[key]) &&
+                              socialMediaData[key]!.length > 0,
+                          );
+
+                          if (!hasAnyConnectedAccounts) {
+                            return (
+                              <View className="w-full py-6 items-center justify-center">
+                                <Text className="text-white/60 text-center font-inter text-base">
+                                  No Connected Accounts!{"\n"}Please Connect
+                                  First!
+                                </Text>
+                              </View>
+                            );
+                          }
+
+                          const filteredPlatforms = [
+                            {
+                              id: "instagram",
+                              name: "Instagram",
+                              icon: require("../../assets/icons/instagram.png"),
+                            },
+                            {
+                              id: "tiktok",
+                              name: "TikTok",
+                              icon: require("../../assets/icons/tiktok.png"),
+                            },
+                            {
+                              id: "youtube",
+                              name: "Youtube",
+                              icon: require("../../assets/icons/youtube.png"),
+                            },
+                            {
+                              id: "snapchat",
+                              name: "Snapchat",
+                              icon: require("../../assets/icons/snapchat.png"),
+                            },
+                            {
+                              id: "x",
+                              name: "X",
+                              icon: require("../../assets/icons/twitter.png"),
+                            },
+                            {
+                              id: "facebook",
+                              name: "Facebook",
+                              icon: require("../../assets/icons/facebook.png"),
+                            },
+                          ].filter((p) => {
+                            // Check if platform key exists for Twitter (stored as 'twitter' in backend)
+                            const platformKey = p.id === "x" ? "twitter" : p.id;
+
+                            // Only show connected accounts
+                            const isConnected =
+                              socialMediaData[platformKey] &&
+                              Array.isArray(socialMediaData[platformKey]) &&
+                              socialMediaData[platformKey]!.length > 0;
+
+                            if (!isConnected) return false;
+
+                            // Platform-specific content type restrictions
+                            if (activeTab === "Post") {
+                              if (postType === "Single") {
+                                // Single Post: disable YouTube and Snapchat
+                                return !["youtube", "snapchat"].includes(p.id);
+                              } else if (postType === "Carousel") {
+                                // Carousel: Only Instagram, Facebook, X (Twitter)
+                                return ["instagram", "facebook", "x"].includes(
+                                  p.id,
+                                );
+                              }
+                            }
+
+                            if (activeTab === "Reel") {
+                              // Reel: All except X (Twitter)
+                              return p.id !== "x";
+                            }
+
+                            if (activeTab === "Story") {
+                              // Story: Only Instagram, Facebook, Snapchat
+                              return [
+                                "instagram",
+                                "facebook",
+                                "snapchat",
+                              ].includes(p.id);
+                            }
+
+                            return true;
+                          });
+
+                          return filteredPlatforms.map((platform) => {
+                            const isSelected = selectedPlatforms[platform.id];
+
+                            // Determine if platform should be hidden due to carousel constraints
+                            if (
+                              activeTab === "Post" &&
+                              postType === "Carousel" &&
+                              currentMedia &&
+                              Array.isArray(currentMedia)
+                            ) {
+                              // 1. When select video so facebook button do not show
+                              if (platform.id === "facebook") {
+                                const hasVideo = currentMedia.some((url) =>
+                                  isVideoUrl(url),
+                                );
+                                if (hasVideo) return null;
+                              }
+
+                              // 2. When choose more than 4 items then twitter button do not show
+                              if (
+                                platform.id === "x" &&
+                                currentMedia.length > 4
+                              ) {
+                                return null;
+                              }
+                            }
+
+                            return (
+                              <TouchableOpacity
+                                key={platform.id}
+                                className={`post-on-btn ${isSelected ? "post-on-btn-selected" : ""}`}
+                                onPress={() => togglePlatform(platform.id)}
+                              >
+                                <BlurView
+                                  intensity={isSelected ? 0 : 5}
+                                  tint="light"
+                                  className="post-on-content"
+                                >
+                                  <Image
+                                    source={platform.icon}
+                                    className={`post-on-icon ${isSelected ? "post-on-icon-selected" : ""}`}
+                                    resizeMode="contain"
+                                  />
+                                  <Text
+                                    className={`post-on-platform-name ${isSelected ? "post-on-platform-name-selected" : "post-on-platform-name-default"}`}
+                                  >
+                                    {platform.name}
+                                  </Text>
+                                </BlurView>
+                              </TouchableOpacity>
+                            );
+                          });
+                        })()}
+                      </View>
+                    </View>
+                  </BlurView>
+                </View>
+
+                {/* Third Card: Schedule */}
+                <View
+                  key={`third-card-${activeTab}`}
+                  className="glass-card-container"
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.45,
+                    shadowRadius: 24,
+                    elevation: 8,
+                  }}
                 >
-                  <View className="absolute inset-0" />
-
-                  <Text className="text-white font-semibold text-lg">
-                    Generate Post
-                  </Text>
-                </ImageBackground>
-              </TouchableOpacity>
-
-              {/* Separator */}
-              <View className="flex-row items-center w-full mb-6 px-2">
-                <View className="flex-1 h-[1px] bg-white/80" />
-                <Text className="text-white mx-4 font-inter text-base">or</Text>
-                <View className="flex-1 h-[1px] bg-white/80" />
-              </View>
-
-              {/* Post Without Viewing Button */}
-              <TouchableOpacity
-                className="w-full h-14 overflow-hidden rounded-full mb-10"
-                onPress={() => {
-                  handleGeneratePost();
-                }}
-              >
-                <ImageBackground
-                  source={require("../../assets/images/post_without.jpg")}
-                  className="w-full h-full items-center justify-center"
-                  resizeMode="cover"
+                  <BlurView intensity={14} tint="dark" className="flex-1">
+                    <View className="glass-card-gradient">
+                      {/* Schedule */}
+                      <Text className="input-label">Schedule</Text>
+                      <TouchableOpacity
+                        className="schedule-input flex-row items-center w-full"
+                        onPress={() => setShowDatePicker(true)}
+                      >
+                        <BlurView
+                          intensity={5}
+                          tint="light"
+                          className="flex-1 flex-row items-center px-4 py-3"
+                        >
+                          <Image
+                            source={require("../../assets/icons/calender.png")}
+                            className="w-5 h-5 mr-3"
+                            resizeMode="contain"
+                            style={{ tintColor: "rgba(255, 255, 255, 0.6)" }}
+                          />
+                          <Text className="text-white/60 input-text-regular">
+                            {date ? date.toLocaleString() : "Select date & time"}
+                          </Text>
+                        </BlurView>
+                      </TouchableOpacity>
+                    </View>
+                  </BlurView>
+                </View>
+                {/* Generate Post Button */}
+                <TouchableOpacity
+                  className="w-full h-14 overflow-hidden rounded-full mb-6"
+                  onPress={handlePreviewPost}
+                  disabled={isPublishing}
                 >
-                  <View className="absolute inset-0" />
-                  {isPublishing ? (
-                    <ActivityIndicator size="small" color="#ffffff" />
-                  ) : (
+                  <ImageBackground
+                    source={require("../../assets/images/generate_post.jpg")}
+                    className="w-full h-full items-center justify-center"
+                    resizeMode="cover"
+                  >
+                    <View className="absolute inset-0" />
+
                     <Text className="text-white font-semibold text-lg">
-                      Post without viewing
+                      Generate Post
                     </Text>
-                  )}
-                </ImageBackground>
-              </TouchableOpacity>
-            </View>
-          )}
+                  </ImageBackground>
+                </TouchableOpacity>
+
+                {/* Separator */}
+                <View className="flex-row items-center w-full mb-6 px-2">
+                  <View className="flex-1 h-[1px] bg-white/80" />
+                  <Text className="text-white mx-4 font-inter text-base">or</Text>
+                  <View className="flex-1 h-[1px] bg-white/80" />
+                </View>
+
+                {/* Post Without Viewing Button */}
+                <TouchableOpacity
+                  className="w-full h-14 overflow-hidden rounded-full mb-10"
+                  onPress={() => {
+                    handleGeneratePost();
+                  }}
+                >
+                  <ImageBackground
+                    source={require("../../assets/images/post_without.jpg")}
+                    className="w-full h-full items-center justify-center"
+                    resizeMode="cover"
+                  >
+                    <View className="absolute inset-0" />
+                    {isPublishing ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Text className="text-white font-semibold text-lg">
+                        Post without viewing
+                      </Text>
+                    )}
+                  </ImageBackground>
+                </TouchableOpacity>
+              </View>
+            )}
         </View>
       </ScrollView>
 
@@ -3258,13 +3258,13 @@ export default function CreatePost() {
                       left:
                         coverDurationMs && filmStripWidth.current
                           ? Math.max(
-                              0,
-                              Math.min(
-                                filmStripWidth.current - SELECTOR_WIDTH,
-                                (scrubberPositionMs / coverDurationMs) *
-                                  (filmStripWidth.current - SELECTOR_WIDTH),
-                              ),
-                            )
+                            0,
+                            Math.min(
+                              filmStripWidth.current - SELECTOR_WIDTH,
+                              (scrubberPositionMs / coverDurationMs) *
+                              (filmStripWidth.current - SELECTOR_WIDTH),
+                            ),
+                          )
                           : 0,
                       width: SELECTOR_WIDTH,
                       borderWidth: 3,

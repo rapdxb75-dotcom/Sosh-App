@@ -199,13 +199,13 @@ const getPublishSuccessCopy = ({
 
   if (scheduledAt) {
     return {
-      notificationMessage: `Your ${contentType} has been scheduled successfully to post on ${destination} at ${scheduledAt}.🎉`,
+      notificationMessage: `Your ${contentType} has been scheduled successfully to post on ${destination} at ${scheduledAt}.`,
       toastMessage: `Scheduled on ${destination} at ${scheduledAt}`,
     };
   }
 
   return {
-    notificationMessage: `Your ${contentType} has been successfully published to ${destination}.🎉`,
+    notificationMessage: `Your ${contentType} has been successfully published to ${destination}.`,
     toastMessage: `Published to ${destination}`,
   };
 };
@@ -431,7 +431,7 @@ export default function PostPreview() {
               if (thumbVideoRef.current) {
                 thumbVideoRef.current
                   .setPositionAsync(actualMs)
-                  .catch(() => {});
+                  .catch(() => { });
               }
             }
           } catch {
@@ -706,13 +706,13 @@ export default function PostPreview() {
         : "";
   const previewProfileSource = globalProfilePicture
     ? {
-        uri:
-          globalProfilePicture.startsWith("data:") ||
+      uri:
+        globalProfilePicture.startsWith("data:") ||
           globalProfilePicture.startsWith("http") ||
           globalProfilePicture.startsWith("file")
-            ? globalProfilePicture
-            : `data:image/png;base64,${globalProfilePicture}`,
-      }
+          ? globalProfilePicture
+          : `data:image/png;base64,${globalProfilePicture}`,
+    }
     : require("../assets/images/avtar.png");
   const previewProfileResizeMode = globalProfilePicture ? "cover" : "contain";
   const activePreviewMediaUri =
@@ -2478,13 +2478,13 @@ export default function PostPreview() {
                       left:
                         coverDurationMs && filmStripWidthRef.current
                           ? Math.max(
-                              0,
-                              Math.min(
-                                filmStripWidthRef.current - selectorWidth,
-                                (scrubberPositionMs / coverDurationMs) *
-                                  (filmStripWidthRef.current - selectorWidth),
-                              ),
-                            )
+                            0,
+                            Math.min(
+                              filmStripWidthRef.current - selectorWidth,
+                              (scrubberPositionMs / coverDurationMs) *
+                              (filmStripWidthRef.current - selectorWidth),
+                            ),
+                          )
                           : 0,
                       width: selectorWidth,
                       borderWidth: 3,
