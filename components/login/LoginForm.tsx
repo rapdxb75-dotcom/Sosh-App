@@ -124,9 +124,13 @@ export default function LoginForm() {
               // Update global Redux state for reactive UI
               dispatch(
                 setUserData({
-                  userName: decoded.userName,
+                  userName: decoded.userName?.trim(),
                   email: decoded.email,
                   profilePicture: response.profilePicture,
+                  subscription: {
+                    plan: decoded.subscription || "Free",
+                    isSubscribed: !!decoded.subscription && decoded.subscription !== "Free",
+                  },
                 }),
               );
 

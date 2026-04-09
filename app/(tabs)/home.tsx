@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
@@ -12,7 +13,14 @@ import { formatNumber } from "../../utils/format";
 export default function Home() {
   const userName = useSelector((state: RootState) => state.user.userName);
   const globalEmail = useSelector((state: RootState) => state.user.email);
+  const subscription = useSelector((state: RootState) => state.user.subscription);
+  const router = useRouter();
   const dispatch = useDispatch();
+  const subscriptionRef = useRef(subscription);
+
+  useEffect(() => {
+    subscriptionRef.current = subscription;
+  }, [subscription]);
 
   const insets = useSafeAreaInsets();
 
@@ -74,11 +82,26 @@ export default function Home() {
             });
           }
 
-          // Update Redux state with profile information (userName, aiAdditions, etc.)
+          // Update Redux state with profile information (userName, aiAdditions, subscription, etc.)
           dispatch(
             setUserData({
               userName: userData.userName || userData.name || userName,
               aiAdditions: userData.aiAdditions,
+              subscription: (() => {
+                const firebaseSub = userData.subscription;
+                let planName = "Free";
+                
+                if (typeof firebaseSub === "string") {
+                  planName = firebaseSub;
+                } else if (firebaseSub && typeof firebaseSub === "object") {
+                  planName = firebaseSub.plan || "Free";
+                }
+                
+                return {
+                  plan: planName as "Free" | "Pro" | "Business",
+                  isSubscribed: planName !== "Free",
+                };
+              })(),
             }),
           );
         }
