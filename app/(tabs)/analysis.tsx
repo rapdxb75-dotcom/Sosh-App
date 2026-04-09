@@ -1217,9 +1217,9 @@ export default function Analysis() {
         showsHorizontalScrollIndicator={false}
         {...(Platform.OS === "ios"
           ? {
-              contentInset: { top: insets.top },
-              contentOffset: { x: 0, y: -insets.top },
-            }
+            contentInset: { top: insets.top },
+            contentOffset: { x: 0, y: -insets.top },
+          }
           : {})}
         refreshControl={
           <RefreshControl

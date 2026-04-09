@@ -6,6 +6,7 @@ import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
+import { jwtDecode } from "jwt-decode";
 import { ArrowLeft, ArrowRight, Check, Mic } from "lucide-react-native";
 import { useState } from "react";
 import {
@@ -381,15 +382,26 @@ export default function Onboarding() {
         };
 
         // 1. Register with all data
+        console.log("🚀 Starting registration for:", registrationBuffer?.email);
         const registerResponse = await authService.register({
           ...registrationBuffer,
-          subscription: "Pro",
+          subscription: "Free",
           onboardingData,
         });
 
         console.log("✅ Registration successful:", registerResponse);
 
-        // 2. Login automatically
+        // 2. Add a small delay for backend propagation
+        // n8n workflows can sometimes take a moment to commit to the database
+        console.log("⏳ Waiting for account propagation...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // 3. Login automatically
+        // Diagnostic: Log lengths to ensure no hidden characters/spaces
+        console.log("🔑 Attempting automatic login...");
+        console.log(`[Diagnostic] Email: "${registrationBuffer.email}" (Len: ${registrationBuffer.email?.length})`);
+        console.log(`[Diagnostic] Password Length: ${registrationBuffer.password?.length}`);
+
         const loginResponse = await authService.login({
           email: registrationBuffer.email,
           password: registrationBuffer.password,
@@ -397,7 +409,7 @@ export default function Onboarding() {
 
         console.log("✅ Login successful, token:", !!loginResponse.token);
 
-        // 3. Save session
+        // 4. Save session
         if (loginResponse.token) {
           // Clear any old user data first
           dispatch(clearUserData());
@@ -406,10 +418,18 @@ export default function Onboarding() {
           await storageService.setEmail(registrationBuffer.email);
           await storageService.setUsername(registrationBuffer.userName);
 
+          const decoded: any = jwtDecode(loginResponse.token);
+          const finalUserName = decoded.userName?.trim() || registrationBuffer.userName;
+          const finalEmail = decoded.email || registrationBuffer.email;
+
           dispatch(
             setUserData({
-              userName: registrationBuffer.userName,
-              email: registrationBuffer.email,
+              userName: finalUserName,
+              email: finalEmail,
+              subscription: {
+                plan: (decoded.subscription || "Free") as "Free" | "Pro" | "Business",
+                isSubscribed: !!decoded.subscription && decoded.subscription !== "Free",
+              },
             }),
           );
 
@@ -914,16 +934,16 @@ export default function Onboarding() {
                       <TouchableOpacity
                         onPress={() =>
                           isListening &&
-                          activeInputKey?.parent === stepData.key &&
-                          !activeInputKey.partId
+                            activeInputKey?.parent === stepData.key &&
+                            !activeInputKey.partId
                             ? stopListening()
                             : startListening(stepData.key)
                         }
                         className={`m-4 w-12 h-12 rounded-full items-center justify-center ${isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId ? "bg-red-500" : "bg-white/10"}`}
                       >
                         {isListening &&
-                        activeInputKey?.parent === stepData.key &&
-                        !activeInputKey.partId ? (
+                          activeInputKey?.parent === stepData.key &&
+                          !activeInputKey.partId ? (
                           <ActivityIndicator size="small" color="white" />
                         ) : (
                           <Mic color="white" size={20} />

@@ -7,6 +7,7 @@ const NOTIFICATIONS_KEY = "app_notifications";
 const UNREAD_NOTIFICATIONS_COUNT_KEY = "app_unread_notifications_count";
 const EMAIL_KEY = "user_email";
 const HAS_LAUNCHED_KEY = "has_launched";
+const SUBSCRIPTION_KEY = "subscription"; // Matching the string user uses in userSlice.ts
 
 const storageService = {
   /**
@@ -186,6 +187,29 @@ const storageService = {
   },
 
   /**
+   * Set a value in storage
+   */
+  setItem: async (key: string, value: string) => {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (error) {
+      console.error(`Error saving ${key}`, error);
+    }
+  },
+
+  /**
+   * Get a value from storage
+   */
+  getItem: async (key: string) => {
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.error(`Error getting ${key}`, error);
+      return null;
+    }
+  },
+
+  /**
    * Remove everything from storage (logout)
    */
   logout: async () => {
@@ -196,11 +220,15 @@ const storageService = {
         PROFILE_PICTURE_KEY,
         NOTIFICATIONS_KEY,
         UNREAD_NOTIFICATIONS_COUNT_KEY,
+        EMAIL_KEY,
+        SUBSCRIPTION_KEY,
       ]);
     } catch (error) {
       console.error("Error removing auth data", error);
     }
   },
+
+  SUBSCRIPTION_KEY,
 };
 
 export default storageService;

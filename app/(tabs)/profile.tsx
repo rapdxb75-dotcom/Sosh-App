@@ -174,6 +174,7 @@ export default function Profile() {
     (state: RootState) => state.user.profilePicture,
   );
   const globalEmail = useSelector((state: RootState) => state.user.email);
+  const subscription = useSelector((state: RootState) => state.user.subscription);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -661,6 +662,89 @@ export default function Profile() {
     }
   };
 
+  const handleUpgradeNavigation = () => {
+    Linking.openURL("https://sosh.digital");
+  };
+
+  const PlanCard = () => {
+    const plan = subscription?.plan || "Free";
+    const isPro = plan === "Pro";
+    const isBusiness = plan === "Business";
+    const isPremium = isPro || isBusiness;
+
+    const getGradientColors = (): [string, string, ...string[]] => {
+      if (isBusiness) return ["#DAA520", "#8B4513", "#191414"]; // Business Gold/Bronze
+      if (isPro) return ["#1DB954", "#0A2A12"]; // Pro Green
+      return ["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]; // Free
+    };
+
+    const getPlanLabel = () => {
+      if (isBusiness) return "Business";
+      if (isPro) return "Pro";
+      return "Free";
+    };
+
+    const getDescription = () => {
+      if (isBusiness) return "Scale your brand with advanced team tools, custom AI training, and priority agency support.";
+      if (isPro) return "You have full access to all premium features including AI assistants and post scheduling.";
+      return "Upgrade to Sosh Pro to unlock AI assistance, post scheduling, and detailed analytics.";
+    };
+
+    return (
+      <View
+        className="rounded-[32px] overflow-hidden mb-8"
+        style={{
+          shadowColor: "#000000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.45,
+          shadowRadius: 24,
+          elevation: 12,
+        }}
+      >
+        <BlurView intensity={30} tint="light" className="p-[1px]">
+          <LinearGradient
+            colors={getGradientColors()}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{
+              borderRadius: 31,
+              padding: 24,
+            }}
+          >
+            <View className="flex-row justify-between items-center mb-4">
+              <View>
+                <Text className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">
+                  Current Plan
+                </Text>
+                <Text className="text-white text-2xl font-bold">
+                  Sosh {plan}
+                </Text>
+              </View>
+              <View className="bg-white/20 px-3 py-1 rounded-full">
+                <Text className="text-white text-[10px] font-bold uppercase">
+                  {getPlanLabel()}
+                </Text>
+              </View>
+            </View>
+
+            <Text className="text-white/80 text-sm mb-6 leading-5">
+              {getDescription()}
+            </Text>
+
+            <TouchableOpacity
+              onPress={handleUpgradeNavigation}
+              className={`w-full h-12 rounded-full items-center justify-center ${isPremium ? 'bg-white' : 'bg-[#fff]'}`}
+            >
+              <Text className="font-bold text-base text-black">
+                {isPremium ? "Manage Subscription" : "Upgrade Now"}
+              </Text>
+            </TouchableOpacity>
+          </LinearGradient>
+        </BlurView>
+      </View>
+    );
+  };
+
   return (
     <View className="flex-1">
       <ScrollView
@@ -675,9 +759,9 @@ export default function Profile() {
         nestedScrollEnabled
         {...(Platform.OS === "ios"
           ? {
-              contentInset: { top: insets.top },
-              contentOffset: { x: 0, y: -insets.top },
-            }
+            contentInset: { top: insets.top },
+            contentOffset: { x: 0, y: -insets.top },
+          }
           : {})}
         refreshControl={
           <RefreshControl
@@ -770,13 +854,13 @@ export default function Profile() {
                           source={
                             image
                               ? {
-                                  uri:
-                                    image.startsWith("http") ||
+                                uri:
+                                  image.startsWith("http") ||
                                     image.startsWith("file") ||
                                     image.startsWith("data:")
-                                      ? image
-                                      : `data:image/png;base64,${image}`,
-                                }
+                                    ? image
+                                    : `data:image/png;base64,${image}`,
+                              }
                               : require("../../assets/images/avtar.png")
                           }
                           className="w-[45px] h-[45px] rounded-full"
@@ -845,6 +929,9 @@ export default function Profile() {
                 </LinearGradient>
               </BlurView>
             </View>
+
+            {/* Subscription Section */}
+            <PlanCard />
 
             {/* Connected Accounts */}
             <Text className="text-white text-lg font-medium mb-4">
@@ -1026,13 +1113,13 @@ export default function Profile() {
                     source={
                       image
                         ? {
-                            uri:
-                              image.startsWith("http") ||
+                          uri:
+                            image.startsWith("http") ||
                               image.startsWith("file") ||
                               image.startsWith("data:")
-                                ? image
-                                : `data:image/png;base64,${image}`,
-                          }
+                              ? image
+                              : `data:image/png;base64,${image}`,
+                        }
                         : require("../../assets/images/avtar.png")
                     }
                     className="w-[82px] h-[82px] absolute rounded-full"
