@@ -354,4 +354,56 @@ export const updatePoppyTokenCredits = async (
   }
 };
 
+// Increment AI Chat Count
+export const incrementAIChatCount = async (userEmail: string) => {
+  try {
+    if (!userEmail) return false;
+
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", userEmail);
+
+    await setDoc(
+      userDocRef,
+      {
+        aiChatCount: increment(1),
+      },
+      { merge: true },
+    );
+
+    console.log(`✅ Incremented aiChatCount for ${userEmail}`);
+    return true;
+  } catch (error: any) {
+    console.error("Error incrementing aiChatCount:", error);
+    return false;
+  }
+};
+
+// Increment Post Caption Count
+export const incrementPostCaptionCount = async (userEmail: string) => {
+  try {
+    if (!userEmail) return false;
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", userEmail);
+    await setDoc(userDocRef, { postCaptionCount: increment(1) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error incrementing postCaptionCount:", error);
+    return false;
+  }
+};
+
+// Increment Reel Caption Count
+export const incrementReelCaptionCount = async (userEmail: string) => {
+  try {
+    if (!userEmail) return false;
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", userEmail);
+    await setDoc(userDocRef, { reelCaptionCount: increment(1) }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error incrementing reelCaptionCount:", error);
+    return false;
+  }
+};
+
 export { app, db };

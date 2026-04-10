@@ -31,18 +31,22 @@ class PoppyService {
         chatId,
       });
 
+      const payload = {
+        isReel,
+        captionpromt: captionPrompt,
+        boardId,
+        chatId,
+      };
+
+      console.log("📤 Poppy Payload (Caption):", JSON.stringify(payload, null, 2));
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          isReel,
-          captionpromt: captionPrompt,
-          boardId,
-          chatId,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -225,14 +229,15 @@ class PoppyService {
           reject(new Error("Network request failed"));
         };
 
-        xhr.send(
-          JSON.stringify({
-            prompt,
-            streaming: true,
-            save_history: true,
-            include_usage: true, // Exclude usage details to reduce response size
-          }),
-        );
+        const payload = {
+          prompt,
+          streaming: true,
+          save_history: true,
+          include_usage: true, // Exclude usage details to reduce response size
+        };
+
+        console.log("📤 Poppy Payload (Stream):", JSON.stringify(payload, null, 2));
+        xhr.send(JSON.stringify(payload));
       });
     } catch (error) {
       console.error("❌ Poppy stream error:", error);

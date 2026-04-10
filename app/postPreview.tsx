@@ -32,6 +32,7 @@ import {
   TouchableWithoutFeedback,
   View,
   useWindowDimensions,
+  Linking,
 } from "react-native";
 import Svg, {
   Circle,
@@ -43,8 +44,13 @@ import Toast from "react-native-toast-message";
 import { useSelector } from "react-redux";
 import Header from "../components/common/Header";
 import { useNotification } from "../context/NotificationContext";
+import anthropicService from "../services/api/anthropic";
 import createPostService from "../services/api/createPost";
 import poppyService from "../services/api/poppy";
+import {
+  incrementPostCaptionCount,
+  incrementReelCaptionCount,
+} from "../services/firebase";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
@@ -267,6 +273,7 @@ export default function PostPreview() {
   const globalUserName = user.userName;
   const globalProfilePicture = user.profilePicture;
   const [isPublishing, setIsPublishing] = useState(false);
+  const isFreePlan = user.subscription?.plan === "Free";
   const isBackgroundPublishing = useRef(false);
 
   useEffect(() => {
@@ -473,13 +480,50 @@ export default function PostPreview() {
       const boardId = user.aiAdditions?.poppyShortCaption?.boardId;
       const chatId = user.aiAdditions?.poppyShortCaption?.chatId;
 
-      const generatedCaption = await poppyService.generateCaption(
-        data.caption,
-        isReel,
-        token,
-        boardId,
-        chatId,
-      );
+      // Limit Enforcement for Free Plan
+      if (isFreePlan) {
+        if (isReel && (user.reelCaptionCount || 0) >= 3) {
+          Alert.alert(
+            "Limit Exceeded",
+            "Your reel caption generation limit is exceeded, please upgrade your plan.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Upgrade Plan",
+                style: "default",
+                onPress: () => Linking.openURL("https://sosh.digital"),
+              },
+            ],
+          );
+          return;
+        } else if (!isReel && (user.postCaptionCount || 0) >= 3) {
+          Alert.alert(
+            "Limit Exceeded",
+            "Your post caption generation limit is exceeded, please upgrade your plan.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Upgrade Plan",
+                style: "default",
+                onPress: () => Linking.openURL("https://sosh.digital"),
+              },
+            ],
+          );
+          return;
+        }
+      }
+
+      console.log(`🤖 AI Provider (Caption): ${isFreePlan ? "Anthropic (Claude)" : "Poppy AI"}`);
+
+      const generatedCaption = isFreePlan
+        ? await anthropicService.generateMessage(data.caption, user.systemPrompt)
+        : await poppyService.generateCaption(
+          data.caption,
+          isReel,
+          token,
+          boardId,
+          chatId,
+        );
 
       setData((prev) => (prev ? { ...prev, caption: generatedCaption } : prev));
 
@@ -495,6 +539,15 @@ export default function PostPreview() {
       });
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Increment Usage Count
+      if (isFreePlan) {
+        if (isReel) {
+          incrementReelCaptionCount(user.email).catch(console.error);
+        } else {
+          incrementPostCaptionCount(user.email).catch(console.error);
+        }
+      }
     } catch (error) {
       console.error("Caption generation error:", error);
       addNotification({
@@ -2186,11 +2239,16 @@ export default function PostPreview() {
           }}
         >
           <TouchableOpacity
-            style={{ height: 56, borderRadius: 28, overflow: "hidden" }}
             onPress={() => {
               handlePost();
             }}
-            disabled={isPublishing}
+            disabled={isPublishing || isFreePlan}
+            style={{
+              height: 56,
+              borderRadius: 28,
+              overflow: "hidden",
+              opacity: isFreePlan ? 0.6 : 1,
+            }}
           >
             <ImageBackground
               source={require("../assets/images/generate_post.jpg")}

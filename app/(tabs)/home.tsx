@@ -87,6 +87,10 @@ export default function Home() {
             setUserData({
               userName: userData.userName || userData.name || userName,
               aiAdditions: userData.aiAdditions,
+              systemPrompt: userData.systemPrompt,
+              aiChatCount: userData.aiChatCount || 0,
+              postCaptionCount: userData.postCaptionCount || 0,
+              reelCaptionCount: userData.reelCaptionCount || 0,
               subscription: (() => {
                 const firebaseSub = userData.subscription;
                 let planName = "Free";
