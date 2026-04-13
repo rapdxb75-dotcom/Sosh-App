@@ -51,6 +51,7 @@ import {
   incrementPostCaptionCount,
   incrementReelCaptionCount,
 } from "../services/firebase";
+import { getFreeTierSystemPrompt } from "../utils/prompts";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
@@ -514,9 +515,17 @@ export default function PostPreview() {
       }
 
       console.log(`🤖 AI Provider (Caption): ${isFreePlan ? "Anthropic (Claude)" : "Poppy AI"}`);
+      
+      let finalSystemPrompt = user.systemPrompt;
+      if (isFreePlan) {
+        finalSystemPrompt = getFreeTierSystemPrompt(
+          data?.activeTab === "Post" ? "post" : "story",
+          user.onboardingData,
+        );
+      }
 
       const generatedCaption = isFreePlan
-        ? await anthropicService.generateMessage(data.caption, user.systemPrompt)
+        ? await anthropicService.generateMessage(data.caption, finalSystemPrompt)
         : await poppyService.generateCaption(
           data.caption,
           isReel,

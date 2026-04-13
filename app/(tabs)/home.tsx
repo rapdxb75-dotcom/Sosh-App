@@ -91,6 +91,7 @@ export default function Home() {
               aiChatCount: userData.aiChatCount || 0,
               postCaptionCount: userData.postCaptionCount || 0,
               reelCaptionCount: userData.reelCaptionCount || 0,
+              onboardingData: userData.onboardingData,
               subscription: (() => {
                 const firebaseSub = userData.subscription;
                 let planName = "Free";

@@ -43,6 +43,7 @@ interface UserState {
     email: string;
     password: string;
   } | null;
+  onboardingData?: any;
 }
 
 const initialState: UserState = {
@@ -61,6 +62,7 @@ const initialState: UserState = {
   postCaptionCount: 0,
   reelCaptionCount: 0,
   registrationBuffer: null,
+  onboardingData: undefined,
 };
 
 // Async thunk to initialize user data from storage
@@ -116,6 +118,7 @@ const userSlice = createSlice({
           plan: "Free" | "Pro" | "Business";
           isSubscribed: boolean;
         };
+        onboardingData?: any;
       }>,
     ) => {
       if (action.payload.userName !== undefined) {
@@ -145,6 +148,9 @@ const userSlice = createSlice({
       if (action.payload.subscription !== undefined) {
         state.subscription = action.payload.subscription;
       }
+      if (action.payload.onboardingData !== undefined) {
+        state.onboardingData = action.payload.onboardingData;
+      }
       state.isLoggedIn = true;
     },
     clearUserData: (state) => {
@@ -158,6 +164,7 @@ const userSlice = createSlice({
       state.postCaptionCount = 0;
       state.reelCaptionCount = 0;
       state.registrationBuffer = null;
+      state.onboardingData = undefined;
       state.subscription = { plan: "Free", isSubscribed: false };
     },
     setRegistrationBuffer: (
