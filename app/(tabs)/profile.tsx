@@ -553,16 +553,18 @@ export default function Profile() {
       if (
         response &&
         Array.isArray(response) &&
-        response.length > 0 &&
-        response[0].url
+        response.length > 0
       ) {
-        await Linking.openURL(response[0].url);
-        // Keep loader active — move platform to pendingConnections
-        // Firebase listener will detect when data arrives and clear this
-        setPendingConnections((prev: string[]) => {
-          if (prev.indexOf(platform) !== -1) return prev;
-          return [...prev, platform];
-        });
+        const connectUrl = response[0].url || response[0].authUrl;
+        if (connectUrl) {
+          await Linking.openURL(connectUrl);
+          // Keep loader active — move platform to pendingConnections
+          // Firebase listener will detect when data arrives and clear this
+          setPendingConnections((prev: string[]) => {
+            if (prev.indexOf(platform) !== -1) return prev;
+            return [...prev, platform];
+          });
+        }
         setConnectingPlatform(null);
       } else {
         setConnectingPlatform(null);

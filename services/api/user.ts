@@ -13,7 +13,9 @@ export interface UpdateProfileResponse {
 }
 
 export interface SocialMediaConnectResponse {
-  url: string;
+  url?: string;
+  authUrl?: string;
+  state?: string;
 }
 
 const userService = {

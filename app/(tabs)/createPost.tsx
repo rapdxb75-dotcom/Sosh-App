@@ -1118,6 +1118,8 @@ export default function CreatePost() {
       const chatId = settings?.chatId;
 
       const isFreePlan = user.subscription?.plan === "Free";
+      const isProPlan = user.subscription?.plan === "Pro";
+      const useClaude = isFreePlan || isProPlan;
 
       // Limit Enforcement for Free Plan
       if (isFreePlan) {
@@ -1152,7 +1154,7 @@ export default function CreatePost() {
         }
       }
 
-      console.log(`🤖 AI Provider (Caption): ${isFreePlan ? "Anthropic (Claude)" : "Poppy AI"}`);
+      console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
       
       let finalSystemPrompt = user.systemPrompt;
       if (isFreePlan) {
@@ -1162,7 +1164,7 @@ export default function CreatePost() {
         );
       }
 
-      const generatedCaption = isFreePlan
+      const generatedCaption = useClaude
         ? await anthropicService.generateMessage(caption, finalSystemPrompt)
         : await poppyService.generateCaption(
           caption,

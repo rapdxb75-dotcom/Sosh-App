@@ -480,6 +480,9 @@ export default function PostPreview() {
       const isReel = data?.activeTab === "Reel";
       const boardId = user.aiAdditions?.poppyShortCaption?.boardId;
       const chatId = user.aiAdditions?.poppyShortCaption?.chatId;
+      const isFreePlan = user.subscription?.plan === "Free";
+      const isProPlan = user.subscription?.plan === "Pro";
+      const useClaude = isFreePlan || isProPlan;
 
       // Limit Enforcement for Free Plan
       if (isFreePlan) {
@@ -514,7 +517,7 @@ export default function PostPreview() {
         }
       }
 
-      console.log(`🤖 AI Provider (Caption): ${isFreePlan ? "Anthropic (Claude)" : "Poppy AI"}`);
+      console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
       
       let finalSystemPrompt = user.systemPrompt;
       if (isFreePlan) {
@@ -524,7 +527,7 @@ export default function PostPreview() {
         );
       }
 
-      const generatedCaption = isFreePlan
+      const generatedCaption = useClaude
         ? await anthropicService.generateMessage(data.caption, finalSystemPrompt)
         : await poppyService.generateCaption(
           data.caption,

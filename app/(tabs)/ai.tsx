@@ -1329,6 +1329,9 @@ export default function AI() {
       };
 
       const isFreePlan = subscription?.plan === "Free";
+      const isProPlan = subscription?.plan === "Pro";
+      const useClaude = isFreePlan || isProPlan;
+
       if (isFreePlan && aiChatCount >= AI_CHAT_LIMIT) {
         Alert.alert(
           "Limit Exceeded",
@@ -1345,7 +1348,7 @@ export default function AI() {
         return;
       }
 
-      console.log(`🤖 AI Provider (Stream): ${isFreePlan ? "Anthropic (Claude)" : "Poppy AI"}`);
+      console.log(`🤖 AI Provider (Stream): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
 
       const [,] = await Promise.all([
         // Save user message (fire-and-forget, don't block streaming)
@@ -1355,8 +1358,8 @@ export default function AI() {
           userEmail,
           "User",
         ),
-        // Stream from Poppy AI or Anthropic (for Free plan)
-        isFreePlan
+        // Stream from Poppy AI or Anthropic (for Free/Pro plan)
+        useClaude
           ? anthropicService.streamMessage(content, (delta) => {
             fullAIResponse += delta;
             streamBufferRef.current = fullAIResponse;
