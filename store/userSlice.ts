@@ -33,12 +33,17 @@ interface UserState {
       model: string;
     };
   };
+  systemPrompt?: string;
+  aiChatCount?: number;
+  postCaptionCount?: number;
+  reelCaptionCount?: number;
   registrationBuffer: {
     fullName: string;
     userName: string;
     email: string;
     password: string;
   } | null;
+  onboardingData?: any;
 }
 
 const initialState: UserState = {
@@ -52,7 +57,12 @@ const initialState: UserState = {
     isSubscribed: false,
   },
   aiAdditions: undefined,
+  systemPrompt: undefined,
+  aiChatCount: 0,
+  postCaptionCount: 0,
+  reelCaptionCount: 0,
   registrationBuffer: null,
+  onboardingData: undefined,
 };
 
 // Async thunk to initialize user data from storage
@@ -100,10 +110,15 @@ const userSlice = createSlice({
         email?: string;
         profilePicture?: string | null;
         aiAdditions?: any;
+        systemPrompt?: string;
+        aiChatCount?: number;
+        postCaptionCount?: number;
+        reelCaptionCount?: number;
         subscription?: {
           plan: "Free" | "Pro" | "Business";
           isSubscribed: boolean;
         };
+        onboardingData?: any;
       }>,
     ) => {
       if (action.payload.userName !== undefined) {
@@ -118,8 +133,23 @@ const userSlice = createSlice({
       if (action.payload.aiAdditions !== undefined) {
         state.aiAdditions = action.payload.aiAdditions;
       }
+      if (action.payload.systemPrompt !== undefined) {
+        state.systemPrompt = action.payload.systemPrompt;
+      }
+      if (action.payload.aiChatCount !== undefined) {
+        state.aiChatCount = action.payload.aiChatCount;
+      }
+      if (action.payload.postCaptionCount !== undefined) {
+        state.postCaptionCount = action.payload.postCaptionCount;
+      }
+      if (action.payload.reelCaptionCount !== undefined) {
+        state.reelCaptionCount = action.payload.reelCaptionCount;
+      }
       if (action.payload.subscription !== undefined) {
         state.subscription = action.payload.subscription;
+      }
+      if (action.payload.onboardingData !== undefined) {
+        state.onboardingData = action.payload.onboardingData;
       }
       state.isLoggedIn = true;
     },
@@ -129,7 +159,12 @@ const userSlice = createSlice({
       state.profilePicture = null;
       state.isLoggedIn = false;
       state.aiAdditions = undefined;
+      state.systemPrompt = undefined;
+      state.aiChatCount = 0;
+      state.postCaptionCount = 0;
+      state.reelCaptionCount = 0;
       state.registrationBuffer = null;
+      state.onboardingData = undefined;
       state.subscription = { plan: "Free", isSubscribed: false };
     },
     setRegistrationBuffer: (
@@ -160,6 +195,10 @@ export const updateUser =
     email?: string;
     profilePicture?: string | null;
     aiAdditions?: any;
+    systemPrompt?: string;
+    aiChatCount?: number;
+    postCaptionCount?: number;
+    reelCaptionCount?: number;
     subscription?: {
       plan: "Free" | "Pro" | "Business";
       isSubscribed: boolean;

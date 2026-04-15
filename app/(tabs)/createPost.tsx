@@ -30,6 +30,7 @@ import {
   TouchableWithoutFeedback,
   View,
   useWindowDimensions,
+  Linking,
 } from "react-native";
 import {
   Video as CompressorVideo,
@@ -49,9 +50,15 @@ import { showEditor } from "react-native-video-trim";
 import { useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import { useNotification } from "../../context/NotificationContext";
+import anthropicService from "../../services/api/anthropic";
 import createPostService from "../../services/api/createPost";
 import poppyService from "../../services/api/poppy";
-import { listenToUserData } from "../../services/firebase";
+import {
+  listenToUserData,
+  incrementPostCaptionCount,
+  incrementReelCaptionCount,
+} from "../../services/firebase";
+import { getFreeTierSystemPrompt } from "../../utils/prompts";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
@@ -368,6 +375,7 @@ export default function CreatePost() {
   const globalEmail = user.email;
   const globalUserName = user.userName;
   const globalProfilePicture = user.profilePicture;
+  const isFreePlan = user.subscription?.plan === "Free";
 
   // Social media connections state
   const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
@@ -1109,13 +1117,62 @@ export default function CreatePost() {
       const boardId = settings?.boardId;
       const chatId = settings?.chatId;
 
-      const generatedCaption = await poppyService.generateCaption(
-        caption,
-        isReel,
-        token,
-        boardId,
-        chatId,
-      );
+      const isFreePlan = user.subscription?.plan === "Free";
+      const isProPlan = user.subscription?.plan === "Pro";
+      const useClaude = isFreePlan || isProPlan;
+
+      // Limit Enforcement for Free Plan
+      if (isFreePlan) {
+        if (isReel && (user.reelCaptionCount || 0) >= 3) {
+          Alert.alert(
+            "Limit Exceeded",
+            "Your reel caption generation limit is exceeded, please upgrade your plan.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Upgrade Plan",
+                style: "default",
+                onPress: () => Linking.openURL("https://sosh.digital"),
+              },
+            ],
+          );
+          return;
+        } else if (!isReel && (user.postCaptionCount || 0) >= 3) {
+          Alert.alert(
+            "Limit Exceeded",
+            "Your post caption generation limit is exceeded, please upgrade your plan.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Upgrade Plan",
+                style: "default",
+                onPress: () => Linking.openURL("https://sosh.digital"),
+              },
+            ],
+          );
+          return;
+        }
+      }
+
+      console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
+      
+      let finalSystemPrompt = user.systemPrompt;
+      if (isFreePlan) {
+        finalSystemPrompt = getFreeTierSystemPrompt(
+          activeTab === "Post" ? "post" : "story",
+          user.onboardingData,
+        );
+      }
+
+      const generatedCaption = useClaude
+        ? await anthropicService.generateMessage(caption, finalSystemPrompt)
+        : await poppyService.generateCaption(
+          caption,
+          isReel,
+          token,
+          boardId,
+          chatId,
+        );
 
       // Update caption with generated content
       setCaption(generatedCaption);
@@ -1130,8 +1187,16 @@ export default function CreatePost() {
         text1: "Caption Generated",
         text2: "AI caption generated successfully",
       });
-
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Increment Usage Count
+      if (isFreePlan) {
+        if (isReel) {
+          incrementReelCaptionCount(user.email).catch(console.error);
+        } else {
+          incrementPostCaptionCount(user.email).catch(console.error);
+        }
+      }
     } catch (error) {
       console.error("Caption generation error:", error);
       addNotification({
@@ -2899,7 +2964,8 @@ export default function CreatePost() {
                 <TouchableOpacity
                   className="w-full h-14 overflow-hidden rounded-full mb-6"
                   onPress={handlePreviewPost}
-                  disabled={isPublishing}
+                  disabled={isPublishing || isFreePlan}
+                  style={{ opacity: isFreePlan ? 0.6 : 1 }}
                 >
                   <ImageBackground
                     source={require("../../assets/images/generate_post.jpg")}
@@ -2927,6 +2993,8 @@ export default function CreatePost() {
                   onPress={() => {
                     handleGeneratePost();
                   }}
+                  disabled={isPublishing || isFreePlan}
+                  style={{ opacity: isFreePlan ? 0.6 : 1 }}
                 >
                   <ImageBackground
                     source={require("../../assets/images/post_without.jpg")}

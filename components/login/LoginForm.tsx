@@ -146,11 +146,17 @@ export default function LoginForm() {
                   const firebaseData = (await getCurrentUserData(
                     decoded.email,
                   )) as any;
-                  if (firebaseData?.aiAdditions) {
+                  if (firebaseData) {
                     dispatch(
-                      setUserData({ aiAdditions: firebaseData.aiAdditions }),
+                      setUserData({
+                        aiAdditions: firebaseData.aiAdditions,
+                        systemPrompt: firebaseData.systemPrompt,
+                        aiChatCount: firebaseData.aiChatCount || 0,
+                        postCaptionCount: firebaseData.postCaptionCount || 0,
+                        reelCaptionCount: firebaseData.reelCaptionCount || 0,
+                      }),
                     );
-                    console.log("✅ aiAdditions loaded on login");
+                    console.log("✅ Firebase data (aiAdditions/systemPrompt/aiChatCount/captionCounts) loaded on login");
                   }
                 } catch (firebaseError) {
                   console.error("Error fetching Firebase data:", firebaseError);

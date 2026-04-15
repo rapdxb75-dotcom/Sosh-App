@@ -1,7 +1,7 @@
 import Clipboard from "@react-native-clipboard/clipboard";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   Check,
   Copy,
@@ -19,6 +19,7 @@ import {
   ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -45,6 +46,7 @@ import { useSelector } from "react-redux";
 import { MarkdownText } from "../../components/common/MarkdownText";
 import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
+import anthropicService from "../../services/api/anthropic";
 import chatService, { Conversation, Message } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
 import {
@@ -52,7 +54,9 @@ import {
   speechRecognitionModule,
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
+import { incrementAIChatCount } from "../../services/firebase";
 import { RootState } from "../../store/store";
+const AI_CHAT_LIMIT = 5;
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
@@ -510,7 +514,7 @@ const ChatMessage = React.memo(
                     chatMessageStyles.toolButton,
                     isCopyConfirmed && chatMessageStyles.toolButtonCopyActive,
                     areResponseActionsDisabled &&
-                      chatMessageStyles.toolButtonDisabled,
+                    chatMessageStyles.toolButtonDisabled,
                     pressed && chatMessageStyles.toolButtonPressed,
                   ]}
                 >
@@ -533,7 +537,7 @@ const ChatMessage = React.memo(
                       chatMessageStyles.toolButton,
                       isThumbsUpActive && chatMessageStyles.toolButtonUpActive,
                       areResponseActionsDisabled &&
-                        chatMessageStyles.toolButtonDisabled,
+                      chatMessageStyles.toolButtonDisabled,
                       pressed && chatMessageStyles.toolButtonPressed,
                     ]}
                   >
@@ -557,9 +561,9 @@ const ChatMessage = React.memo(
                     style={({ pressed }) => [
                       chatMessageStyles.toolButton,
                       isThumbsDownActive &&
-                        chatMessageStyles.toolButtonDownActive,
+                      chatMessageStyles.toolButtonDownActive,
                       areResponseActionsDisabled &&
-                        chatMessageStyles.toolButtonDisabled,
+                      chatMessageStyles.toolButtonDisabled,
                       pressed && chatMessageStyles.toolButtonPressed,
                     ]}
                   >
@@ -598,6 +602,10 @@ export default function AI() {
     (state: RootState) => state.user.profilePicture,
   );
   const aiAdditions = useSelector((state: RootState) => state.user.aiAdditions);
+  const subscription = useSelector((state: RootState) => state.user.subscription);
+  const systemPrompt = useSelector((state: RootState) => state.user.systemPrompt);
+  const aiChatCount = useSelector((state: RootState) => state.user.aiChatCount || 0);
+  const router = useRouter();
 
   // Get dynamic boardId and chatId from user's aiAdditions
   const poppyBoardId =
@@ -874,9 +882,9 @@ export default function AI() {
 
     const nextPreviewText = interimSpeechTextRef.current
       ? appendSpeechChunk(
-          committedSpeechTextRef.current,
-          interimSpeechTextRef.current,
-        )
+        committedSpeechTextRef.current,
+        interimSpeechTextRef.current,
+      )
       : committedSpeechTextRef.current;
 
     setInputText(nextPreviewText);
@@ -1014,12 +1022,12 @@ export default function AI() {
 
       const validData = Array.isArray(data)
         ? data.filter(
-            (c: any) =>
-              c &&
-              typeof c === "object" &&
-              c._id &&
-              String(c._id).trim() !== "",
-          )
+          (c: any) =>
+            c &&
+            typeof c === "object" &&
+            c._id &&
+            String(c._id).trim() !== "",
+        )
         : [];
 
       const sortedData = validData.sort((a, b) => {
@@ -1320,6 +1328,28 @@ export default function AI() {
         rafIdRef.current = null;
       };
 
+      const isFreePlan = subscription?.plan === "Free";
+      const isProPlan = subscription?.plan === "Pro";
+      const useClaude = isFreePlan || isProPlan;
+
+      if (isFreePlan && aiChatCount >= AI_CHAT_LIMIT) {
+        Alert.alert(
+          "Limit Exceeded",
+          "Your limit is exceeded, please upgrade your plan.",
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Upgrade Plan",
+              style: "default",
+              onPress: () => Linking.openURL("https://sosh.digital"),
+            },
+          ]
+        );
+        return;
+      }
+
+      console.log(`🤖 AI Provider (Stream): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
+
       const [,] = await Promise.all([
         // Save user message (fire-and-forget, don't block streaming)
         chatService.manageHistory(
@@ -1328,14 +1358,9 @@ export default function AI() {
           userEmail,
           "User",
         ),
-        // Stream from Poppy AI
-        poppyService.streamMessage(
-          currentConversationId!,
-          content,
-          poppyBoardId,
-          poppyChatId,
-          userEmail,
-          (delta) => {
+        // Stream from Poppy AI or Anthropic (for Free/Pro plan)
+        useClaude
+          ? anthropicService.streamMessage(content, (delta) => {
             fullAIResponse += delta;
             streamBufferRef.current = fullAIResponse;
 
@@ -1343,8 +1368,23 @@ export default function AI() {
             if (!rafIdRef.current) {
               rafIdRef.current = requestAnimationFrame(flushStreamBuffer);
             }
-          },
-        ),
+          }, systemPrompt)
+          : poppyService.streamMessage(
+            currentConversationId!,
+            content,
+            poppyBoardId,
+            poppyChatId,
+            userEmail,
+            (delta) => {
+              fullAIResponse += delta;
+              streamBufferRef.current = fullAIResponse;
+
+              // Schedule a batched UI update on the next animation frame
+              if (!rafIdRef.current) {
+                rafIdRef.current = requestAnimationFrame(flushStreamBuffer);
+              }
+            },
+          ),
       ]);
 
       // Flush any remaining buffered content
@@ -1369,6 +1409,10 @@ export default function AI() {
             "Model",
           )
           .catch((err) => console.error("Failed to save AI response:", err));
+
+        if (isFreePlan) {
+          incrementAIChatCount(userEmail).catch(console.error);
+        }
       }
 
       // Final scroll only if user is at bottom

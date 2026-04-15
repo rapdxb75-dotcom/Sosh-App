@@ -23,6 +23,7 @@ export const ICONS = {
 export const IMAGES = {
   background: require("../assets/images/background.png"),
   logo: require("../assets/images/logo.png"),
+  appIcon: require("../assets/images/icon.png"),
   notification: require("../assets/images/notification.png"),
   avatar: require("../assets/images/avtar.png"),
   button_bg: require("../assets/images/button-bg.png"),
