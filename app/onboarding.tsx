@@ -1,6 +1,7 @@
 import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
   ExpoSpeechRecognitionModule,
@@ -12,7 +13,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
-  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -399,8 +399,12 @@ export default function Onboarding() {
         // 3. Login automatically
         // Diagnostic: Log lengths to ensure no hidden characters/spaces
         console.log("🔑 Attempting automatic login...");
-        console.log(`[Diagnostic] Email: "${registrationBuffer.email}" (Len: ${registrationBuffer.email?.length})`);
-        console.log(`[Diagnostic] Password Length: ${registrationBuffer.password?.length}`);
+        console.log(
+          `[Diagnostic] Email: "${registrationBuffer.email}" (Len: ${registrationBuffer.email?.length})`,
+        );
+        console.log(
+          `[Diagnostic] Password Length: ${registrationBuffer.password?.length}`,
+        );
 
         const loginResponse = await authService.login({
           email: registrationBuffer.email,
@@ -419,7 +423,8 @@ export default function Onboarding() {
           await storageService.setUsername(registrationBuffer.userName);
 
           const decoded: any = jwtDecode(loginResponse.token);
-          const finalUserName = decoded.userName?.trim() || registrationBuffer.userName;
+          const finalUserName =
+            decoded.userName?.trim() || registrationBuffer.userName;
           const finalEmail = decoded.email || registrationBuffer.email;
 
           dispatch(
@@ -427,8 +432,12 @@ export default function Onboarding() {
               userName: finalUserName,
               email: finalEmail,
               subscription: {
-                plan: (decoded.subscription || "Free") as "Free" | "Pro" | "Business",
-                isSubscribed: !!decoded.subscription && decoded.subscription !== "Free",
+                plan: (decoded.subscription || "Free") as
+                  | "Free"
+                  | "Pro"
+                  | "Business",
+                isSubscribed:
+                  !!decoded.subscription && decoded.subscription !== "Free",
               },
             }),
           );
@@ -575,12 +584,12 @@ export default function Onboarding() {
     if (part.type === "textarea") {
       return (
         <View key={part.id} className="mb-6">
-          <Text className="text-white/60 mb-3 text-sm font-medium">
+          <Text className="text-white/80 mb-3 text-sm font-medium">
             {part.label}
           </Text>
           <View
-            className="rounded-[24px] bg-white/5 overflow-hidden border border-white/10 shadow-xl"
-            style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+            className="rounded-[24px] bg-white/10 overflow-hidden border border-white/20 shadow-xl"
+            style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
           >
             <BlurView intensity={20} tint="dark" className="p-1">
               <View className="flex-row">
@@ -695,10 +704,10 @@ export default function Onboarding() {
                                 [part.id]: updated,
                               });
                             }}
-                            className={`px-3 py-2 rounded-full border ${isRangeSelected ? "bg-white/20 border-white" : "border-white/10 bg-white/5"}`}
+                            className={`px-3 py-2 rounded-full border ${isRangeSelected ? "bg-white/30 border-white" : "border-white/20 bg-white/10"}`}
                           >
                             <Text
-                              className={`text-xs font-bold ${isRangeSelected ? "text-white" : "text-white/40"}`}
+                              className={`text-xs font-bold ${isRangeSelected ? "text-white" : "text-white/70"}`}
                             >
                               {range}
                             </Text>
@@ -860,18 +869,15 @@ export default function Onboarding() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
-      <Image
-        source={require("../assets/images/background.png")}
+      <LinearGradient
+        colors={["#001C3D", "#000000"]}
         style={{
           position: "absolute",
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
-          width: "100%",
-          height: "100%",
         }}
-        resizeMode="cover"
       />
       <SafeAreaView className="flex-1">
         {/* Progress Bar */}
@@ -883,10 +889,10 @@ export default function Onboarding() {
             />
           </View>
           <View className="flex-row justify-between mt-2">
-            <Text className="text-white/30 text-xs uppercase font-bold">
+            <Text className="text-white text-xs uppercase font-bold">
               Step {currentStep + 1} of {STEPS.length}
             </Text>
-            <Text className="text-white/30 text-xs font-bold">
+            <Text className="text-white text-xs font-bold">
               {Math.round(progress)}% Complete
             </Text>
           </View>
@@ -902,14 +908,14 @@ export default function Onboarding() {
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 100 }}
             >
-              <Text className="text-white/40 text-xs uppercase font-bold tracking-widest mb-2">
+              <Text className="text-white/80 text-xs uppercase font-bold tracking-widest mb-2">
                 {stepData.subtitle}
               </Text>
               <Text style={styles.title} className="text-white mb-2">
                 {stepData.title}
               </Text>
               {stepData.description && (
-                <Text className="text-white/60 mb-8 leading-6 text-base font-medium">
+                <Text className="text-white/90 mb-8 leading-6 text-base font-medium">
                   {stepData.description}
                 </Text>
               )}
@@ -934,16 +940,16 @@ export default function Onboarding() {
                       <TouchableOpacity
                         onPress={() =>
                           isListening &&
-                            activeInputKey?.parent === stepData.key &&
-                            !activeInputKey.partId
+                          activeInputKey?.parent === stepData.key &&
+                          !activeInputKey.partId
                             ? stopListening()
                             : startListening(stepData.key)
                         }
                         className={`m-4 w-12 h-12 rounded-full items-center justify-center ${isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId ? "bg-red-500" : "bg-white/10"}`}
                       >
                         {isListening &&
-                          activeInputKey?.parent === stepData.key &&
-                          !activeInputKey.partId ? (
+                        activeInputKey?.parent === stepData.key &&
+                        !activeInputKey.partId ? (
                           <ActivityIndicator size="small" color="white" />
                         ) : (
                           <Mic color="white" size={20} />
