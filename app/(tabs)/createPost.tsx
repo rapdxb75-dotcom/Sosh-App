@@ -376,6 +376,7 @@ export default function CreatePost() {
   const globalUserName = user.userName;
   const globalProfilePicture = user.profilePicture;
   const isFreePlan = user.subscription?.plan === "Free";
+  const isProPlan = user.subscription?.plan === "Pro";
 
   // Social media connections state
   const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
@@ -2859,6 +2860,9 @@ export default function CreatePost() {
                                 "snapchat",
                               ].includes(p.id);
                             }
+
+                            // Pro version restriction: remove Snapchat
+                            if (isProPlan && p.id === "snapchat") return false;
 
                             return true;
                           });
