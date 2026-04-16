@@ -940,7 +940,9 @@ export default function Profile() {
               Connected accounts
             </Text>
 
-            {SOCIAL_PLATFORMS.map((platform) => (
+            {SOCIAL_PLATFORMS.filter(
+              (p) => !(subscription?.plan === "Pro" && p.key === "snapchat"),
+            ).map((platform) => (
               <ConnectedAccountItem
                 key={platform.key}
                 icon={platform.icon}
