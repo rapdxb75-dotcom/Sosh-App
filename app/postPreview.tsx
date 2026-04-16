@@ -21,6 +21,7 @@ import {
   ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   PanResponder,
   Platform,
@@ -32,7 +33,6 @@ import {
   TouchableWithoutFeedback,
   View,
   useWindowDimensions,
-  Linking,
 } from "react-native";
 import Svg, {
   Circle,
@@ -51,7 +51,6 @@ import {
   incrementPostCaptionCount,
   incrementReelCaptionCount,
 } from "../services/firebase";
-import { getFreeTierSystemPrompt } from "../utils/prompts";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
@@ -66,6 +65,7 @@ import {
   setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
+import { getFreeTierSystemPrompt } from "../utils/prompts";
 
 const isVideoUrl = (url?: string | null) => {
   if (typeof url !== "string" || !url) return false;
@@ -518,7 +518,7 @@ export default function PostPreview() {
       }
 
       console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
-      
+
       let finalSystemPrompt = user.systemPrompt;
       if (isFreePlan) {
         finalSystemPrompt = getFreeTierSystemPrompt(
@@ -989,7 +989,7 @@ export default function PostPreview() {
       if (isBackgroundPublishing.current) {
         addNotification({
           type: "success",
-          title: "Post is Live",
+          title: `${contentType} is Live`,
           message: notificationMessage,
         });
       }

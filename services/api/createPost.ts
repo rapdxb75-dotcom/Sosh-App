@@ -58,7 +58,8 @@ const createPostService = {
 
       // ✅ Append platforms like your example
       selectedPlatforms.forEach((platform) => {
-        formData.append("platforms", platform);
+        const platformValue = platform === "x" ? "twitter" : platform;
+        formData.append("platforms", platformValue);
       });
 
       // If there's only 1 platform, append an empty string to ensure FormData sends it as an array
@@ -150,7 +151,8 @@ const createPostService = {
 
       // Append platforms
       selectedPlatforms.forEach((platform) => {
-        formData.append("platforms", platform);
+        const platformValue = platform === "x" ? "twitter" : platform;
+        formData.append("platforms", platformValue);
       });
 
       // If there's only 1 platform, append an empty string to ensure FormData sends it as an array
@@ -218,7 +220,8 @@ const createPostService = {
 
       // Append platforms
       selectedPlatforms.forEach((platform) => {
-        formData.append("platforms", platform);
+        const platformValue = platform === "x" ? "twitter" : platform;
+        formData.append("platforms", platformValue);
       });
 
       if (selectedPlatforms.length === 1) {
@@ -288,7 +291,8 @@ const createPostService = {
 
       // Append platforms with capital P as per API spec
       selectedPlatforms.forEach((platform) => {
-        formData.append("Platforms", platform);
+        const platformValue = platform === "x" ? "twitter" : platform;
+        formData.append("Platforms", platformValue);
       });
 
       if (selectedPlatforms.length === 1) {
