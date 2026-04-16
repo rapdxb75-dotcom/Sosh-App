@@ -17,6 +17,7 @@ import {
   ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   NativeEventEmitter,
   NativeModules,
@@ -30,7 +31,6 @@ import {
   TouchableWithoutFeedback,
   View,
   useWindowDimensions,
-  Linking,
 } from "react-native";
 import {
   Video as CompressorVideo,
@@ -54,11 +54,10 @@ import anthropicService from "../../services/api/anthropic";
 import createPostService from "../../services/api/createPost";
 import poppyService from "../../services/api/poppy";
 import {
-  listenToUserData,
   incrementPostCaptionCount,
   incrementReelCaptionCount,
+  listenToUserData,
 } from "../../services/firebase";
-import { getFreeTierSystemPrompt } from "../../utils/prompts";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
@@ -72,6 +71,7 @@ import {
   setPreviewData,
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
+import { getFreeTierSystemPrompt } from "../../utils/prompts";
 
 type ExpoImageManipulatorModule = typeof import("expo-image-manipulator");
 
@@ -1156,7 +1156,7 @@ export default function CreatePost() {
       }
 
       console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
-      
+
       let finalSystemPrompt = user.systemPrompt;
       if (isFreePlan) {
         finalSystemPrompt = getFreeTierSystemPrompt(
@@ -1640,7 +1640,7 @@ export default function CreatePost() {
       if (isBackgroundPublishing.current) {
         addNotification({
           type: "success",
-          title: "Post is Live",
+          title: `${contentType} is Live`,
           message: notificationMessage,
         });
       }

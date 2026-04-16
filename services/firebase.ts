@@ -21,12 +21,12 @@ import userService from "./api/user";
 
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyB9bzB3P06DbpzQf3BsXjnzGLPAh4TL324",
-  authDomain: "rapdxb-app.firebaseapp.com",
-  projectId: "rapdxb-app",
-  storageBucket: "rapdxb-app.firebasestorage.app",
-  messagingSenderId: "459898012419",
-  appId: "1:459898012419:android:1ec111bb418237597cdf36",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase App

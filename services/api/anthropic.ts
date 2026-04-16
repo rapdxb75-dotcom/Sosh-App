@@ -1,4 +1,5 @@
 const ANTHROPIC_API_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
+const ANTHROPIC_API_URL = process.env.EXPO_PUBLIC_ANTHROPIC_API_URL;
 const ANTHROPIC_VERSION = "2023-06-01";
 const DEFAULT_MODEL = "claude-opus-4-0";
 
@@ -16,7 +17,7 @@ class AnthropicService {
     onChunk: (delta: string) => void,
     systemPrompt?: string,
   ): Promise<string> {
-    const url = "https://api.anthropic.com/v1/messages";
+    const url = `${ANTHROPIC_API_URL}/messages`;
 
     try {
       console.log("🦋 Starting Anthropic stream request...");
@@ -95,7 +96,7 @@ class AnthropicService {
    * Non-streaming message generation (matching the provided curl)
    */
   async generateMessage(content: string, systemPrompt?: string): Promise<string> {
-    const url = "https://api.anthropic.com/v1/messages";
+    const url = `${ANTHROPIC_API_URL}/messages`;
 
     try {
       console.log("🦋 Starting Anthropic non-streaming request...");

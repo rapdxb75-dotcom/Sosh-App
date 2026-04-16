@@ -1,6 +1,6 @@
-const POPPY_API_KEY =
-  process.env.EXPO_PUBLIC_POPPY_API_KEY ||
-  "zKNHI3ZmmGQTWTRnlllJM6ozIEpuTCNgATdGo8o2ic";
+const POPPY_API_KEY = process.env.EXPO_PUBLIC_POPPY_API_KEY;
+const POPPY_WEBHOOK_URL = process.env.EXPO_PUBLIC_POPPY_WEBHOOK_URL;
+const POPPY_API_URL = process.env.EXPO_PUBLIC_POPPY_API_URL;
 
 import { updatePoppyTokenCredits } from "../firebase";
 
@@ -21,7 +21,7 @@ class PoppyService {
     boardId?: string,
     chatId?: string,
   ): Promise<string> {
-    const url = "https://n8n-production-0558.up.railway.app/webhook/poppyAi";
+    const url = POPPY_WEBHOOK_URL;
 
     try {
       console.log("🎨 Generating caption...", {
@@ -106,7 +106,7 @@ class PoppyService {
     userEmail: string,
     onChunk: (delta: string) => void,
   ): Promise<string> {
-    const url = `https://api.getpoppy.ai/api/conversation/${conversationId}?board_id=${boardId}&chat_id=${chatId}&api_key=${POPPY_API_KEY}`;
+    const url = `${POPPY_API_URL}/conversation/${conversationId}?board_id=${boardId}&chat_id=${chatId}&api_key=${POPPY_API_KEY}`;
 
     try {
       console.log("🌊 Starting Poppy XHR request:", url);
