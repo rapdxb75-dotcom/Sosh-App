@@ -49,12 +49,12 @@ import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
 import chatService, { Conversation, Message } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
+import { incrementAIChatCount } from "../../services/firebase";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
-import { incrementAIChatCount } from "../../services/firebase";
 import { RootState } from "../../store/store";
 const AI_CHAT_LIMIT = 5;
 
