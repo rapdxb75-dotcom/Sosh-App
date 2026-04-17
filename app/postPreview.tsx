@@ -57,6 +57,7 @@ import {
   useOptionalSpeechRecognitionEvent,
 } from "../services/speechRecognition";
 import storageService from "../services/storage";
+import { generateVideoThumbnail } from "../utils/video";
 import {
   type PreviewData,
   clearPreviewData,
@@ -945,6 +946,28 @@ export default function PostPreview() {
         : processMediaForUpload(currentMedia as string);
 
       if (activeTab === "Reel") {
+        let thumbnailPayload = null;
+        if (cover_img) {
+          thumbnailPayload = {
+            uri: cover_img,
+            type: "image/jpeg",
+            name: "thumbnail.jpg",
+          } as any;
+        } else {
+          const offset = thumbNailOffset || scrubberPositionMs || 0;
+          const mediaUri = typeof mediaPayload === "string" ? mediaPayload : mediaPayload.uri;
+          if (mediaUri) {
+            const generatedThumb = await generateVideoThumbnail(mediaUri, offset);
+            if (generatedThumb) {
+              thumbnailPayload = {
+                uri: generatedThumb,
+                type: "image/jpeg",
+                name: "thumbnail.jpg",
+              } as any;
+            }
+          }
+        }
+
         await createPostService.createReel(
           caption,
           activeTags,
@@ -953,7 +976,7 @@ export default function PostPreview() {
           mediaPayload as any,
           date,
           thumbNailOffset || scrubberPositionMs || 0,
-          null, // thumbnailPayload
+          thumbnailPayload,
         );
       } else if (activeTab === "Story") {
         const email = await storageService.getEmail();

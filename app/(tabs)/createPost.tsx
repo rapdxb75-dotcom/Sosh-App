@@ -64,6 +64,7 @@ import {
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
 import storageService from "../../services/storage";
+import { generateVideoThumbnail } from "../../utils/video";
 import {
   type PreviewData,
   consumePreviewPostSuccessReset,
@@ -1594,6 +1595,19 @@ export default function CreatePost() {
             type: "image/jpeg",
             name: "thumbnail.jpg",
           } as any;
+        } else {
+          const offset = thumbNailOffset || scrubberPositionMs || 0;
+          const mediaUri = typeof mediaPayload === "string" ? mediaPayload : mediaPayload.uri;
+          if (mediaUri) {
+            const generatedThumb = await generateVideoThumbnail(mediaUri, offset);
+            if (generatedThumb) {
+              thumbnailPayload = {
+                uri: generatedThumb,
+                type: "image/jpeg",
+                name: "thumbnail.jpg",
+              } as any;
+            }
+          }
         }
 
         await createPostService.createReel(

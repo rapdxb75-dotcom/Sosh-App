@@ -687,7 +687,7 @@ export default function Profile() {
     };
 
     const getDescription = () => {
-      if (isBusiness) return "Scale your brand with advanced team tools, custom AI training, and priority agency support.";
+      if (isBusiness) return "Supercharge your brand with unlimited AI content, seamless post scheduling, and a custom AI that writes perfectly in your unique voice.";
       if (isPro) return "You have full access to all premium features including AI assistants and post scheduling.";
       return "Upgrade to Sosh Pro to unlock AI assistance, post scheduling, and detailed analytics.";
     };

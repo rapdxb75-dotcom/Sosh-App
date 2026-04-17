@@ -91,10 +91,10 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
   }
 };
 
-export const getFCMToken = async (): Promise<string | null> => {
+export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
   try {
     // 1. iOS: Explicitly register device for remote messages before anything else
-    if (Platform.OS === "ios") {
+    if (Platform.OS === "ios" && retryCount === 0) {
       console.log(
         "📱 [iOS] Registering device for remote messages explicitly...",
       );
@@ -115,7 +115,7 @@ export const getFCMToken = async (): Promise<string | null> => {
     await messaging().setAutoInitEnabled(true);
 
     // 4. Get the token
-    console.log("🎫 [FCM] Requesting token...");
+    console.log(`🎫 [FCM] Requesting token (Attempt ${retryCount + 1})...`);
     try {
       const token = await messaging().getToken();
 
@@ -124,12 +124,29 @@ export const getFCMToken = async (): Promise<string | null> => {
         console.log("✅ [FCM] Token obtained successfully:", token);
         // Sync token with local backend/webhook
         await syncFCMTokenWithBackend(token);
+        return token;
       } else {
         console.error("❌ [FCM] Received null or empty token.");
+        throw new Error("Received null or empty token.");
       }
-      return token;
     } catch (tokenError) {
-      console.error("❌ [FCM] messaging().getToken() error:", tokenError);
+      console.warn("⚠️ [FCM] messaging().getToken() error:", tokenError);
+      
+      if (retryCount < 2) {
+        console.log(`⏳ Retrying FCM token generation in 3 seconds...`);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        
+        // Sometimes deleting the existing token clears up bad state on network switches
+        try {
+          await messaging().deleteToken();
+        } catch (e) {
+          // Ignore deleteToken errors
+        }
+        
+        return await getFCMToken(retryCount + 1);
+      }
+      
+      console.error("❌ [FCM] Failed to get FCM token after retries.");
       return null;
     }
   } catch (error) {
