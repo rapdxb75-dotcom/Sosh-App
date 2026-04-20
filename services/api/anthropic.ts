@@ -1,7 +1,7 @@
 const ANTHROPIC_API_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY;
 const ANTHROPIC_API_URL = process.env.EXPO_PUBLIC_ANTHROPIC_API_URL;
 const ANTHROPIC_VERSION = "2023-06-01";
-const DEFAULT_MODEL = "claude-opus-4-0";
+const DEFAULT_MODEL = "claude-sonnet-4-5-20250929";
 
 class AnthropicService {
 
