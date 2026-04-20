@@ -1037,6 +1037,39 @@ export default function AI() {
         );
       });
       setConversations(sortedData);
+
+      // Automatically log the history for the 10 most recent conversations to show 'responses'
+      if (sortedData.length > 0) {
+        const topConversations = sortedData.slice(0, 10);
+        console.log(`🔍 [AI] Fetching history for the latest ${topConversations.length} chats...`);
+
+        topConversations.forEach((conv, index) => {
+          const latestId = conv.conversationId || conv._id;
+          chatService.getHistory(latestId).then(history => {
+            // Transform history into cleaned { user, response } pairs
+            const formattedPairs: { user: string, response: string }[] = [];
+
+            for (let i = 0; i < history.length; i++) {
+              if (history[i].role === 'User') {
+                const userMsg = history[i].content;
+                let aiRes = "";
+
+                // Look for the next 'Model' message
+                if (i + 1 < history.length && history[i + 1].role === 'Model') {
+                  aiRes = history[i + 1].content;
+                  i++; // skip the model message
+                }
+                formattedPairs.push({ user: userMsg, response: aiRes });
+              } else if (history[i].role === 'Model') {
+                // If we find a model response without a preceding user message
+                formattedPairs.push({ user: "", response: history[i].content });
+              }
+            }
+
+            console.log(`📜 [AI] (${index + 1}) Formatted History for: "${conv.conversationName}":`, formattedPairs);
+          }).catch(err => console.error(`Failed to fetch history for ${conv.conversationName}:`, err));
+        });
+      }
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
       setConversationsError("Failed to load conversations");
@@ -1211,6 +1244,10 @@ export default function AI() {
       );
 
       setMessages(validMessages);
+      console.log("💬 [AI] Last Chat History from Firebase:", validMessages);
+      if (validMessages.length > 0) {
+        console.log("✨ [AI] Most recent message:", validMessages[validMessages.length - 1]);
+      }
 
       // Auto-scroll to bottom after loading
       setTimeout(() => {
@@ -1246,9 +1283,11 @@ export default function AI() {
   );
 
   const handleSendMessage = async () => {
+    console.log("📤 [AI] handleSendMessage triggered. Current messages state length:", messages.length);
     if (!inputText.trim() || isSending || !userEmail) return;
 
     const content = inputText.trim();
+    console.log("📤 [AI] Sending User Message:", content);
     setInputText("");
     setIsSending(true);
 
@@ -1368,7 +1407,30 @@ export default function AI() {
             if (!rafIdRef.current) {
               rafIdRef.current = requestAnimationFrame(flushStreamBuffer);
             }
-          }, systemPrompt)
+          }, systemPrompt, (() => {
+            // Filter out any messages that don't have roles we expect
+            const historyToPass = messages
+              .filter(m => m.role && m.content && (m.role === "User" || m.role === "Model"))
+              .slice(-10);
+
+            // Ensure alternating roles for Anthropic (User -> Assistant -> User ...)
+            // We'll take the messages and if any two consecutive have the same role, 
+            // the API will fail, so we should be careful. 
+            // Usually history already alternates, but let's be safe.
+            const alternatingHistory = [];
+            let lastRole = null;
+
+            for (const msg of historyToPass) {
+              const currentRole = msg.role === "User" ? "user" : "assistant";
+              if (currentRole !== lastRole) {
+                alternatingHistory.push(msg);
+                lastRole = currentRole;
+              }
+            }
+
+            console.log("📤 [AI] Final history being sent:", JSON.stringify(alternatingHistory.map(m => ({ role: m.role, content: m.content.substring(0, 30) + "..." })), null, 2));
+            return alternatingHistory;
+          })())
           : poppyService.streamMessage(
             currentConversationId!,
             content,
@@ -1398,6 +1460,8 @@ export default function AI() {
           msg._id === aiMessageId ? { ...msg, content: fullAIResponse } : msg,
         ),
       );
+      console.log("📥 [AI] Complete AI Response Received:", fullAIResponse);
+      console.log("🔄 [AI] Chat Pair:", { message: content, response: fullAIResponse });
 
       // 4. Save AI Response to History in background (don't block UI)
       if (fullAIResponse) {

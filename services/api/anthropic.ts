@@ -16,12 +16,14 @@ class AnthropicService {
     content: string,
     onChunk: (delta: string) => void,
     systemPrompt?: string,
+    history: { role: string; content: string }[] = [],
   ): Promise<string> {
     const url = `${ANTHROPIC_API_URL}/messages`;
 
     try {
       console.log("🦋 Starting Anthropic stream request...");
-      console.log("📝 System Prompt:", systemPrompt);
+      console.log("📝 System Prompt:", systemPrompt ? "Present" : "None");
+      console.log(`📜 History items passed: ${history.length}`);
 
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -79,7 +81,15 @@ class AnthropicService {
           model: DEFAULT_MODEL,
           max_tokens: 1024,
           ...(systemPrompt ? { system: systemPrompt } : {}),
-          messages: [{ role: "user", content }],
+          messages: [
+            ...history
+              .filter(msg => msg.role && msg.content)
+              .map(msg => ({
+                role: msg.role.toLowerCase() === "user" ? "user" : "assistant",
+                content: msg.content
+              })),
+            { role: "user", content }
+          ],
           stream: true,
         };
 
@@ -95,7 +105,7 @@ class AnthropicService {
   /**
    * Non-streaming message generation (matching the provided curl)
    */
-  async generateMessage(content: string, systemPrompt?: string): Promise<string> {
+  async generateMessage(content: string, systemPrompt?: string, history: { role: string; content: string }[] = []): Promise<string> {
     const url = `${ANTHROPIC_API_URL}/messages`;
 
     try {
@@ -105,7 +115,13 @@ class AnthropicService {
         model: DEFAULT_MODEL,
         max_tokens: 1024,
         ...(systemPrompt ? { system: systemPrompt } : {}),
-        messages: [{ role: "user", content }],
+        messages: [
+          ...history.map(msg => ({
+            role: msg.role.toLowerCase() === "user" ? "user" : "assistant",
+            content: msg.content
+          })),
+          { role: "user", content }
+        ],
       };
 
       console.log("📤 Anthropic Payload:", JSON.stringify(payload, null, 2));
