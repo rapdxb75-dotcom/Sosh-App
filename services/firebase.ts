@@ -37,9 +37,6 @@ export const initializeFirebase = () => {
   if (!app) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app, "test"); // Using 'test' database
-    console.log("Firebase initialized successfully");
-    console.log("Firebase DB Name:", firebaseConfig.projectId);
-    console.log("Firebase Database ID: test");
   }
   return { app, db };
 };
@@ -64,9 +61,6 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 
     if (Platform.OS === "ios") {
       try {
-        console.log("📱 [iOS] Registering device for remote messages...");
-        await messaging().registerDeviceForRemoteMessages();
-        console.log("✅ [iOS] Device registered successfully");
       } catch (error) {
         console.error("❌ [iOS] Failed to register device:", error);
       }
@@ -95,11 +89,6 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
   try {
     // 1. iOS: Explicitly register device for remote messages before anything else
     if (Platform.OS === "ios" && retryCount === 0) {
-      console.log(
-        "📱 [iOS] Registering device for remote messages explicitly...",
-      );
-      await messaging().registerDeviceForRemoteMessages();
-      console.log("✅ [iOS] Device registered successfully");
       // Crucial: wait for registration to propagate
       await new Promise((resolve) => setTimeout(resolve, 1500));
     }
@@ -107,7 +96,6 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
     // 2. Request/Check permissions
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) {
-      console.log("❌ No notification permission - cannot get FCM token");
       return null;
     }
 
@@ -115,13 +103,11 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
     await messaging().setAutoInitEnabled(true);
 
     // 4. Get the token
-    console.log(`🎫 [FCM] Requesting token (Attempt ${retryCount + 1})...`);
     try {
       const token = await messaging().getToken();
 
       if (token) {
         await AsyncStorage.setItem("fcm_token", token);
-        console.log("✅ [FCM] Token obtained successfully:", token);
         // Sync token with local backend/webhook
         await syncFCMTokenWithBackend(token);
         return token;
@@ -133,7 +119,6 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
       console.warn("⚠️ [FCM] messaging().getToken() error:", tokenError);
       
       if (retryCount < 2) {
-        console.log(`⏳ Retrying FCM token generation in 3 seconds...`);
         await new Promise((resolve) => setTimeout(resolve, 3000));
         
         // Sometimes deleting the existing token clears up bad state on network switches
@@ -157,10 +142,6 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
 
 export const setupForegroundMessageListener = () => {
   return messaging().onMessage(async (remoteMessage) => {
-    console.log(
-      "🔔 Foreground notification:",
-      JSON.stringify(remoteMessage, null, 2),
-    );
 
     const title =
       remoteMessage.notification?.title ||
@@ -191,7 +172,6 @@ export const setupForegroundMessageListener = () => {
 
 export const setupTokenRefreshListener = () => {
   return messaging().onTokenRefresh(async (token) => {
-    console.log("🔁 FCM Token refreshed:", token);
     await AsyncStorage.setItem("fcm_token", token);
     await syncFCMTokenWithBackend(token);
   });
@@ -202,9 +182,7 @@ export const setupTokenRefreshListener = () => {
  */
 export const syncFCMTokenWithBackend = async (fcmToken: string) => {
   try {
-    console.log("📤 Syncing FCM token with backend...");
     await userService.updateFcmToken(fcmToken);
-    console.log("✅ FCM token synced successfully");
   } catch (error) {
     console.error("❌ Error syncing FCM token with backend:", error);
   }
@@ -212,7 +190,6 @@ export const syncFCMTokenWithBackend = async (fcmToken: string) => {
 
 export const initializeFCM = async () => {
   try {
-    console.log("🚀 [FCM] Starting initialization...");
 
     // Ensure Firebase is initialized
     initializeFirebase();
@@ -233,7 +210,6 @@ export const initializeFCM = async () => {
 export const getCurrentUserData = async (userEmail: string) => {
   try {
     if (!userEmail) {
-      console.log("No user email provided");
       return null;
     }
 
@@ -250,9 +226,6 @@ export const getCurrentUserData = async (userEmail: string) => {
         ...userData,
       };
 
-      console.log("Firebase Collection Name: users");
-      console.log("Current User Email:", userEmail);
-      console.log("User Document Data:", userDataWithId);
 
       return userDataWithId;
     } else {
@@ -269,13 +242,9 @@ export const getCurrentUserData = async (userEmail: string) => {
           ...userData,
         };
 
-        console.log("Firebase Collection Name: users");
-        console.log("Current User Email:", userEmail);
-        console.log("User Document Data:", userDataWithId);
 
         return userDataWithId;
       } else {
-        console.log("No user found with email:", userEmail);
         return null;
       }
     }
@@ -292,7 +261,6 @@ export const listenToUserData = (
   onError?: (error: Error) => void,
 ) => {
   if (!userEmail) {
-    console.log("No user email provided for listener");
     return () => { }; // Return empty unsubscribe function
   }
 
@@ -309,10 +277,8 @@ export const listenToUserData = (
           id: docSnapshot.id,
           ...userData,
         };
-        console.log("Real-time user data update:", userDataWithId);
         onUpdate(userDataWithId);
       } else {
-        console.log("User document does not exist");
         onUpdate(null);
       }
     },
@@ -334,7 +300,6 @@ export const updatePoppyTokenCredits = async (
 ) => {
   try {
     if (!userEmail || typeof creditsUsed !== "number" || creditsUsed <= 0) {
-      console.log("Invalid parameters for updating poppy credits");
       return false;
     }
 
@@ -346,9 +311,6 @@ export const updatePoppyTokenCredits = async (
       poppyToken: increment(creditsUsed),
     });
 
-    console.log(
-      `✅ Updated poppyToken: +${creditsUsed} credits for ${userEmail}`,
-    );
     return true;
   } catch (error: any) {
     // If document doesn't exist or field doesn't exist, create it
@@ -357,9 +319,6 @@ export const updatePoppyTokenCredits = async (
         const { db } = initializeFirebase();
         const userDocRef = doc(db, "users", userEmail);
         await setDoc(userDocRef, { poppyToken: creditsUsed }, { merge: true });
-        console.log(
-          `✅ Created poppyToken field: ${creditsUsed} credits for ${userEmail}`,
-        );
         return true;
       } catch (setError) {
         console.error("Error creating poppyToken field:", setError);
@@ -387,7 +346,6 @@ export const incrementAIChatCount = async (userEmail: string) => {
       { merge: true },
     );
 
-    console.log(`✅ Incremented aiChatCount for ${userEmail}`);
     return true;
   } catch (error: any) {
     console.error("Error incrementing aiChatCount:", error);

@@ -41,7 +41,6 @@ export default function Home() {
         getCurrentUserData(globalEmail),
         new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
-      console.log("Pull to refresh - userData:", userData);
       if (userData?.totalAnalytics) {
         const { totalFollowers, totalLikes, totalViews } =
           userData.totalAnalytics;
@@ -66,13 +65,13 @@ export default function Home() {
       (userData) => {
         if (userData) {
           // Update analytics
-          if (userData.totalAnalytics) {
-            const { totalFollowers, totalLikes, totalViews } =
-              userData.totalAnalytics;
+          if (userData.allTimeAnalytics) {
+            const { followers, like, views } =
+              userData.allTimeAnalytics;
             setAnalytics({
-              totalFollowers: totalFollowers || 0,
-              totalLikes: totalLikes || 0,
-              totalViews: totalViews || 0,
+              totalFollowers: followers || 0,
+              totalLikes: like || 0,
+              totalViews: views || 0,
             });
           } else {
             setAnalytics({
@@ -95,13 +94,11 @@ export default function Home() {
               subscription: (() => {
                 const firebaseSub = userData.subscription;
                 let planName = "Free";
-                
                 if (typeof firebaseSub === "string") {
                   planName = firebaseSub;
                 } else if (firebaseSub && typeof firebaseSub === "object") {
                   planName = firebaseSub.plan || "Free";
                 }
-                
                 return {
                   plan: planName as "Free" | "Pro" | "Business",
                   isSubscribed: planName !== "Free",
