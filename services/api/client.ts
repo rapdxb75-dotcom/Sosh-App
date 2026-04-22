@@ -5,22 +5,17 @@ import { store } from "../../store/store";
 import { clearUserData } from "../../store/userSlice";
 import storageService from "../storage";
 
-// Base URL for API requests
-// Note: In production, consider moving this to an environment variable.
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  // timeout: 120000,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Add request interceptor for tokens
 apiClient.interceptors.request.use(
   async (config) => {
-    // Skip adding token for login endpoint
     if (config.url === "/app-login") {
       return config;
     }
@@ -30,9 +25,6 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
-    console.log("[API Full URL]:", `${config.baseURL}${config.url}`);
-    console.log("[API Payload]:", JSON.stringify(config.data, null, 2));
     return config;
   },
   (error) => {
@@ -40,14 +32,11 @@ apiClient.interceptors.request.use(
   },
 );
 
-// Add response interceptor for session handling
 apiClient.interceptors.response.use(
   (response) => {
     return response;
   },
   async (error) => {
-    // Handle session expiry (403 Forbidden - used as expiry here)
-    // Check if it's NOT a workflow error (n8n workflow errors often have a 'hint' or 'message' about webhooks)
     const isWorkflowError =
       error.response?.data?.hint ||
       (error.response?.data?.message &&
@@ -74,7 +63,6 @@ apiClient.interceptors.response.use(
       });
     }
 
-    // Log errors or implement global error handling
     console.error("API Error:", error?.response?.data || error.message);
     return Promise.reject(error);
   },

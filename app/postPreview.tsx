@@ -518,7 +518,6 @@ export default function PostPreview() {
         }
       }
 
-      console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
 
       let finalSystemPrompt = user.systemPrompt;
       if (isFreePlan) {

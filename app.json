@@ -24,7 +24,9 @@
       },
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to the microphone for voice recognition",
-        "NSSpeechRecognitionUsageDescription": "This app needs speech recognition access to convert your voice to text"
+        "NSSpeechRecognitionUsageDescription": "This app needs speech recognition access to convert your voice to text",
+        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to allow you to upload images and videos for your posts.",
+        "NSCameraUsageDescription": "This app needs access to your camera to allow you to take photos and videos for your posts."
       }
     },
     "android": {

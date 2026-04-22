@@ -16,12 +16,11 @@ class AnthropicService {
     content: string,
     onChunk: (delta: string) => void,
     systemPrompt?: string,
+    history: { role: string; content: string }[] = [],
   ): Promise<string> {
     const url = `${ANTHROPIC_API_URL}/messages`;
 
     try {
-      console.log("🦋 Starting Anthropic stream request...");
-      console.log("📝 System Prompt:", systemPrompt);
 
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -62,7 +61,6 @@ class AnthropicService {
         xhr.onreadystatechange = () => {
           if (xhr.readyState === 4) {
             if (xhr.status >= 200 && xhr.status < 300) {
-              console.log("✅ Anthropic stream complete");
               resolve(fullText);
             } else {
               console.error("❌ Anthropic API Error:", xhr.status, xhr.responseText);
@@ -79,11 +77,18 @@ class AnthropicService {
           model: DEFAULT_MODEL,
           max_tokens: 1024,
           ...(systemPrompt ? { system: systemPrompt } : {}),
-          messages: [{ role: "user", content }],
+          messages: [
+            ...history
+              .filter(msg => msg.role && msg.content)
+              .map(msg => ({
+                role: msg.role.toLowerCase() === "user" ? "user" : "assistant",
+                content: msg.content
+              })),
+            { role: "user", content }
+          ],
           stream: true,
         };
 
-        console.log("📤 Anthropic Payload:", JSON.stringify(payload, null, 2));
         xhr.send(JSON.stringify(payload));
       });
     } catch (error) {
@@ -95,20 +100,23 @@ class AnthropicService {
   /**
    * Non-streaming message generation (matching the provided curl)
    */
-  async generateMessage(content: string, systemPrompt?: string): Promise<string> {
+  async generateMessage(content: string, systemPrompt?: string, history: { role: string; content: string }[] = []): Promise<string> {
     const url = `${ANTHROPIC_API_URL}/messages`;
 
     try {
-      console.log("🦋 Starting Anthropic non-streaming request...");
-      console.log("📝 System Prompt:", systemPrompt);
       const payload = {
         model: DEFAULT_MODEL,
         max_tokens: 1024,
         ...(systemPrompt ? { system: systemPrompt } : {}),
-        messages: [{ role: "user", content }],
+        messages: [
+          ...history.map(msg => ({
+            role: msg.role.toLowerCase() === "user" ? "user" : "assistant",
+            content: msg.content
+          })),
+          { role: "user", content }
+        ],
       };
 
-      console.log("📤 Anthropic Payload:", JSON.stringify(payload, null, 2));
 
       const response = await fetch(url, {
         method: "POST",

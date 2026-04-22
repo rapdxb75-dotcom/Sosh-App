@@ -1037,6 +1037,37 @@ export default function AI() {
         );
       });
       setConversations(sortedData);
+
+      // Automatically log the history for the 10 most recent conversations to show 'responses'
+      if (sortedData.length > 0) {
+        const topConversations = sortedData.slice(0, 10);
+
+        topConversations.forEach((conv, index) => {
+          const latestId = conv.conversationId || conv._id;
+          chatService.getHistory(latestId).then(history => {
+            // Transform history into cleaned { user, response } pairs
+            const formattedPairs: { user: string, response: string }[] = [];
+
+            for (let i = 0; i < history.length; i++) {
+              if (history[i].role === 'User') {
+                const userMsg = history[i].content;
+                let aiRes = "";
+
+                // Look for the next 'Model' message
+                if (i + 1 < history.length && history[i + 1].role === 'Model') {
+                  aiRes = history[i + 1].content;
+                  i++; // skip the model message
+                }
+                formattedPairs.push({ user: userMsg, response: aiRes });
+              } else if (history[i].role === 'Model') {
+                // If we find a model response without a preceding user message
+                formattedPairs.push({ user: "", response: history[i].content });
+              }
+            }
+
+          }).catch(err => console.error(`Failed to fetch history for ${conv.conversationName}:`, err));
+        });
+      }
     } catch (error) {
       console.error("Failed to fetch conversations:", error);
       setConversationsError("Failed to load conversations");
@@ -1348,7 +1379,6 @@ export default function AI() {
         return;
       }
 
-      console.log(`🤖 AI Provider (Stream): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
 
       const [,] = await Promise.all([
         // Save user message (fire-and-forget, don't block streaming)
@@ -1368,7 +1398,29 @@ export default function AI() {
             if (!rafIdRef.current) {
               rafIdRef.current = requestAnimationFrame(flushStreamBuffer);
             }
-          }, systemPrompt)
+          }, systemPrompt, (() => {
+            // Filter out any messages that don't have roles we expect
+            const historyToPass = messages
+              .filter(m => m.role && m.content && (m.role === "User" || m.role === "Model"))
+              .slice(-10);
+
+            // Ensure alternating roles for Anthropic (User -> Assistant -> User ...)
+            // We'll take the messages and if any two consecutive have the same role, 
+            // the API will fail, so we should be careful. 
+            // Usually history already alternates, but let's be safe.
+            const alternatingHistory = [];
+            let lastRole = null;
+
+            for (const msg of historyToPass) {
+              const currentRole = msg.role === "User" ? "user" : "assistant";
+              if (currentRole !== lastRole) {
+                alternatingHistory.push(msg);
+                lastRole = currentRole;
+              }
+            }
+
+            return alternatingHistory;
+          })())
           : poppyService.streamMessage(
             currentConversationId!,
             content,
