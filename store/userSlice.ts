@@ -42,6 +42,7 @@ interface UserState {
     userName: string;
     email: string;
     password: string;
+    checkbox: boolean;
   } | null;
   onboardingData?: any;
 }

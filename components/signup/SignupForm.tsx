@@ -1,8 +1,9 @@
 import { AntDesign } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { Eye, EyeOff } from "lucide-react-native";
+import { Eye, EyeOff, Check } from "lucide-react-native";
 import { useState } from "react";
+import * as WebBrowser from "expo-web-browser";
 import {
   ActivityIndicator,
   Image,
@@ -40,7 +41,10 @@ export default function SignupForm() {
     email: "",
     password: "",
     confirmPassword: "",
+    terms: "",
   });
+
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -52,6 +56,7 @@ export default function SignupForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      terms: "",
     };
 
     if (!fullName.trim()) {
@@ -85,6 +90,11 @@ export default function SignupForm() {
       isValid = false;
     }
 
+    if (!acceptedTerms) {
+      newErrors.terms = "You must accept the Privacy Policy and Terms";
+      isValid = false;
+    }
+
     setErrors(newErrors);
 
     if (isValid) {
@@ -97,6 +107,7 @@ export default function SignupForm() {
             userName,
             email,
             password,
+            checkbox: true,
           }),
         );
 
@@ -110,6 +121,14 @@ export default function SignupForm() {
           text2: "Something went wrong. Please try again.",
         });
       }
+    }
+  };
+
+  const handleOpenLink = async (url: string) => {
+    try {
+      await WebBrowser.openBrowserAsync(url);
+    } catch (error) {
+      console.error("Error opening link:", error);
     }
   };
 
@@ -362,6 +381,52 @@ export default function SignupForm() {
               </Text>
             ) : null}
           </View>
+
+          {/* Terms and Conditions Checkbox */}
+          <View className="mt-2">
+            <TouchableOpacity
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+              className="flex-row items-center gap-3 px-1"
+              activeOpacity={1}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 4,
+                  borderWidth: 2,
+                  borderColor: acceptedTerms ? "#3b82f6" : "rgba(255, 255, 255, 0.3)",
+                  backgroundColor: acceptedTerms ? "#3b82f6" : "transparent",
+                }}
+                className="items-center justify-center"
+              >
+                {acceptedTerms && <Check size={14} color="white" />}
+              </View>
+              <View className="flex-1">
+                <Text className="text-white/70 text-xs leading-5">
+                  I agree to the{" "}
+                  <Text
+                    className="text-blue-400 font-semibold underline"
+                    onPress={() => handleOpenLink("https://sosh.app/terms")}
+                  >
+                    Terms and Conditions
+                  </Text>{" "}
+                  and{" "}
+                  <Text
+                    className="text-blue-400 font-semibold underline"
+                    onPress={() => handleOpenLink("https://sosh.app/privacy")}
+                  >
+                    Privacy Policy
+                  </Text>
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {errors.terms ? (
+              <Text className="text-red-500 text-[10px] ml-8 mt-1 italic">
+                {errors.terms}
+              </Text>
+            ) : null}
+          </View>
         </BlurView>
       </View>
 
@@ -369,6 +434,8 @@ export default function SignupForm() {
       <TouchableOpacity
         className="w-full h-14 overflow-hidden rounded-full"
         onPress={handleSignup}
+        disabled={!acceptedTerms}
+        style={{ opacity: acceptedTerms ? 1 : 0.6 }}
       >
         <ImageBackground
           source={require("../../assets/images/post_without.jpg")}

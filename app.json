@@ -15,6 +15,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "1",
       "bundleIdentifier": "com.social.aiautomation",
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
@@ -23,10 +24,10 @@
         "backgroundColor": "#000000"
       },
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "This app needs access to the microphone for voice recognition",
-        "NSSpeechRecognitionUsageDescription": "This app needs speech recognition access to convert your voice to text",
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to allow you to upload images and videos for your posts.",
-        "NSCameraUsageDescription": "This app needs access to your camera to allow you to take photos and videos for your posts."
+        "NSMicrophoneUsageDescription": "Sosh uses the microphone to allow you to record voice commands and audio for your social posts.",
+        "NSSpeechRecognitionUsageDescription": "Sosh requires speech recognition to transcribe your voice into text for captions and AI chat features.",
+        "NSPhotoLibraryUsageDescription": "Sosh requires access to your photo library to let you select images to upload for your social media posts.",
+        "NSCameraUsageDescription": "Sosh requires camera access to let you capture new photos and videos directly within the app for posting."
       }
     },
     "android": {
@@ -63,8 +64,8 @@
       [
         "@react-native-voice/voice",
         {
-          "microphonePermission": "This app needs access to microphone",
-          "speechRecognitionPermission": "This app needs speech recognition access"
+          "microphonePermission": "Sosh uses the microphone to allow you to record voice commands and audio for your social posts.",
+          "speechRecognitionPermission": "Sosh requires speech recognition to transcribe your voice into text for captions and AI chat features."
         }
       ],
       "expo-speech-recognition"

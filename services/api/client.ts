@@ -63,7 +63,6 @@ apiClient.interceptors.response.use(
       });
     }
 
-    console.error("API Error:", error?.response?.data || error.message);
     return Promise.reject(error);
   },
 );

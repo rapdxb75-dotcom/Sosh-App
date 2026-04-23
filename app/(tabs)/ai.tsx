@@ -817,9 +817,7 @@ export default function AI() {
         return;
       }
 
-      void startRecognitionSession().catch((error) => {
-        console.log("Auto-restart voice recognition failed:", error);
-      });
+      void startRecognitionSession().catch(() => {});
     }, 300);
   }, [startRecognitionSession]);
 
@@ -984,7 +982,6 @@ export default function AI() {
       setIsListening(false);
       isListeningRef.current = false;
     } catch (error) {
-      console.log("Stop Voice Error:", error);
       setIsListening(false);
       isListeningRef.current = false;
     }
@@ -1065,11 +1062,10 @@ export default function AI() {
               }
             }
 
-          }).catch(err => console.error(`Failed to fetch history for ${conv.conversationName}:`, err));
+          }).catch(() => {});
         });
       }
     } catch (error) {
-      console.error("Failed to fetch conversations:", error);
       setConversationsError("Failed to load conversations");
     } finally {
       setIsLoadingConversations(false);
@@ -1156,7 +1152,6 @@ export default function AI() {
         message: `Created new conversation: ${conversationName.trim()}`,
       });
     } catch (error) {
-      console.error("Failed to create conversation:", error);
       setCreateError("Failed to create conversation. Please try again.");
     } finally {
       setIsCreating(false);
@@ -1212,7 +1207,6 @@ export default function AI() {
         message: `Updated conversation name to: ${editName.trim()}`,
       });
     } catch (error) {
-      console.error("Failed to edit conversation:", error);
       setEditError("Failed to update conversation. Please try again.");
     } finally {
       setIsEditing(false);
@@ -1248,7 +1242,6 @@ export default function AI() {
         scrollViewRef.current?.scrollToEnd({ animated: false });
       }, 100);
     } catch (error) {
-      console.error("Failed to load conversation history:", error);
       setMessages([]);
       setMessageReactions({});
     } finally {
@@ -1460,10 +1453,10 @@ export default function AI() {
             userEmail,
             "Model",
           )
-          .catch((err) => console.error("Failed to save AI response:", err));
+          .catch(() => {});
 
         if (isFreePlan) {
-          incrementAIChatCount(userEmail).catch(console.error);
+          incrementAIChatCount(userEmail).catch(() => {});
         }
       }
 
@@ -1474,7 +1467,6 @@ export default function AI() {
         }, 50);
       }
     } catch (error) {
-      console.error("Failed to process message flow:", error);
       setMessages((prev) => prev.filter((m) => m._id !== aiMessageId));
     } finally {
       setIsSending(false);
@@ -1562,7 +1554,6 @@ export default function AI() {
         message: "Successfully deleted the conversation",
       });
     } catch (error) {
-      console.error("Failed to delete conversation:", error);
       alert("Failed to delete conversation");
       // Keep modal open on error so user can try again or cancel
     } finally {
