@@ -184,6 +184,7 @@ export default function Home() {
                   value={formatNumber(analytics.totalLikes)}
                   trend="+0% this month"
                   loading={isLoading}
+                  badge="90 days"
                 />
               </View>
 
@@ -193,6 +194,7 @@ export default function Home() {
                   value={formatNumber(analytics.totalViews)}
                   trend="+0% this month"
                   loading={isLoading}
+                  badge="90 days"
                 />
               </View>
             </View>

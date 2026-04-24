@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { TrendingUp } from "lucide-react-native";
+import { TrendingDown, TrendingUp } from "lucide-react-native";
 import { useEffect, useRef } from "react";
 import {
   Animated,
@@ -23,6 +23,7 @@ interface StatCardProps {
   trend: string;
   fullWidth?: boolean;
   loading?: boolean;
+  badge?: string;
 }
 
 /* ---------------- Skeleton Component ---------------- */
@@ -88,10 +89,16 @@ export default function StatCard({
   trend,
   fullWidth,
   loading = false,
+  badge,
 }: StatCardProps) {
   const { width } = useWindowDimensions();
   const isSmallDevice = width < 380;
   const valueFontSize = isSmallDevice ? 40 : 54;
+
+  // Determine trend status
+  const isNegative = trend.trim().startsWith("-");
+  const trendColor = isNegative ? "#c15959" : "#3fb77d";
+  const TrendIcon = isNegative ? TrendingDown : TrendingUp;
 
   const shadowStyle = {
     shadowColor: "#000000",
@@ -117,8 +124,43 @@ export default function StatCard({
           }}
           className={fullWidth ? "flex-col" : "justify-between"}
         >
-          {/* Title */}
-          <Text className="text-white/60 text-sm font-inter">{title}</Text>
+          {/* Title & Badge */}
+          <View className="flex-row items-center gap-2">
+            <Text className="text-white/60 text-sm font-inter">{title}</Text>
+            {badge && !loading && (
+              <View
+                style={{
+                  borderRadius: 100,
+                  overflow: "hidden",
+                  borderWidth: 1,
+                  borderColor: "rgba(255, 255, 255, 0.3)",
+                  marginLeft: 6,
+                }}
+              >
+                <LinearGradient
+                  colors={["rgba(255, 255, 255, 0.2)", "rgba(255, 255, 255, 0.05)"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      color: "#FFFFFF",
+                      fontFamily: "Inter_600SemiBold",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.6,
+                    }}
+                  >
+                    {badge}
+                  </Text>
+                </LinearGradient>
+              </View>
+            )}
+          </View>
 
           {fullWidth ? (
             /* -------- Full Width Layout -------- */
@@ -141,10 +183,10 @@ export default function StatCard({
 
               <View className="flex-row items-center gap-1 mb-2">
                 {!loading && (
-                  <TrendingUp
-                    color={Colors.white}
+                  <TrendIcon
+                    color={trendColor}
                     size={isSmallDevice ? 15 : 19}
-                    strokeWidth={2}
+                    strokeWidth={2.5}
                   />
                 )}
 
@@ -152,8 +194,11 @@ export default function StatCard({
                   <Skeleton height={12} width={60} />
                 ) : (
                   <Text
-                    style={{ fontSize: isSmallDevice ? 11 : 13 }}
-                    className="font-inter font-semibold leading-5 tracking-[0px] text-right text-white/60"
+                    style={{
+                      fontSize: isSmallDevice ? 11 : 13,
+                      color: trendColor,
+                    }}
+                    className="font-inter font-semibold leading-5 tracking-[0px] text-right"
                   >
                     {trend}
                   </Text>
@@ -190,10 +235,10 @@ export default function StatCard({
 
                 <View className="flex-row items-center gap-1 justify-start">
                   {!loading && (
-                    <TrendingUp
-                      color={Colors.white}
+                    <TrendIcon
+                      color={trendColor}
                       size={isSmallDevice ? 15 : 19}
-                      strokeWidth={2}
+                      strokeWidth={2.5}
                     />
                   )}
 
@@ -201,8 +246,11 @@ export default function StatCard({
                     <Skeleton height={12} width={60} />
                   ) : (
                     <Text
-                      style={{ fontSize: isSmallDevice ? 11 : 13 }}
-                      className="font-inter font-semibold leading-5 tracking-[0px] text-left text-white/60"
+                      style={{
+                        fontSize: isSmallDevice ? 11 : 13,
+                        color: trendColor,
+                      }}
+                      className="font-inter font-semibold leading-5 tracking-[0px] text-left"
                     >
                       {trend}
                     </Text>

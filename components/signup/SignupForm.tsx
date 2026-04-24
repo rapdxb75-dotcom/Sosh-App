@@ -1,9 +1,9 @@
 import { AntDesign } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
-import { Eye, EyeOff, Check } from "lucide-react-native";
-import { useState } from "react";
 import * as WebBrowser from "expo-web-browser";
+import { Check, Eye, EyeOff } from "lucide-react-native";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -407,14 +407,14 @@ export default function SignupForm() {
                   I agree to the{" "}
                   <Text
                     className="text-blue-400 font-semibold underline"
-                    onPress={() => handleOpenLink("https://sosh.app/terms")}
+                    onPress={() => handleOpenLink("https://sosh.digital/terms-and-conditions")}
                   >
                     Terms and Conditions
                   </Text>{" "}
                   and{" "}
                   <Text
                     className="text-blue-400 font-semibold underline"
-                    onPress={() => handleOpenLink("https://sosh.app/privacy")}
+                    onPress={() => handleOpenLink("https://sosh.digital/privacy-policy")}
                   >
                     Privacy Policy
                   </Text>

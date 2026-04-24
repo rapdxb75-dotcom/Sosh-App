@@ -213,15 +213,12 @@ export default function Profile() {
         new Promise((resolve) => setTimeout(resolve, 1000)),
       ]);
       if (userData) {
-        if (userData?.totalAnalytics) {
-          const { totalPosts, totalLikes, totalViews } =
-            userData.totalAnalytics;
-          setAnalytics({
-            totalPosts: totalPosts || 0,
-            totalLikes: totalLikes || 0,
-            totalViews: totalViews || 0,
-          });
-        }
+        const { totalLikes, totalViews } = userData.totalAnalytics || {};
+        setAnalytics({
+          totalPosts: userData.soshPostCount || 0,
+          totalLikes: totalLikes || 0,
+          totalViews: totalViews || 0,
+        });
         const socialData: SocialMediaData = {};
         SOCIAL_PLATFORMS.forEach((platform) => {
           const data = userData[platform.key];
@@ -258,17 +255,12 @@ export default function Profile() {
       (userData) => {
         if (userData) {
           // Extract analytics data
-          if (userData?.totalAnalytics) {
-            const { totalPosts, totalLikes, totalViews } =
-              userData.totalAnalytics;
-            setAnalytics({
-              totalPosts: totalPosts || 0,
-              totalLikes: totalLikes || 0,
-              totalViews: totalViews || 0,
-            });
-          } else {
-            setAnalytics({ totalPosts: 0, totalLikes: 0, totalViews: 0 });
-          }
+          const { totalLikes, totalViews } = userData.totalAnalytics || {};
+          setAnalytics({
+            totalPosts: userData.soshPostCount || 0,
+            totalLikes: totalLikes || 0,
+            totalViews: totalViews || 0,
+          });
 
           // Extract social media data
           const socialData: SocialMediaData = {};
