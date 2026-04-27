@@ -28,6 +28,9 @@
         "NSSpeechRecognitionUsageDescription": "Sosh requires speech recognition to transcribe your voice into text for captions and AI chat features.",
         "NSPhotoLibraryUsageDescription": "Sosh requires access to your photo library to let you select images to upload for your social media posts.",
         "NSCameraUsageDescription": "Sosh requires camera access to let you capture new photos and videos directly within the app for posting."
+      },
+      "entitlements": {
+        "aps-environment": "development"
       }
     },
     "android": {
@@ -51,6 +54,10 @@
       "bundler": "metro"
     },
     "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
+      "@react-native-firebase/messaging",
+      "./plugins/withModularHeaders",
       "expo-router",
       [
         "expo-splash-screen",
@@ -63,6 +70,18 @@
       ],
       "expo-font",
       "@react-native-community/datetimepicker",
+      [
+        "react-native-permissions",
+        {
+          "iosPermissions": [
+            "Notifications",
+            "Microphone",
+            "SpeechRecognition",
+            "Camera",
+            "PhotoLibrary"
+          ]
+        }
+      ],
       [
         "@react-native-voice/voice",
         {

@@ -1,13 +1,22 @@
-import crashlytics from "@react-native-firebase/crashlytics";
 import { Component, ErrorInfo, ReactNode } from "react";
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import NoInternet from "./NoInternet";
+
+// Lazy-load crashlytics to avoid "No Firebase App" error at import time
+function getCrashlytics() {
+  try {
+    return require("@react-native-firebase/crashlytics").default;
+  } catch (e) {
+    console.warn("Crashlytics not available:", e);
+    return null;
+  }
+}
 
 interface Props {
   children: ReactNode;
@@ -31,7 +40,6 @@ class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("Uncaught error:", error, errorInfo);
 
-    // Don't log network errors to Crashlytics as crashes
     const isNetworkError =
       error.message?.includes("Network Error") ||
       error.message?.includes("network") ||
@@ -39,7 +47,12 @@ class ErrorBoundary extends Component<Props, State> {
       error.message?.includes("Internet connection");
 
     if (!isNetworkError) {
-      crashlytics().recordError(error);
+      try {
+        const crashlytics = getCrashlytics();
+        crashlytics?.().recordError(error);
+      } catch (e) {
+        console.warn("Failed to log error to Crashlytics:", e);
+      }
     }
   }
 

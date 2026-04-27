@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getApps as getNativeApps, initializeApp as initializeNativeApp } from "@react-native-firebase/app";
 import messaging from "@react-native-firebase/messaging";
-import { initializeApp } from "firebase/app";
+import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   collection,
   doc,
@@ -27,7 +28,19 @@ const firebaseConfig = {
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+  databaseURL: `https://${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.firebaseio.com`,
 };
+
+// Initialize Native Firebase if not already done by Expo plugin
+try {
+  const nativeApps = getNativeApps();
+  if (nativeApps.length === 0) {
+    // Provide a complete config for cases where auto-init is missing
+    initializeNativeApp(firebaseConfig);
+  }
+} catch (error) {
+  console.warn("Native Firebase initialization warning:", error);
+}
 
 // Initialize Firebase App
 let app: any = null;
@@ -35,7 +48,14 @@ let db: any = null;
 
 export const initializeFirebase = () => {
   if (!app) {
-    app = initializeApp(firebaseConfig);
+    const jsApps = getApps();
+    // Use a named app for the JS SDK to avoid clashing with the native [DEFAULT] app
+    // initialized by @react-native-firebase/app via the Expo plugin.
+    if (jsApps.length === 0) {
+      app = initializeApp(firebaseConfig, "SOSH_JS_SDK");
+    } else {
+      app = jsApps.find((a) => a.name === "SOSH_JS_SDK") || jsApps[0];
+    }
     db = getFirestore(app, "test"); // Using 'test' database
   }
   return { app, db };
@@ -88,9 +108,17 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
   try {
     // 1. iOS: Explicitly register device for remote messages before anything else
-    if (Platform.OS === "ios" && retryCount === 0) {
-      // Crucial: wait for registration to propagate
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+    if (Platform.OS === "ios") {
+      try {
+        await messaging().registerDeviceForRemoteMessages();
+        console.log("✅ [iOS] Device registered for remote messages");
+        // Wait for registration to propagate
+        if (retryCount === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      } catch (regError) {
+        console.error("❌ [iOS] Failed to register device:", regError);
+      }
     }
 
     // 2. Request/Check permissions

@@ -27,6 +27,7 @@ import {
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
 import { initializeErrorHandler } from "../utils/errorHandler";
+initializeFirebase();
 
 // Initialize global exception handlers
 initializeErrorHandler();
@@ -48,8 +49,6 @@ function FirebaseDataFetcher() {
     // Fetch data once only
     const fetchData = async () => {
       try {
-        console.log("Fetching Firebase data once for:", email);
-        initializeFirebase();
         const userData = (await getCurrentUserData(email)) as any;
 
         if (userData?.aiAdditions) {
@@ -167,9 +166,9 @@ export default function RootLayout() {
   }
 
   return (
-    <ErrorBoundary>
-      <Provider store={store}>
-        <NotificationProvider>
+    <Provider store={store}>
+      <NotificationProvider>
+        <ErrorBoundary>
           <FirebaseDataFetcher />
           <View
             onLayout={onLayoutRootView}
@@ -208,8 +207,8 @@ export default function RootLayout() {
             <NotificationModal />
             <Toast config={toastConfig} />
           </View>
-        </NotificationProvider>
-      </Provider>
-    </ErrorBoundary>
+        </ErrorBoundary>
+      </NotificationProvider>
+    </Provider>
   );
 }
