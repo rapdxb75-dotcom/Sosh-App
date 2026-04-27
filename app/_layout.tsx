@@ -48,17 +48,21 @@ function FirebaseDataFetcher() {
     // Fetch data once only
     const fetchData = async () => {
       try {
+        console.log("Fetching Firebase data once for:", email);
         initializeFirebase();
         const userData = (await getCurrentUserData(email)) as any;
 
         if (userData?.aiAdditions) {
           store.dispatch(updateUser({ aiAdditions: userData.aiAdditions }));
+          console.log("✅ aiAdditions loaded from Firebase");
         }
 
         // --- FCM Setup ---
         try {
+          console.log("🚀 Initializing FCM...");
           const token = await initializeFCM();
           if (token) {
+            console.log("✅ FCM Token obtained");
           }
         } catch (fcmError) {
           console.error("❌ FCM Setup error:", fcmError);
@@ -119,6 +123,9 @@ export default function RootLayout() {
           "push_permission_requested",
         );
         if (!hasRequestedBefore) {
+          console.log(
+            "🔐 Requesting notification permissions on first launch...",
+          );
           await requestNotificationPermission();
           await AsyncStorage.setItem("push_permission_requested", "true");
         }

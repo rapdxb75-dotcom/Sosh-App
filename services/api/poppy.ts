@@ -24,6 +24,12 @@ class PoppyService {
     const url = POPPY_WEBHOOK_URL;
 
     try {
+      console.log("🎨 Generating caption...", {
+        captionPrompt,
+        isReel,
+        boardId,
+        chatId,
+      });
 
       const payload = {
         isReel,
@@ -32,6 +38,7 @@ class PoppyService {
         chatId,
       };
 
+      console.log("📤 Poppy Payload (Caption):", JSON.stringify(payload, null, 2));
 
       const response = await fetch(url, {
         method: "POST",
@@ -53,6 +60,7 @@ class PoppyService {
       }
 
       const data = await response.json();
+      console.log("✅ Caption generated successfully");
 
       // Extract text from response
       if (data.success && data.data?.content?.[0]?.text) {
@@ -101,6 +109,7 @@ class PoppyService {
     const url = `${POPPY_API_URL}/conversation/${conversationId}?board_id=${boardId}&chat_id=${chatId}&api_key=${POPPY_API_KEY}`;
 
     try {
+      console.log("🌊 Starting Poppy XHR request:", url);
 
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -137,6 +146,7 @@ class PoppyService {
                 // Capture credits usage
                 if (eventData.type === "usage" && eventData.credits_used) {
                   creditsUsed = eventData.credits_used;
+                  console.log(`💳 Poppy credits used: ${creditsUsed}`);
                 }
               } catch (parseError) {
                 // Skip invalid JSON lines silently
@@ -147,6 +157,7 @@ class PoppyService {
 
         xhr.onreadystatechange = () => {
           if (xhr.readyState === 4) {
+            console.log("📝 Poppy API Response Status:", xhr.status);
 
             if (xhr.status >= 200 && xhr.status < 300) {
               // Process any remaining data
@@ -173,6 +184,7 @@ class PoppyService {
                         eventData.credits_used
                       ) {
                         creditsUsed = eventData.credits_used;
+                        console.log(`💳 Poppy credits used: ${creditsUsed}`);
                       }
                     } catch (parseError) {
                       // Skip invalid lines
@@ -181,6 +193,10 @@ class PoppyService {
                 }
               }
 
+              console.log(
+                "✅ Streaming complete. Total text length:",
+                fullText.length,
+              );
 
               // Update Firebase with credits used
               if (creditsUsed > 0 && userEmail) {
@@ -220,6 +236,7 @@ class PoppyService {
           include_usage: true, // Exclude usage details to reduce response size
         };
 
+        console.log("📤 Poppy Payload (Stream):", JSON.stringify(payload, null, 2));
         xhr.send(JSON.stringify(payload));
       });
     } catch (error) {

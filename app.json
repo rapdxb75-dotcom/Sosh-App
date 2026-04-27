@@ -41,7 +41,9 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.social.aiautomation",
       "googleServicesFile": "./google-services.json",
-      "permissions": ["android.permission.RECORD_AUDIO"]
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",

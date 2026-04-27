@@ -2,8 +2,8 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { router, useFocusEffect } from "expo-router";
-import { Trash2, Upload } from "lucide-react-native";
+import { useFocusEffect } from "expo-router";
+import { Upload } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -38,13 +38,16 @@ import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
-import { clearUserData, updateUser } from "../../store/userSlice";
+import { updateUser } from "../../store/userSlice";
 import { formatNumber } from "../../utils/format";
 
 let ImageCropPicker: any = null;
 try {
   ImageCropPicker = require("react-native-image-crop-picker").default;
 } catch (e) {
+  console.log(
+    "react-native-image-crop-picker is not available. Falling back to expo-image-picker.",
+  );
 }
 
 // Social media platform configuration
@@ -175,7 +178,6 @@ export default function Profile() {
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [selectedPlatformKey, setSelectedPlatformKey] = useState<string | null>(
     null,
@@ -193,9 +195,6 @@ export default function Profile() {
   );
   // Track platforms that opened auth URL and are waiting for Firebase confirmation
   const [pendingConnections, setPendingConnections] = useState<string[]>([]);
-  const [connectionTimers, setConnectionTimers] = useState<
-    Record<string, number>
-  >({});
 
   const [analytics, setAnalytics] = useState({
     totalPosts: 0,
@@ -311,6 +310,7 @@ export default function Profile() {
         return;
       } catch (e: any) {
         if (e?.code === "E_PICKER_CANCELLED") return;
+        console.log("ImageCropPicker error, falling back:", e);
       }
     }
 
@@ -343,6 +343,12 @@ export default function Profile() {
         userName: username,
         profilePicture: image || "",
       };
+      console.log("[Profile Update API Payload]:", {
+        ...payload,
+        profilePicture: payload.profilePicture
+          ? `${payload.profilePicture.substring(0, 50)}... (truncated)`
+          : "",
+      });
 
       const response = await userService.updateProfile(payload);
 
@@ -470,63 +476,6 @@ export default function Profile() {
     }
   };
 
-  const handleDeleteAccount = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    if (!globalEmail) {
-      Toast.show({
-        type: "error",
-        text1: "Error",
-        text2: "User email not found",
-      });
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await userService.deleteAccount(globalEmail);
-
-      if (response && response.success) {
-        Toast.show({
-          type: "success",
-          text1: "Account Deleted",
-          text2: "Your account has been deleted successfully.",
-        });
-
-        addNotification({
-          type: "neutral",
-          title: "Account Deleted",
-          message: "Your account has been deleted successfully.",
-        });
-
-        // Slight delay for feedback
-        setTimeout(async () => {
-          router.replace("/login");
-          setTimeout(async () => {
-            dispatch(clearUserData());
-            await storageService.logout();
-          }, 100);
-        }, 1000);
-
-        setDeleteModalVisible(false);
-      } else {
-        Toast.show({
-          type: "error",
-          text1: "Deletion Failed",
-          text2: response?.message || "Failed to delete account",
-        });
-      }
-    } catch (error: any) {
-      console.error("Delete account error:", error);
-      Toast.show({
-        type: "error",
-        text1: "Deletion Failed",
-        text2: error.message || "An error occurred while deleting account",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Helper function to check if a platform is connected
   const isPlatformConnected = (platformKey: SocialPlatformKey): boolean => {
     const data = socialMediaData[platformKey];
@@ -592,6 +541,7 @@ export default function Profile() {
         token,
         platform,
       );
+      console.log("response : ", response);
       if (
         response &&
         Array.isArray(response) &&
@@ -606,8 +556,6 @@ export default function Profile() {
             if (prev.indexOf(platform) !== -1) return prev;
             return [...prev, platform];
           });
-          // Start 60 second timer
-          setConnectionTimers((prev) => ({ ...prev, [platform]: 60 }));
         }
         setConnectingPlatform(null);
       } else {
@@ -634,16 +582,6 @@ export default function Profile() {
     const stillPending: string[] = [];
     pendingConnections.forEach((platformKey: string) => {
       if (isPlatformConnected(platformKey as SocialPlatformKey)) {
-        // Clear timer if it exists
-        setConnectionTimers((prev) => {
-          if (prev[platformKey]) {
-            const next = { ...prev };
-            delete next[platformKey];
-            return next;
-          }
-          return prev;
-        });
-
         // Show success toast
         let platformName = platformKey;
         for (let i = 0; i < SOCIAL_PLATFORMS.length; i++) {
@@ -671,52 +609,6 @@ export default function Profile() {
       setPendingConnections(stillPending);
     }
   }, [socialMediaData]);
-
-  // Countdown effect for connection timers
-  useEffect(() => {
-    const activePlatforms = Object.keys(connectionTimers);
-    if (activePlatforms.length === 0) return;
-
-    const interval = setInterval(() => {
-      setConnectionTimers((prev) => {
-        const newTimers = { ...prev };
-        let changed = false;
-        const expired: string[] = [];
-
-        activePlatforms.forEach((platform) => {
-          if (newTimers[platform] > 1) {
-            newTimers[platform] -= 1;
-            changed = true;
-          } else if (newTimers[platform] === 1) {
-            // Timeout reached
-            delete newTimers[platform];
-            expired.push(platform);
-            changed = true;
-          }
-        });
-
-        if (expired.length > 0) {
-          // Schedule side effects to run after the current update phase
-          setTimeout(() => {
-            expired.forEach((platform) => {
-              setPendingConnections((current) =>
-                current.filter((p) => p !== platform),
-              );
-              Toast.show({
-                type: "error",
-                text1: "Connection Timeout",
-                text2: `Failed to connect ${platform}, Please try again.`,
-              });
-            });
-          }, 0);
-        }
-
-        return changed ? newTimers : prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [connectionTimers]);
 
   const handleConnectPress = (platformKey: SocialPlatformKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1053,7 +945,6 @@ export default function Profile() {
                 isConnected={isPlatformConnected(platform.key)}
                 isConnecting={connectingPlatform === platform.key}
                 isPending={pendingConnections.indexOf(platform.key) !== -1}
-                remainingTime={connectionTimers[platform.key]}
                 onIconPress={() =>
                   handleOpenConnectedPlatform(platform.key, platform.name)
                 }
@@ -1063,21 +954,6 @@ export default function Profile() {
                 }
               />
             ))}
-
-            {/* Logout & Delete Account Buttons */}
-            <View className="mt-6 mb-8 gap-4">
-
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  setDeleteModalVisible(true);
-                }}
-                className="w-full h-14 rounded-2xl flex-row items-center justify-center bg-red-500/10 border border-red-500/20"
-              >
-                <Trash2 size={18} color="#ef4444" />
-                <Text className="text-red-500 font-bold text-base ml-2">Delete Account</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
       </ScrollView>
@@ -1303,55 +1179,6 @@ export default function Profile() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
-
-      {/* Delete Account Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={deleteModalVisible}
-        onRequestClose={() => setDeleteModalVisible(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.8)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 20,
-          }}
-        >
-          <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[32px] p-8 items-center border border-white/10">
-            <View className="w-16 h-16 bg-red-500/10 rounded-full items-center justify-center mb-6">
-              <Trash2 size={32} color="#ef4444" />
-            </View>
-
-            <Text className="text-white text-center text-2xl font-bold mb-2">
-              Delete Account?
-            </Text>
-            <Text className="text-white/60 text-center text-base mb-8 leading-6">
-              This action is permanent and will delete all your data, including connected social accounts and generated posts.
-            </Text>
-
-            <TouchableOpacity
-              onPress={handleDeleteAccount}
-              className={`w-full h-14 bg-red-500 rounded-2xl items-center justify-center mb-3 ${loading ? "opacity-70" : ""}`}
-              disabled={loading}
-            >
-              <Text className="text-white font-bold text-lg">
-                {loading ? "Deleting..." : "Delete Permanently"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setDeleteModalVisible(false)}
-              disabled={loading}
-              className="w-full h-14 bg-white/5 rounded-2xl items-center justify-center"
-            >
-              <Text className="text-white font-bold text-lg">Go Back</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1382,7 +1209,6 @@ function ConnectedAccountItem({
   onIconPress,
   onConnect,
   onDisconnect,
-  remainingTime,
 }: {
   icon: any;
   name: string;
@@ -1395,7 +1221,6 @@ function ConnectedAccountItem({
   onIconPress?: () => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
-  remainingTime?: number;
 }) {
   const isLoading = isConnecting || isPending;
   const canOpenPlatformUrl = isConnected && !!platformUrl && !isLoading;

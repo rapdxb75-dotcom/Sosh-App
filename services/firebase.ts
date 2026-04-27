@@ -117,20 +117,20 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
       }
     } catch (tokenError) {
       console.warn("⚠️ [FCM] messaging().getToken() error:", tokenError);
-      
+
       if (retryCount < 2) {
         await new Promise((resolve) => setTimeout(resolve, 3000));
-        
+
         // Sometimes deleting the existing token clears up bad state on network switches
         try {
           await messaging().deleteToken();
         } catch (e) {
           // Ignore deleteToken errors
         }
-        
+
         return await getFCMToken(retryCount + 1);
       }
-      
+
       console.error("❌ [FCM] Failed to get FCM token after retries.");
       return null;
     }

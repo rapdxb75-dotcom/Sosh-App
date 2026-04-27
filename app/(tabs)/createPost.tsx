@@ -1156,6 +1156,7 @@ export default function CreatePost() {
         }
       }
 
+      console.log(`🤖 AI Provider (Caption): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
 
       let finalSystemPrompt = user.systemPrompt;
       if (isFreePlan) {
@@ -1284,13 +1285,24 @@ export default function CreatePost() {
         try {
           const fileInfo = await FileSystem.getInfoAsync(uri);
           if (!fileInfo.exists || fileInfo.size === undefined) {
+            console.log("[UploadDebug] File info missing", { uri });
           } else {
             const sizeMB = parseBytesToMB(fileInfo.size);
             if (sizeMB) {
+              console.log("[UploadDebug] File size fetched", {
+                uri,
+                sizeMB: Number(sizeMB.toFixed(2)),
+                source: "expo-file-system",
+              });
               return sizeMB;
             }
           }
         } catch (error) {
+          console.log("[UploadDebug] File size fetch failed", { uri });
+          console.log("[UploadDebug] File size fetch error detail", {
+            uri,
+            error,
+          });
         }
 
         try {
@@ -1300,9 +1312,19 @@ export default function CreatePost() {
           const sizeBytes = await compressorGetFileSize(realPath);
           const sizeMB = parseBytesToMB(sizeBytes);
           if (sizeMB) {
+            console.log("[UploadDebug] File size fetched", {
+              uri,
+              realPath,
+              sizeMB: Number(sizeMB.toFixed(2)),
+              source: "react-native-compressor",
+            });
             return sizeMB;
           }
         } catch (error) {
+          console.log("[UploadDebug] Compressor file size fetch failed", {
+            uri,
+            error,
+          });
         }
 
         return null;
@@ -1346,9 +1368,18 @@ export default function CreatePost() {
             "file:///tmp/";
           const localUri = `${baseDir}upload-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
           await FileSystem.copyAsync({ from: sourceUri, to: localUri });
+          console.log("[UploadDebug] Local file prepared", {
+            originalUri: uri,
+            sourceUri,
+            localUri,
+          });
           return localUri;
         } catch {
           const fallbackUri = normalizeMediaUri(uri);
+          console.log("[UploadDebug] Local file prepare fallback", {
+            originalUri: uri,
+            fallbackUri,
+          });
           return fallbackUri;
         }
       };
@@ -1361,6 +1392,13 @@ export default function CreatePost() {
           (activeTab === "Story" && postType === "Carousel") ||
           activeTab === "Reel";
 
+        console.log("[UploadDebug] Compression check", {
+          activeTab,
+          postType,
+          mediaItem,
+          localMediaUri,
+          isVideoMedia,
+        });
 
         if (!localMediaUri.startsWith("file://") || !isVideoMedia) {
           return mediaItem;
@@ -1373,14 +1411,32 @@ export default function CreatePost() {
         const shouldForceCompression = activeTab === "Story" && isVideoMedia;
 
         if (initialSizeMB && initialSizeMB <= maxSizeMB) {
+          console.log("[UploadDebug] Compression skipped (under threshold)", {
+            localMediaUri,
+            initialSizeMB,
+            maxSizeMB,
+          });
           return localMediaUri;
         }
 
         if (!initialSizeMB && !shouldForceCompression) {
+          console.log("[UploadDebug] Compression skipped (size unknown)", {
+            localMediaUri,
+            activeTab,
+            postType,
+          });
           return localMediaUri;
         }
 
         if (!initialSizeMB && shouldForceCompression) {
+          console.log(
+            "[UploadDebug] Forcing Story video compression because size is unknown",
+            {
+              localMediaUri,
+              maxSizeMB,
+              targetSizeMB,
+            },
+          );
         }
 
         Toast.show({
@@ -1405,6 +1461,12 @@ export default function CreatePost() {
 
           compressedUri = normalizeMediaUri(nextUri);
           const nextSizeMB = await getFileSizeInMB(compressedUri);
+          console.log("[UploadDebug] Compression step", {
+            maxSize,
+            previousSizeMB: currentSizeMB,
+            nextSizeMB,
+            compressedUri,
+          });
           if (!nextSizeMB || nextSizeMB >= currentSizeMB) {
             break;
           }
@@ -1412,6 +1474,14 @@ export default function CreatePost() {
         }
 
         const finalSizeMB = await getFileSizeInMB(compressedUri);
+        console.log("[UploadDebug] Compression result", {
+          localMediaUri,
+          compressedUri,
+          initialSizeMB,
+          finalSizeMB,
+          maxSizeMB,
+          targetSizeMB,
+        });
 
         if (!finalSizeMB || finalSizeMB > maxSizeMB) {
           throw new Error(
@@ -1480,6 +1550,11 @@ export default function CreatePost() {
         mediaPayload = await processMediaForUpload(currentMedia as string);
       }
 
+      console.log("[UploadDebug] Final media payload prepared", {
+        activeTab,
+        isCarousel,
+        payload: mediaPayload,
+      });
 
       const activePlatforms = Object.entries(selectedPlatforms)
         .filter(([_, isSelected]) => isSelected)

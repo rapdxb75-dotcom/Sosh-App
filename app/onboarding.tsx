@@ -382,25 +382,36 @@ export default function Onboarding() {
         };
 
         // 1. Register with all data
+        console.log("🚀 Starting registration for:", registrationBuffer?.email);
         const registerResponse = await authService.register({
           ...registrationBuffer,
           subscription: "Free",
           onboardingData,
         });
 
+        console.log("✅ Registration successful:", registerResponse);
 
         // 2. Add a small delay for backend propagation
         // n8n workflows can sometimes take a moment to commit to the database
+        console.log("⏳ Waiting for account propagation...");
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         // 3. Login automatically
         // Diagnostic: Log lengths to ensure no hidden characters/spaces
+        console.log("🔑 Attempting automatic login...");
+        console.log(
+          `[Diagnostic] Email: "${registrationBuffer.email}" (Len: ${registrationBuffer.email?.length})`,
+        );
+        console.log(
+          `[Diagnostic] Password Length: ${registrationBuffer.password?.length}`,
+        );
 
         const loginResponse = await authService.login({
           email: registrationBuffer.email,
           password: registrationBuffer.password,
         });
 
+        console.log("✅ Login successful, token:", !!loginResponse.token);
 
         // 4. Save session
         if (loginResponse.token) {
