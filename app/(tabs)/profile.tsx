@@ -679,9 +679,9 @@ export default function Profile() {
     };
 
     const getDescription = () => {
-      if (isBusiness) return "Supercharge your brand with unlimited AI content, seamless post scheduling, and a custom AI that writes perfectly in your unique voice.";
-      if (isPro) return "You have full access to all premium features including AI assistants and post scheduling.";
-      return "Upgrade to Sosh Pro to unlock AI assistance, post scheduling, and detailed analytics.";
+      if (isBusiness) return "The full Sosh experience. A custom knowledge base built by our experts, post to every platform, full analytics, and an AI that truly speaks your voice.";
+      if (isPro) return "Unlock unlimited AI content, post across every platform, and track your growth with analytics built for creators ready to scale.";
+      return "Explore Sosh with your own custom AI social media expert. Chat, create captions, and discover what personalized AI can do for your brand.";
     };
 
     return (

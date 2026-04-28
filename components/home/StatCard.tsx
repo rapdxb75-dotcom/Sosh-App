@@ -15,7 +15,6 @@ import Svg, {
   Stop,
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
-import { Colors } from "../../constants/Colors";
 
 interface StatCardProps {
   title: string;
@@ -97,7 +96,7 @@ export default function StatCard({
 
   // Determine trend status
   const isNegative = trend.trim().startsWith("-");
-  const trendColor = isNegative ? "#c15959" : "#3fb77d";
+  const trendColor = "#ffffffff"
   const TrendIcon = isNegative ? TrendingDown : TrendingUp;
 
   const shadowStyle = {
@@ -125,39 +124,48 @@ export default function StatCard({
           className={fullWidth ? "flex-col" : "justify-between"}
         >
           {/* Title & Badge */}
-          <View className="flex-row items-center gap-2">
+          <View className="flex-row items-center justify-between">
             <Text className="text-white/60 text-sm font-inter">{title}</Text>
             {badge && !loading && (
               <View
                 style={{
-                  borderRadius: 100,
+                  borderRadius: 16,
                   overflow: "hidden",
                   borderWidth: 1,
-                  borderColor: "rgba(255, 255, 255, 0.3)",
-                  marginLeft: 6,
+                  borderColor: "rgba(255, 255, 255, 0.2)",
+                  backgroundColor: "rgba(255, 255, 255, 0.08)",
                 }}
               >
-                <LinearGradient
-                  colors={["rgba(255, 255, 255, 0.2)", "rgba(255, 255, 255, 0.05)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
+                <View
                   style={{
                     paddingHorizontal: 8,
-                    paddingVertical: 2,
+                    paddingVertical: 3,
+                    flexDirection: "row",
+                    alignItems: "center",
                   }}
                 >
+                  <View
+                    style={{
+                      width: 4,
+                      height: 4,
+                      borderRadius: 2,
+                      backgroundColor: "#FFFFFF",
+                      marginRight: 6,
+                      opacity: 0.8,
+                    }}
+                  />
                   <Text
                     style={{
-                      fontSize: 9,
+                      fontSize: 10,
                       color: "#FFFFFF",
                       fontFamily: "Inter_600SemiBold",
+                      letterSpacing: 0.5,
                       textTransform: "uppercase",
-                      letterSpacing: 0.6,
                     }}
                   >
                     {badge}
                   </Text>
-                </LinearGradient>
+                </View>
               </View>
             )}
           </View>
