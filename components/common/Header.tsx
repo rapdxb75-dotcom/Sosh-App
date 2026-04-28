@@ -114,9 +114,13 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
       }}
     >
       {/* Left Logo */}
-      <View
+      <TouchableOpacity
         className="items-center justify-center"
         style={{ width: normalize(38), height: normalize(38) }}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.navigate("/(tabs)/home");
+        }}
       >
         <Image
           source={require("../../assets/images/logo.png")}
@@ -124,7 +128,7 @@ export default function Header({ disableTopSpacing = false }: HeaderProps) {
           contentFit="contain"
           cachePolicy="memory-disk"
         />
-      </View>
+      </TouchableOpacity>
 
       {/* Right Icons */}
       <View className="flex-row items-center gap-3">
