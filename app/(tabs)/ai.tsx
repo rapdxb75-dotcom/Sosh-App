@@ -1366,13 +1366,13 @@ export default function AI() {
       if (isFreePlan && aiChatCount >= AI_CHAT_LIMIT) {
         Alert.alert(
           "Limit Exceeded",
-          "Your limit is exceeded, please upgrade your plan.",
+          "Free limit reached. Please manage your plan to continue.",
           [
             { text: "Cancel", style: "cancel" },
             {
-              text: "Upgrade Plan",
+              text: "Manage Plan",
               style: "default",
-              onPress: () => Linking.openURL("https://sosh.digital"),
+              onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
             },
           ]
         );
@@ -1573,8 +1573,9 @@ export default function AI() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: "transparent", alignItems: "center" }}>
+      <View style={{ width: "100%", maxWidth: 500, flex: 1 }}>
+        <View style={{ flex: 1 }}>
         {/* Header Container (Absolute to match Home/Profile) */}
         <View
           className="absolute top-0 left-0 right-0 z-10"
@@ -2295,6 +2296,7 @@ export default function AI() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      </View>
     </View>
   );
 }

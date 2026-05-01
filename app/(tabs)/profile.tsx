@@ -174,7 +174,9 @@ export default function Profile() {
     (state: RootState) => state.user.profilePicture,
   );
   const globalEmail = useSelector((state: RootState) => state.user.email);
-  const subscription = useSelector((state: RootState) => state.user.subscription);
+  const subscription = useSelector(
+    (state: RootState) => state.user.subscription,
+  );
 
   const [modalVisible, setModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -542,11 +544,7 @@ export default function Profile() {
         platform,
       );
       console.log("response : ", response);
-      if (
-        response &&
-        Array.isArray(response) &&
-        response.length > 0
-      ) {
+      if (response && Array.isArray(response) && response.length > 0) {
         const connectUrl = response[0].url || response[0].authUrl;
         if (connectUrl) {
           await Linking.openURL(connectUrl);
@@ -661,9 +659,13 @@ export default function Profile() {
   };
 
   const PlanCard = () => {
-    const plan = subscription?.plan || "Free";
-    const isPro = plan === "Pro";
-    const isBusiness = plan === "Business";
+    const rawPlan = subscription?.plan || "Free";
+    // Normalize the plan name to handle cases where backend sends "pro" instead of "Pro"
+    const displayPlan =
+      rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1).toLowerCase();
+
+    const isPro = displayPlan === "Pro";
+    const isBusiness = displayPlan === "Business";
     const isPremium = isPro || isBusiness;
 
     const getGradientColors = (): [string, string, ...string[]] => {
@@ -679,8 +681,10 @@ export default function Profile() {
     };
 
     const getDescription = () => {
-      if (isBusiness) return "The full Sosh experience. A custom knowledge base built by our experts, post to every platform, full analytics, and an AI that truly speaks your voice.";
-      if (isPro) return "Unlock unlimited AI content, post across every platform, and track your growth with analytics built for creators ready to scale.";
+      if (isBusiness)
+        return "The full Sosh experience. A custom knowledge base built by our experts, post to every platform, full analytics, and an AI that truly speaks your voice.";
+      if (isPro)
+        return "Unlock unlimited AI content, post across every platform, and track your growth with analytics built for creators ready to scale.";
       return "Explore Sosh with your own custom AI social media expert. Chat, create captions, and discover what personalized AI can do for your brand.";
     };
 
@@ -711,7 +715,7 @@ export default function Profile() {
                   Current Plan
                 </Text>
                 <Text className="text-white text-2xl font-bold">
-                  Sosh {plan}
+                  Sosh {displayPlan}
                 </Text>
               </View>
               <View className="bg-white/20 px-3 py-1 rounded-full">
@@ -727,7 +731,7 @@ export default function Profile() {
 
             <TouchableOpacity
               onPress={handleUpgradeNavigation}
-              className={`w-full h-12 rounded-full items-center justify-center ${isPremium ? 'bg-white' : 'bg-[#fff]'}`}
+              className={`w-full h-12 rounded-full items-center justify-center ${isPremium ? "bg-white" : "bg-[#fff]"}`}
             >
               <Text className="font-bold text-base text-black">
                 {isPremium ? "Manage Subscription" : "Upgrade Now"}
@@ -740,7 +744,8 @@ export default function Profile() {
   };
 
   return (
-    <View className="flex-1">
+    <View className="flex-1" style={{ alignItems: "center", backgroundColor: "transparent" }}>
+      <View style={{ width: "100%", maxWidth: 500, flex: 1 }}>
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -753,9 +758,9 @@ export default function Profile() {
         nestedScrollEnabled
         {...(Platform.OS === "ios"
           ? {
-            contentInset: { top: insets.top },
-            contentOffset: { x: 0, y: -insets.top },
-          }
+              contentInset: { top: insets.top },
+              contentOffset: { x: 0, y: -insets.top },
+            }
           : {})}
         refreshControl={
           <RefreshControl
@@ -848,13 +853,13 @@ export default function Profile() {
                           source={
                             image
                               ? {
-                                uri:
-                                  image.startsWith("http") ||
+                                  uri:
+                                    image.startsWith("http") ||
                                     image.startsWith("file") ||
                                     image.startsWith("data:")
-                                    ? image
-                                    : `data:image/png;base64,${image}`,
-                              }
+                                      ? image
+                                      : `data:image/png;base64,${image}`,
+                                }
                               : require("../../assets/images/avtar.png")
                           }
                           className="w-[45px] h-[45px] rounded-full"
@@ -1109,13 +1114,13 @@ export default function Profile() {
                     source={
                       image
                         ? {
-                          uri:
-                            image.startsWith("http") ||
+                            uri:
+                              image.startsWith("http") ||
                               image.startsWith("file") ||
                               image.startsWith("data:")
-                              ? image
-                              : `data:image/png;base64,${image}`,
-                        }
+                                ? image
+                                : `data:image/png;base64,${image}`,
+                          }
                         : require("../../assets/images/avtar.png")
                     }
                     className="w-[82px] h-[82px] absolute rounded-full"
@@ -1179,6 +1184,7 @@ export default function Profile() {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      </View>
     </View>
   );
 }

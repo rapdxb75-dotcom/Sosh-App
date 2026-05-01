@@ -28,9 +28,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { FontFamily, normalize } from "../constants/Fonts";
 import { useNotification } from "../context/NotificationContext";
 import authService from "../services/api/auth";
+import { updateUserOnboardingData } from "../services/firebase";
 import storageService from "../services/storage";
 import { RootState } from "../store/store";
-import { clearUserData, setUserData } from "../store/userSlice";
+import { clearUserData, setLoginBuffer, setUserData } from "../store/userSlice";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -316,6 +317,8 @@ export default function Onboarding() {
   const registrationBuffer = useSelector(
     (state: RootState) => state.user.registrationBuffer,
   );
+  const loginBuffer = useSelector((state: RootState) => state.user.loginBuffer);
+  const isLoginFlow = !!loginBuffer;
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
@@ -333,160 +336,247 @@ export default function Onboarding() {
       // Final Finish
       if (loading) return;
 
-      if (!registrationBuffer) {
-        Toast.show({
-          type: "error",
-          text1: "Error",
-          text2: "Registration data not found. Please try signing up again.",
-        });
-        router.replace("/signup");
-        return;
-      }
+      const onboardingData = {
+        step1: { brandDescription: answers["brandDescription"] || "" },
+        step2: {
+          targetAudienceAge: answers["audience"]?.["2a"] || [],
+          idealFollowerDescription: answers["audience"]?.["2b"] || "",
+        },
+        step3: {
+          activePlatforms: answers["social media"]?.["3a"] || {},
+          primaryGoal: answers["social media"]?.["3b"] || "",
+        },
+        step4: { brandPersonalityTraits: answers["brandPersonality"] || [] },
+        step5: {
+          contentCategories: answers["contentStyle"]?.["5a"] || [],
+          competitiveDifferentiator: answers["contentStyle"]?.["5b"] || "",
+        },
+        step6: { desiredAudienceFeelings: answers["audienceFeeling"] || [] },
+        step7: {
+          brandLanguage: answers["languageBoundaries"]?.["7a"] || "",
+          avoidedTopics: answers["languageBoundaries"]?.["7b"] || "",
+        },
+        step8: {
+          monitoredCompetitors: answers["competitors"]?.["8a"] || "",
+          respectedCompetitorTraits: answers["competitors"]?.["8b"] || "",
+          userEdgeFactor: answers["competitors"]?.["8c"] || "",
+        },
+        step9: {
+          preferredCaptionLength: answers["captionStyle"]?.["9a"] || "",
+          emojiUsagePreference: answers["captionStyle"]?.["9b"] || "",
+        },
+        step10: {
+          preferredCTAStyle: answers["engagement"]?.["10a"] || "",
+          captionBodyTone: answers["engagement"]?.["10b"] || "",
+        },
+      };
 
-      try {
-        setLoading(true);
+      if (isLoginFlow) {
+        // --- LOGIN FLOW: User already authenticated, just update onboarding data ---
+        try {
+          setLoading(true);
 
-        const onboardingData = {
-          step1: { brandDescription: answers["brandDescription"] || "" },
-          step2: {
-            targetAudienceAge: answers["audience"]?.["2a"] || [],
-            idealFollowerDescription: answers["audience"]?.["2b"] || "",
-          },
-          step3: {
-            activePlatforms: answers["social media"]?.["3a"] || {},
-            primaryGoal: answers["social media"]?.["3b"] || "",
-          },
-          step4: { brandPersonalityTraits: answers["brandPersonality"] || [] },
-          step5: {
-            contentCategories: answers["contentStyle"]?.["5a"] || [],
-            competitiveDifferentiator: answers["contentStyle"]?.["5b"] || "",
-          },
-          step6: { desiredAudienceFeelings: answers["audienceFeeling"] || [] },
-          step7: {
-            brandLanguage: answers["languageBoundaries"]?.["7a"] || "",
-            avoidedTopics: answers["languageBoundaries"]?.["7b"] || "",
-          },
-          step8: {
-            monitoredCompetitors: answers["competitors"]?.["8a"] || "",
-            respectedCompetitorTraits: answers["competitors"]?.["8b"] || "",
-            userEdgeFactor: answers["competitors"]?.["8c"] || "",
-          },
-          step9: {
-            preferredCaptionLength: answers["captionStyle"]?.["9a"] || "",
-            emojiUsagePreference: answers["captionStyle"]?.["9b"] || "",
-          },
-          step10: {
-            preferredCTAStyle: answers["engagement"]?.["10a"] || "",
-            captionBodyTone: answers["engagement"]?.["10b"] || "",
-          },
-        };
+          console.log(
+            "🚀 Updating onboarding data for logged-in user:",
+            loginBuffer.email,
+          );
+          const success = await updateUserOnboardingData(
+            loginBuffer.email,
+            onboardingData,
+          );
 
-        // 1. Register with all data
-        console.log("🚀 Starting registration for:", registrationBuffer?.email);
-        const registerResponse = await authService.register({
-          ...registrationBuffer,
-          subscription: "Free",
-          onboardingData,
-        });
+          if (!success) {
+            throw new Error("Failed to save onboarding data");
+          }
+          console.log("✅ Onboarding data updated successfully");
 
-        console.log("✅ Registration successful:", registerResponse);
+          // Call login API
+          if (loginBuffer.email && loginBuffer.password) {
+            console.log("🔑 Calling login API...");
+            const loginResponse = await authService.login({
+              email: loginBuffer.email,
+              password: loginBuffer.password,
+            });
 
-        // 2. Add a small delay for backend propagation
-        // n8n workflows can sometimes take a moment to commit to the database
-        console.log("⏳ Waiting for account propagation...");
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+            if (loginResponse.token) {
+              await storageService.setToken(loginResponse.token);
+            }
+          }
 
-        // 3. Login automatically
-        // Diagnostic: Log lengths to ensure no hidden characters/spaces
-        console.log("🔑 Attempting automatic login...");
-        console.log(
-          `[Diagnostic] Email: "${registrationBuffer.email}" (Len: ${registrationBuffer.email?.length})`,
-        );
-        console.log(
-          `[Diagnostic] Password Length: ${registrationBuffer.password?.length}`,
-        );
-
-        const loginResponse = await authService.login({
-          email: registrationBuffer.email,
-          password: registrationBuffer.password,
-        });
-
-        console.log("✅ Login successful, token:", !!loginResponse.token);
-
-        // 4. Save session
-        if (loginResponse.token) {
-          // Clear any old user data first
-          dispatch(clearUserData());
-
-          await storageService.setToken(loginResponse.token);
-          await storageService.setEmail(registrationBuffer.email);
-          await storageService.setUsername(registrationBuffer.userName);
-
-          const decoded: any = jwtDecode(loginResponse.token);
-          const finalUserName =
-            decoded.userName?.trim() || registrationBuffer.userName;
-          const finalEmail = decoded.email || registrationBuffer.email;
-
+          // Session is already saved from login, just update Redux with onboarding data
           dispatch(
             setUserData({
-              userName: finalUserName,
-              email: finalEmail,
-              subscription: {
-                plan: (decoded.subscription || "Free") as
-                  | "Free"
-                  | "Pro"
-                  | "Business",
-                isSubscribed:
-                  !!decoded.subscription && decoded.subscription !== "Free",
-              },
+              onboardingData,
             }),
           );
 
+          // Clear the login buffer
+          dispatch(setLoginBuffer(null));
+
           addNotification({
             type: "success",
-            title: "Signup Successful",
-            message:
-              "Welcome to Sosh! Your account has been created successfully.",
+            title: "Welcome to Sosh!",
+            message: "Your profile has been set up successfully.",
           });
 
           Toast.show({
             type: "success",
             text1: "Welcome to Sosh! 👋",
-            text2: "Account created successfully.",
+            text2: "Profile set up successfully.",
           });
 
           router.replace("/(tabs)/home");
+        } catch (error: any) {
+          console.error("Onboarding Update Error:", error);
+          const errorMessage =
+            error.response?.data?.message ||
+            "Something went wrong. Please try again.";
+
+          addNotification({
+            type: "error",
+            title: "Setup Failed",
+            message: errorMessage,
+          });
+
+          Toast.show({
+            type: "error",
+            text1: "Setup Failed",
+            text2: errorMessage,
+          });
+        } finally {
+          setLoading(false);
         }
-      } catch (error: any) {
-        console.error("Finish Error:", error);
-        const errorMessage =
-          error.response?.data?.message ||
-          "Something went wrong. Please try again.";
+      } else {
+        // --- SIGNUP FLOW: Register + Login ---
+        if (!registrationBuffer) {
+          Toast.show({
+            type: "error",
+            text1: "Error",
+            text2: "Registration data not found. Please try signing up again.",
+          });
+          router.replace("/signup");
+          return;
+        }
 
-        addNotification({
-          type: "error",
-          title: "Signup Failed",
-          message: errorMessage,
-        });
+        try {
+          setLoading(true);
 
-        Toast.show({
-          type: "error",
-          text1: "Registration Failed",
-          text2: errorMessage,
-        });
-      } finally {
-        setLoading(false);
+          // 1. Register with all data
+          console.log(
+            "🚀 Starting registration for:",
+            registrationBuffer?.email,
+          );
+          const registerResponse = await authService.register({
+            ...registrationBuffer,
+            subscription: "Free",
+            onboardingData,
+          });
+
+          console.log("✅ Registration successful:", registerResponse);
+
+          // 2. Add a small delay for backend propagation
+          // n8n workflows can sometimes take a moment to commit to the database
+          console.log("⏳ Waiting for account propagation...");
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          // 3. Login automatically
+          // Diagnostic: Log lengths to ensure no hidden characters/spaces
+          console.log("🔑 Attempting automatic login...");
+          console.log(
+            `[Diagnostic] Email: "${registrationBuffer.email}" (Len: ${registrationBuffer.email?.length})`,
+          );
+          console.log(
+            `[Diagnostic] Password Length: ${registrationBuffer.password?.length}`,
+          );
+
+          const loginResponse = await authService.login({
+            email: registrationBuffer.email,
+            password: registrationBuffer.password,
+          });
+
+          console.log("✅ Login successful, token:", !!loginResponse.token);
+
+          // 4. Save session
+          if (loginResponse.token) {
+            // Clear any old user data first
+            dispatch(clearUserData());
+
+            await storageService.setToken(loginResponse.token);
+            await storageService.setEmail(registrationBuffer.email);
+            await storageService.setUsername(registrationBuffer.userName);
+
+            const decoded: any = jwtDecode(loginResponse.token);
+            const finalUserName =
+              decoded.userName?.trim() || registrationBuffer.userName;
+            const finalEmail = decoded.email || registrationBuffer.email;
+
+            dispatch(
+              setUserData({
+                userName: finalUserName,
+                email: finalEmail,
+                subscription: {
+                  plan: (decoded.subscription || "Free") as
+                    | "Free"
+                    | "Pro"
+                    | "Business",
+                  isSubscribed:
+                    !!decoded.subscription && decoded.subscription !== "Free",
+                },
+              }),
+            );
+
+            addNotification({
+              type: "success",
+              title: "Signup Successful",
+              message:
+                "Welcome to Sosh! Your account has been created successfully.",
+            });
+
+            Toast.show({
+              type: "success",
+              text1: "Welcome to Sosh! 👋",
+              text2: "Account created successfully.",
+            });
+
+            router.replace("/(tabs)/home");
+          }
+        } catch (error: any) {
+          console.error("Finish Error:", error);
+          const errorMessage =
+            error.response?.data?.message ||
+            "Something went wrong. Please try again.";
+
+          addNotification({
+            type: "error",
+            title: "Signup Failed",
+            message: errorMessage,
+          });
+
+          Toast.show({
+            type: "error",
+            text1: "Registration Failed",
+            text2: errorMessage,
+          });
+        } finally {
+          setLoading(false);
+        }
       }
     }
   };
 
-  const handlePrev = () => {
+  const handlePrev = async () => {
     Haptics.selectionAsync();
     setDirection("backward");
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     } else {
-      router.back();
+      if (isLoginFlow) {
+        dispatch(clearUserData());
+        await storageService.logout();
+        router.replace("/login");
+      } else {
+        router.replace("/signup");
+      }
     }
   };
 
@@ -867,6 +957,10 @@ export default function Onboarding() {
     );
   };
 
+  const { width: SCREEN_WIDTH } = Dimensions.get("window");
+  const isTablet = SCREEN_WIDTH > 600;
+  const CONTENT_WIDTH = isTablet ? 600 : SCREEN_WIDTH;
+
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
       <LinearGradient
@@ -879,170 +973,172 @@ export default function Onboarding() {
           bottom: 0,
         }}
       />
-      <SafeAreaView className="flex-1">
-        {/* Progress Bar */}
-        <View className="px-6 py-4">
-          <View className="h-1 bg-white/10 rounded-full w-full overflow-hidden">
-            <View
-              style={{ width: `${progress}%` }}
-              className="h-full bg-white"
-            />
-          </View>
-          <View className="flex-row justify-between mt-2">
-            <Text className="text-white text-xs uppercase font-bold">
-              Step {currentStep + 1} of {STEPS.length}
-            </Text>
-            <Text className="text-white text-xs font-bold">
-              {Math.round(progress)}% Complete
-            </Text>
-          </View>
-        </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-        >
-          <View style={{ flex: 1 }}>
-            <ScrollView
-              className="flex-1 px-8 py-6"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 100 }}
-            >
-              <Text className="text-white/80 text-xs uppercase font-bold tracking-widest mb-2">
-                {stepData.subtitle}
+      <SafeAreaView className="flex-1 items-center">
+        <View style={{ width: CONTENT_WIDTH, flex: 1 }}>
+          {/* Progress Bar */}
+          <View className="px-6 py-4">
+            <View className="h-1 bg-white/10 rounded-full w-full overflow-hidden">
+              <View
+                style={{ width: `${progress}%` }}
+                className="h-full bg-white"
+              />
+            </View>
+            <View className="flex-row justify-between mt-2">
+              <Text className="text-white text-xs uppercase font-bold">
+                Step {currentStep + 1} of {STEPS.length}
               </Text>
-              <Text style={styles.title} className="text-white mb-2">
-                {stepData.title}
+              <Text className="text-white text-xs font-bold">
+                {Math.round(progress)}% Complete
               </Text>
-              {stepData.description && (
-                <Text className="text-white/90 mb-8 leading-6 text-base font-medium">
-                  {stepData.description}
-                </Text>
-              )}
-
-              {stepData.type === "textarea" && (
-                <View
-                  className="rounded-[24px] bg-white/5 overflow-hidden border border-white/10 shadow-2xl"
-                  style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                >
-                  <BlurView intensity={30} tint="dark" className="p-1">
-                    <View className="flex-row">
-                      <TextInput
-                        multiline
-                        numberOfLines={6}
-                        placeholder={stepData.placeholder}
-                        placeholderTextColor="#ffffff40"
-                        className="flex-1 px-6 py-6 text-white min-h-[220px] text-lg"
-                        style={{ textAlignVertical: "top" }}
-                        value={answers[stepData.key] || ""}
-                        onChangeText={(txt) => updateAnswer(stepData.key, txt)}
-                      />
-                      <TouchableOpacity
-                        onPress={() =>
-                          isListening &&
-                          activeInputKey?.parent === stepData.key &&
-                          !activeInputKey.partId
-                            ? stopListening()
-                            : startListening(stepData.key)
-                        }
-                        className={`m-4 w-12 h-12 rounded-full items-center justify-center ${isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId ? "bg-red-500" : "bg-white/10"}`}
-                      >
-                        {isListening &&
-                        activeInputKey?.parent === stepData.key &&
-                        !activeInputKey.partId ? (
-                          <ActivityIndicator size="small" color="white" />
-                        ) : (
-                          <Mic color="white" size={20} />
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  </BlurView>
-                </View>
-              )}
-
-              {stepData.type === "multi-select" && (
-                <View className="gap-3">
-                  {stepData.options?.map((option: string) => {
-                    const isSelected = (answers[stepData.key] || []).includes(
-                      option,
-                    );
-                    return (
-                      <View
-                        key={option}
-                        className={`w-full overflow-hidden rounded-[24px] border h-20 ${isSelected ? "bg-white border-white" : "border-white/10 shadow-lg"}`}
-                      >
-                        <BlurView
-                          intensity={isSelected ? 0 : 30}
-                          tint="dark"
-                          className="h-full"
-                        >
-                          <TouchableOpacity
-                            onPress={() => {
-                              Haptics.selectionAsync();
-                              updateMultiAnswer(
-                                stepData.key,
-                                option,
-                                stepData.limit,
-                              );
-                            }}
-                            className={`px-5 flex-row items-center justify-between h-full ${isSelected ? "bg-white" : ""}`}
-                          >
-                            <Text
-                              className={`text-xl font-medium ${isSelected ? "text-black" : "text-white"}`}
-                            >
-                              {option}
-                            </Text>
-                            {isSelected && (
-                              <Check size={24} color="black" strokeWidth={3} />
-                            )}
-                          </TouchableOpacity>
-                        </BlurView>
-                      </View>
-                    );
-                  })}
-                  {stepData.limit && (
-                    <Text className="text-white/40 text-xs text-center mt-2 italic">
-                      Select up to {stepData.limit} traits
-                    </Text>
-                  )}
-                </View>
-              )}
-
-              {stepData.type === "mixed" &&
-                stepData.parts?.map((part) => renderInput(part, stepData.key))}
-            </ScrollView>
+            </View>
           </View>
-        </KeyboardAvoidingView>
 
-        {/* Footer Navigation */}
-        <View className="px-8 py-6 flex-row gap-4">
-          <TouchableOpacity
-            onPress={handlePrev}
-            activeOpacity={0.7}
-            className="w-16 h-16 rounded-full bg-white/10 items-center justify-center border border-white/10"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
           >
-            <ArrowLeft color="white" size={24} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleNext}
-            activeOpacity={0.7}
-            disabled={loading}
-            className={`flex-1 h-16 rounded-full items-center justify-center flex-row gap-2 ${loading ? "bg-white/50" : "bg-white"}`}
-          >
-            {loading ? (
-              <ActivityIndicator color="black" />
-            ) : (
-              <>
-                <Text className="text-black font-bold text-lg">
-                  {currentStep === STEPS.length - 1 ? "Finish" : "Next"}
+            <View style={{ flex: 1 }}>
+              <ScrollView
+                className="flex-1 px-8 py-6"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+              >
+                <Text className="text-white/80 text-xs uppercase font-bold tracking-widest mb-2">
+                  {stepData.subtitle}
                 </Text>
-                {currentStep < STEPS.length - 1 && (
-                  <ArrowRight color="black" size={20} />
+                <Text style={styles.title} className="text-white mb-2">
+                  {stepData.title}
+                </Text>
+                {stepData.description && (
+                  <Text className="text-white/90 mb-8 leading-6 text-base font-medium">
+                    {stepData.description}
+                  </Text>
                 )}
-              </>
-            )}
-          </TouchableOpacity>
+
+                {stepData.type === "textarea" && (
+                  <View
+                    className="rounded-[24px] bg-white/5 overflow-hidden border border-white/10 shadow-2xl"
+                    style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                  >
+                    <BlurView intensity={30} tint="dark" className="p-1">
+                      <View className="flex-row">
+                        <TextInput
+                          multiline
+                          numberOfLines={6}
+                          placeholder={stepData.placeholder}
+                          placeholderTextColor="#ffffff40"
+                          className="flex-1 px-6 py-6 text-white min-h-[220px] text-lg"
+                          style={{ textAlignVertical: "top" }}
+                          value={answers[stepData.key] || ""}
+                          onChangeText={(txt) => updateAnswer(stepData.key, txt)}
+                        />
+                        <TouchableOpacity
+                          onPress={() =>
+                            isListening &&
+                              activeInputKey?.parent === stepData.key &&
+                              !activeInputKey.partId
+                              ? stopListening()
+                              : startListening(stepData.key)
+                          }
+                          className={`m-4 w-12 h-12 rounded-full items-center justify-center ${isListening && activeInputKey?.parent === stepData.key && !activeInputKey.partId ? "bg-red-500" : "bg-white/10"}`}
+                        >
+                          {isListening &&
+                            activeInputKey?.parent === stepData.key &&
+                            !activeInputKey.partId ? (
+                            <ActivityIndicator size="small" color="white" />
+                          ) : (
+                            <Mic color="white" size={20} />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    </BlurView>
+                  </View>
+                )}
+
+                {stepData.type === "multi-select" && (
+                  <View className="gap-3">
+                    {stepData.options?.map((option: string) => {
+                      const isSelected = (answers[stepData.key] || []).includes(
+                        option,
+                      );
+                      return (
+                        <View
+                          key={option}
+                          className={`w-full overflow-hidden rounded-[24px] border h-20 ${isSelected ? "bg-white border-white" : "border-white/10 shadow-lg"}`}
+                        >
+                          <BlurView
+                            intensity={isSelected ? 0 : 30}
+                            tint="dark"
+                            className="h-full"
+                          >
+                            <TouchableOpacity
+                              onPress={() => {
+                                Haptics.selectionAsync();
+                                updateMultiAnswer(
+                                  stepData.key,
+                                  option,
+                                  stepData.limit,
+                                );
+                              }}
+                              className={`px-5 flex-row items-center justify-between h-full ${isSelected ? "bg-white" : ""}`}
+                            >
+                              <Text
+                                className={`text-xl font-medium ${isSelected ? "text-black" : "text-white"}`}
+                              >
+                                {option}
+                              </Text>
+                              {isSelected && (
+                                <Check size={24} color="black" strokeWidth={3} />
+                              )}
+                            </TouchableOpacity>
+                          </BlurView>
+                        </View>
+                      );
+                    })}
+                    {stepData.limit && (
+                      <Text className="text-white/40 text-xs text-center mt-2 italic">
+                        Select up to {stepData.limit} traits
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                {stepData.type === "mixed" &&
+                  stepData.parts?.map((part) => renderInput(part, stepData.key))}
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+
+          {/* Footer Navigation */}
+          <View className="px-8 py-6 flex-row gap-4">
+            <TouchableOpacity
+              onPress={handlePrev}
+              activeOpacity={0.7}
+              className="w-16 h-16 rounded-full bg-white/10 items-center justify-center border border-white/10"
+            >
+              <ArrowLeft color="white" size={24} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleNext}
+              activeOpacity={0.7}
+              disabled={loading}
+              className={`flex-1 h-16 rounded-full items-center justify-center flex-row gap-2 ${loading ? "bg-white/50" : "bg-white"}`}
+            >
+              {loading ? (
+                <ActivityIndicator color="black" />
+              ) : (
+                <>
+                  <Text className="text-black font-bold text-lg">
+                    {currentStep === STEPS.length - 1 ? "Finish" : "Next"}
+                  </Text>
+                  {currentStep < STEPS.length - 1 && (
+                    <ArrowRight color="black" size={20} />
+                  )}
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
     </View>

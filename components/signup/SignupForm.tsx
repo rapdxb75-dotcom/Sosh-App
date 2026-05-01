@@ -1,4 +1,3 @@
-import { AntDesign } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
@@ -133,7 +132,7 @@ export default function SignupForm() {
   };
 
   return (
-    <View className="flex-1 justify-center gap-5 mb-5">
+    <View className="w-full gap-5 mb-5">
       {/* Logo */}
       <View
         style={{
@@ -452,31 +451,7 @@ export default function SignupForm() {
         </ImageBackground>
       </TouchableOpacity>
 
-      {/* Divider */}
-      <View className="flex-row items-center my-2">
-        <View className="flex-1 h-[1px] bg-white/20" />
-        <Text className="text-white/40 px-4 text-xs font-medium">OR</Text>
-        <View className="flex-1 h-[1px] bg-white/20" />
-      </View>
 
-      {/* Social Logins */}
-      <View className="flex-row gap-4 justify-between">
-        <TouchableOpacity
-          className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => { }}
-        >
-          <AntDesign name="google" size={20} color="white" />
-          <Text className="text-white font-medium">Sign up with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => { }}
-        >
-          <AntDesign name="apple" size={20} color="white" />
-          <Text className="text-white font-medium">Sign up with Apple</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Login Link */}
       <View className="flex-row justify-center items-center mt-4">

@@ -57,7 +57,6 @@ import {
   useOptionalSpeechRecognitionEvent,
 } from "../services/speechRecognition";
 import storageService from "../services/storage";
-import { generateVideoThumbnail } from "../utils/video";
 import {
   type PreviewData,
   clearPreviewData,
@@ -67,6 +66,7 @@ import {
 } from "../store/previewStore";
 import { RootState } from "../store/store";
 import { getFreeTierSystemPrompt } from "../utils/prompts";
+import { generateVideoThumbnail } from "../utils/video";
 
 const isVideoUrl = (url?: string | null) => {
   if (typeof url !== "string" || !url) return false;
@@ -490,11 +490,11 @@ export default function PostPreview() {
         if (isReel && (user.reelCaptionCount || 0) >= 3) {
           Alert.alert(
             "Limit Exceeded",
-            "Your reel caption generation limit is exceeded, please upgrade your plan.",
+            "Free limit reached. Please manage your plan to continue.",
             [
               { text: "Cancel", style: "cancel" },
               {
-                text: "Upgrade Plan",
+                text: "Manage Plan",
                 style: "default",
                 onPress: () => Linking.openURL("https://sosh.digital"),
               },
@@ -504,13 +504,13 @@ export default function PostPreview() {
         } else if (!isReel && (user.postCaptionCount || 0) >= 3) {
           Alert.alert(
             "Limit Exceeded",
-            "Your post caption generation limit is exceeded, please upgrade your plan.",
+            "Free limit reached. Please manage your plan to continue.",
             [
               { text: "Cancel", style: "cancel" },
               {
-                text: "Upgrade Plan",
+                text: "Manage Plan",
                 style: "default",
-                onPress: () => Linking.openURL("https://sosh.digital"),
+                onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
               },
             ],
           );
@@ -1084,8 +1084,11 @@ export default function PostPreview() {
     }
   };
 
+  const CONTENT_WIDTH = Math.min(width, 600);
+
   return (
-    <View style={{ flex: 1, backgroundColor: "transparent" }}>
+    <View style={{ flex: 1, backgroundColor: "transparent", alignItems: "center" }}>
+      <View style={{ width: CONTENT_WIDTH, flex: 1 }}>
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={{ width: "100%" }}>
@@ -2632,6 +2635,7 @@ export default function PostPreview() {
           </View>
         </BlurView>
       </Modal>
+      </View>
     </View>
   );
 }

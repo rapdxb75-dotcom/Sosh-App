@@ -95,13 +95,13 @@ export default function Home() {
               subscription: (() => {
                 const firebaseSub = userData.subscription;
                 let planName = "Free";
-                
+
                 if (typeof firebaseSub === "string") {
                   planName = firebaseSub;
                 } else if (firebaseSub && typeof firebaseSub === "object") {
                   planName = firebaseSub.plan || "Free";
                 }
-                
+
                 return {
                   plan: planName as "Free" | "Pro" | "Business",
                   isSubscribed: planName !== "Free",
@@ -132,8 +132,13 @@ export default function Home() {
   return (
     <View
       className="flex-1"
-      style={{ paddingTop: Platform.OS === "ios" ? insets.top + 10 : 0 }}
+      style={{
+        paddingTop: Platform.OS === "ios" ? insets.top + 10 : 0,
+        alignItems: "center",
+        backgroundColor: "transparent",
+      }}
     >
+      <View style={{ width: "100%", maxWidth: 500, flex: 1 }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flex: 1, paddingBottom: bottomPadding }}
@@ -204,6 +209,7 @@ export default function Home() {
           </View>
         </View>
       </ScrollView>
+      </View>
     </View>
   );
 }
