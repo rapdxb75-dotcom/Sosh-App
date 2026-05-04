@@ -23,6 +23,7 @@ import {
   initializeFCM,
   initializeFirebase,
   requestNotificationPermission,
+  updateLastLogin,
 } from "../services/firebase";
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
@@ -55,6 +56,11 @@ function FirebaseDataFetcher() {
           store.dispatch(updateUser({ aiAdditions: userData.aiAdditions }));
           console.log("✅ aiAdditions loaded from Firebase");
         }
+
+        // Update last login timestamp with timezone directly in Firebase
+        updateLastLogin(email).catch((err) => {
+          console.error("❌ Error updating last login on app startup:", err);
+        });
 
         // --- FCM Setup ---
         try {

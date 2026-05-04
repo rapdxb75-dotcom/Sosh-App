@@ -28,10 +28,11 @@ import { useDispatch, useSelector } from "react-redux";
 import { FontFamily, normalize } from "../constants/Fonts";
 import { useNotification } from "../context/NotificationContext";
 import authService from "../services/api/auth";
-import { updateUserOnboardingData } from "../services/firebase";
+import { updateUserOnboardingData, updateLastLogin } from "../services/firebase";
 import storageService from "../services/storage";
 import { RootState } from "../store/store";
 import { clearUserData, setLoginBuffer, setUserData } from "../store/userSlice";
+import { getTimestampWithTimezone } from "../utils/format";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -400,6 +401,10 @@ export default function Onboarding() {
 
             if (loginResponse.token) {
               await storageService.setToken(loginResponse.token);
+              // Update last login timestamp with timezone directly in Firebase
+              updateLastLogin(loginBuffer.email).catch((err) => {
+                console.error("❌ Error updating last login:", err);
+              });
             }
           }
 
@@ -504,6 +509,11 @@ export default function Onboarding() {
             await storageService.setToken(loginResponse.token);
             await storageService.setEmail(registrationBuffer.email);
             await storageService.setUsername(registrationBuffer.userName);
+
+            // Update last login timestamp with timezone directly in Firebase
+            updateLastLogin(registrationBuffer.email).catch((err) => {
+              console.error("❌ Error updating last login:", err);
+            });
 
             const decoded: any = jwtDecode(loginResponse.token);
             const finalUserName =

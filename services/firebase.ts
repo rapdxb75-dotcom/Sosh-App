@@ -438,4 +438,50 @@ export const updateUserOnboardingData = async (
   }
 };
 
+// Update Last Login with Timezone
+export const updateLastLogin = async (userEmail: string) => {
+  try {
+    if (!userEmail) return false;
+
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", userEmail);
+
+    const now = new Date();
+    const offset = -now.getTimezoneOffset();
+    const diff = offset >= 0 ? "+" : "-";
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const timestampWithTimezone =
+      now.getFullYear() +
+      "-" +
+      pad(now.getMonth() + 1) +
+      "-" +
+      pad(now.getDate()) +
+      "T" +
+      pad(now.getHours()) +
+      ":" +
+      pad(now.getMinutes()) +
+      ":" +
+      pad(now.getSeconds()) +
+      diff +
+      pad(Math.floor(Math.abs(offset) / 60)) +
+      ":" +
+      pad(Math.abs(offset) % 60);
+
+    const updateData = { lastLogin: timestampWithTimezone };
+    console.log(`🔥 Updating Firebase for ${userEmail}:`, JSON.stringify(updateData, null, 2));
+
+    await setDoc(
+      userDocRef,
+      updateData,
+      { merge: true },
+    );
+
+    console.log(`✅ Last login updated for ${userEmail}: ${timestampWithTimezone}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating lastLogin:", error);
+    return false;
+  }
+};
+
 export { app, db };

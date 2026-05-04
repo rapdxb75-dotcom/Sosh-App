@@ -22,6 +22,7 @@ import Svg, {
 import Toast from "react-native-toast-message";
 import { useDispatch } from "react-redux";
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
+import { getTimestampWithTimezone } from "../../utils/format";
 import { useNotification } from "../../context/NotificationContext";
 import authService from "../../services/api/auth";
 import chatService from "../../services/api/chat";
@@ -29,6 +30,7 @@ import {
   getCurrentUserData,
   initializeFCM,
   initializeFirebase,
+  updateLastLogin,
 } from "../../services/firebase";
 import storageService from "../../services/storage";
 import {
@@ -132,6 +134,11 @@ export default function LoginForm() {
                   // --- FCM Setup ---
                   initializeFCM().catch((fcmError) => {
                     console.error("❌ FCM Setup error:", fcmError);
+                  });
+                  
+                  // Update last login timestamp with timezone directly in Firebase
+                  updateLastLogin(decoded.email).catch((err) => {
+                    console.error("❌ Error updating last login:", err);
                   });
 
                   const firebaseData = (await getCurrentUserData(
