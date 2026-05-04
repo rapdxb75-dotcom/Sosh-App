@@ -1,4 +1,3 @@
-import { AntDesign } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { useRouter } from "expo-router";
 import { jwtDecode } from "jwt-decode";
@@ -32,7 +31,11 @@ import {
   initializeFirebase,
 } from "../../services/firebase";
 import storageService from "../../services/storage";
-import { clearUserData, setUserData } from "../../store/userSlice";
+import {
+  clearUserData,
+  setLoginBuffer,
+  setUserData,
+} from "../../store/userSlice";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -72,19 +75,6 @@ export default function LoginForm() {
         const response: any = await authService.login({ email, password });
 
         if (response.token) {
-          // On Success
-          addNotification({
-            type: "success",
-            title: "Login Successful",
-            message: "Welcome back! 👋",
-          });
-
-          Toast.show({
-            type: "success",
-            text1: "Login Successful",
-            text2: "Welcome back! 👋",
-          });
-
           // Save token to storage
           if (response.token) {
             console.log("Saving token:", response.token);
@@ -129,7 +119,8 @@ export default function LoginForm() {
                   profilePicture: response.profilePicture,
                   subscription: {
                     plan: decoded.subscription || "Free",
-                    isSubscribed: !!decoded.subscription && decoded.subscription !== "Free",
+                    isSubscribed:
+                      !!decoded.subscription && decoded.subscription !== "Free",
                   },
                 }),
               );
@@ -147,6 +138,10 @@ export default function LoginForm() {
                     decoded.email,
                   )) as any;
                   if (firebaseData) {
+                    console.log(
+                      `🔥 Firebase User Data for ${decoded.email}:`,
+                      JSON.stringify(firebaseData, null, 2),
+                    );
                     dispatch(
                       setUserData({
                         aiAdditions: firebaseData.aiAdditions,
@@ -156,7 +151,51 @@ export default function LoginForm() {
                         reelCaptionCount: firebaseData.reelCaptionCount || 0,
                       }),
                     );
-                    console.log("✅ Firebase data (aiAdditions/systemPrompt/aiChatCount/captionCounts) loaded on login");
+                    console.log(
+                      "✅ Firebase data (aiAdditions/systemPrompt/aiChatCount/captionCounts) loaded on login",
+                    );
+                  }
+
+                  // Check if user has onboarding data
+                  const hasOnboardingData =
+                    firebaseData?.onboardingData &&
+                    Object.keys(firebaseData.onboardingData).length > 0;
+
+                  if (!hasOnboardingData) {
+                    // User has no onboarding data - redirect to onboarding
+                    console.log(
+                      "⚠️ No onboarding data found, redirecting to onboarding...",
+                    );
+                    dispatch(
+                      setLoginBuffer({
+                        token: response.token,
+                        email: decoded.email,
+                        password: password,
+                        userName: decoded.userName?.trim() || "",
+                        profilePicture: response.profilePicture,
+                        subscription: {
+                          plan: decoded.subscription || "Free",
+                          isSubscribed:
+                            !!decoded.subscription &&
+                            decoded.subscription !== "Free",
+                        },
+                      }),
+                    );
+
+                    addNotification({
+                      type: "info",
+                      title: "Action Required",
+                      message: "Please complete your onboarding profile.",
+                    });
+
+                    Toast.show({
+                      type: "info",
+                      text1: "Action Required",
+                      text2: "Please complete your onboarding profile.",
+                    });
+
+                    router.replace("/onboarding");
+                    return;
                   }
                 } catch (firebaseError) {
                   console.error("Error fetching Firebase data:", firebaseError);
@@ -168,6 +207,18 @@ export default function LoginForm() {
           }
 
           // Ensure proper navigation based on response
+          addNotification({
+            type: "success",
+            title: "Login Successful",
+            message: "Welcome back! 👋",
+          });
+
+          Toast.show({
+            type: "success",
+            text1: "Login Successful",
+            text2: "Welcome back! 👋",
+          });
+
           router.replace("/(tabs)/home");
         } else {
           // Handle case where API didn't return success/token
@@ -207,7 +258,7 @@ export default function LoginForm() {
   };
 
   return (
-    <View className="flex-1 justify-center gap-5 mb-5">
+    <View className="w-full gap-5 mb-5">
       {/* Logo between text - matching user's requested size (54) */}
       <View
         style={{
@@ -390,35 +441,7 @@ export default function LoginForm() {
         </ImageBackground>
       </TouchableOpacity>
 
-      {/* Divider */}
-      <View className="flex-row items-center my-2">
-        <View className="flex-1 h-[1px] bg-white/20" />
-        <Text className="text-white/40 px-4 text-xs font-medium">OR</Text>
-        <View className="flex-1 h-[1px] bg-white/20" />
-      </View>
 
-      {/* Social Logins */}
-      <View className="flex-row gap-4 justify-between">
-        <TouchableOpacity
-          className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => {
-            /* Google login logic */
-          }}
-        >
-          <AntDesign name="google" size={20} color="white" />
-          <Text className="text-white font-medium">Sign in with Google</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          className="flex-1 h-12 rounded-full border border-white/20 flex-row items-center justify-center gap-3 bg-white/5"
-          onPress={() => {
-            /* Apple login logic */
-          }}
-        >
-          <AntDesign name="apple" size={20} color="white" />
-          <Text className="text-white font-medium">Sign in with Apple</Text>
-        </TouchableOpacity>
-      </View>
 
       {/* Signup Link */}
       <View className="flex-row justify-center items-center mt-4">

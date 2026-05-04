@@ -44,9 +44,14 @@ export default function BottomNavigation({
 
   return (
     <View
-      className="absolute left-5 right-5 h-[72px]"
       style={{
+        position: "absolute",
         bottom: Math.max(insets.bottom + 10, 40),
+        height: 72,
+        width: "100%",
+        maxWidth: 500,
+        alignSelf: "center",
+        paddingHorizontal: 20,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.45,

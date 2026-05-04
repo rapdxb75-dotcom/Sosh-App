@@ -44,6 +44,17 @@ interface UserState {
     password: string;
     checkbox: boolean;
   } | null;
+  loginBuffer: {
+    token: string;
+    email: string;
+    password?: string;
+    userName: string;
+    profilePicture?: string | null;
+    subscription: {
+      plan: "Free" | "Pro" | "Business";
+      isSubscribed: boolean;
+    };
+  } | null;
   onboardingData?: any;
 }
 
@@ -63,27 +74,32 @@ const initialState: UserState = {
   postCaptionCount: 0,
   reelCaptionCount: 0,
   registrationBuffer: null,
+  loginBuffer: null,
   onboardingData: undefined,
 };
 
 // Async thunk to initialize user data from storage
 export const initializeUser = createAsyncThunk("user/initialize", async () => {
-  const [userName, email, profilePicture, token] =
-    await Promise.all([
-      storageService.getUsername(),
-      storageService.getEmail(),
-      storageService.getProfilePicture(),
-      storageService.getToken(),
-    ]);
-  let subscription: { plan: "Free" | "Pro" | "Business"; isSubscribed: boolean } = { plan: "Free", isSubscribed: false };
+  const [userName, email, profilePicture, token] = await Promise.all([
+    storageService.getUsername(),
+    storageService.getEmail(),
+    storageService.getProfilePicture(),
+    storageService.getToken(),
+  ]);
+  let subscription: {
+    plan: "Free" | "Pro" | "Business";
+    isSubscribed: boolean;
+  } = { plan: "Free", isSubscribed: false };
 
   if (token) {
     try {
       const decoded: any = jwtDecode(token || "");
       if (decoded.subscription) {
+        const rawPlan = String(decoded.subscription);
+        const normalizedPlan = (rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1).toLowerCase()) as "Free" | "Pro" | "Business";
         subscription = {
-          plan: decoded.subscription as "Free" | "Pro" | "Business",
-          isSubscribed: decoded.subscription !== "Free",
+          plan: normalizedPlan,
+          isSubscribed: normalizedPlan !== "Free",
         };
       }
     } catch (e) {
@@ -147,7 +163,12 @@ const userSlice = createSlice({
         state.reelCaptionCount = action.payload.reelCaptionCount;
       }
       if (action.payload.subscription !== undefined) {
-        state.subscription = action.payload.subscription;
+        const rawPlan = action.payload.subscription.plan || "Free";
+        const normalizedPlan = (rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1).toLowerCase()) as "Free" | "Pro" | "Business";
+        state.subscription = {
+          ...action.payload.subscription,
+          plan: normalizedPlan,
+        };
       }
       if (action.payload.onboardingData !== undefined) {
         state.onboardingData = action.payload.onboardingData;
@@ -165,6 +186,7 @@ const userSlice = createSlice({
       state.postCaptionCount = 0;
       state.reelCaptionCount = 0;
       state.registrationBuffer = null;
+      state.loginBuffer = null;
       state.onboardingData = undefined;
       state.subscription = { plan: "Free", isSubscribed: false };
     },
@@ -173,6 +195,12 @@ const userSlice = createSlice({
       action: PayloadAction<UserState["registrationBuffer"]>,
     ) => {
       state.registrationBuffer = action.payload;
+    },
+    setLoginBuffer: (
+      state,
+      action: PayloadAction<UserState["loginBuffer"]>,
+    ) => {
+      state.loginBuffer = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -186,8 +214,12 @@ const userSlice = createSlice({
   },
 });
 
-export const { setUserData, clearUserData, setRegistrationBuffer } =
-  userSlice.actions;
+export const {
+  setUserData,
+  clearUserData,
+  setRegistrationBuffer,
+  setLoginBuffer,
+} = userSlice.actions;
 
 // Action to update state AND storage
 export const updateUser =

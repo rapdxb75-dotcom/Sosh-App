@@ -1,5 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { getApps as getNativeApps, initializeApp as initializeNativeApp } from "@react-native-firebase/app";
+import {
+  getApps as getNativeApps,
+  initializeApp as initializeNativeApp,
+} from "@react-native-firebase/app";
 import messaging from "@react-native-firebase/messaging";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import {
@@ -170,7 +173,6 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
 
 export const setupForegroundMessageListener = () => {
   return messaging().onMessage(async (remoteMessage) => {
-
     const title =
       remoteMessage.notification?.title ||
       remoteMessage.data?.title ||
@@ -218,7 +220,6 @@ export const syncFCMTokenWithBackend = async (fcmToken: string) => {
 
 export const initializeFCM = async () => {
   try {
-
     // Ensure Firebase is initialized
     initializeFirebase();
 
@@ -254,7 +255,6 @@ export const getCurrentUserData = async (userEmail: string) => {
         ...userData,
       };
 
-
       return userDataWithId;
     } else {
       // If not found by document ID, try querying by email field
@@ -269,7 +269,6 @@ export const getCurrentUserData = async (userEmail: string) => {
           id: userDoc.id,
           ...userData,
         };
-
 
         return userDataWithId;
       } else {
@@ -289,7 +288,7 @@ export const listenToUserData = (
   onError?: (error: Error) => void,
 ) => {
   if (!userEmail) {
-    return () => { }; // Return empty unsubscribe function
+    return () => {}; // Return empty unsubscribe function
   }
 
   const { db } = initializeFirebase();
@@ -387,7 +386,11 @@ export const incrementPostCaptionCount = async (userEmail: string) => {
     if (!userEmail) return false;
     const { db } = initializeFirebase();
     const userDocRef = doc(db, "users", userEmail);
-    await setDoc(userDocRef, { postCaptionCount: increment(1) }, { merge: true });
+    await setDoc(
+      userDocRef,
+      { postCaptionCount: increment(1) },
+      { merge: true },
+    );
     return true;
   } catch (error) {
     console.error("Error incrementing postCaptionCount:", error);
@@ -401,10 +404,36 @@ export const incrementReelCaptionCount = async (userEmail: string) => {
     if (!userEmail) return false;
     const { db } = initializeFirebase();
     const userDocRef = doc(db, "users", userEmail);
-    await setDoc(userDocRef, { reelCaptionCount: increment(1) }, { merge: true });
+    await setDoc(
+      userDocRef,
+      { reelCaptionCount: increment(1) },
+      { merge: true },
+    );
     return true;
   } catch (error) {
     console.error("Error incrementing reelCaptionCount:", error);
+    return false;
+  }
+};
+
+// Update User Onboarding Data
+export const updateUserOnboardingData = async (
+  userEmail: string,
+  onboardingData: any,
+) => {
+  try {
+    if (!userEmail || !onboardingData) {
+      return false;
+    }
+
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", userEmail);
+
+    await setDoc(userDocRef, { onboardingData }, { merge: true });
+    console.log("✅ Onboarding data saved to Firebase for:", userEmail);
+    return true;
+  } catch (error) {
+    console.error("Error updating onboarding data in Firebase:", error);
     return false;
   }
 };

@@ -64,7 +64,6 @@ import {
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
 import storageService from "../../services/storage";
-import { generateVideoThumbnail } from "../../utils/video";
 import {
   type PreviewData,
   consumePreviewPostSuccessReset,
@@ -73,6 +72,7 @@ import {
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
 import { getFreeTierSystemPrompt } from "../../utils/prompts";
+import { generateVideoThumbnail } from "../../utils/video";
 
 type ExpoImageManipulatorModule = typeof import("expo-image-manipulator");
 
@@ -1128,13 +1128,13 @@ export default function CreatePost() {
         if (isReel && (user.reelCaptionCount || 0) >= 3) {
           Alert.alert(
             "Limit Exceeded",
-            "Your reel caption generation limit is exceeded, please upgrade your plan.",
+            "Free limit reached. Please manage your plan to continue.",
             [
               { text: "Cancel", style: "cancel" },
               {
-                text: "Upgrade Plan",
+                text: "Manage Plan",
                 style: "default",
-                onPress: () => Linking.openURL("https://sosh.digital"),
+                onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
               },
             ],
           );
@@ -1142,11 +1142,11 @@ export default function CreatePost() {
         } else if (!isReel && (user.postCaptionCount || 0) >= 3) {
           Alert.alert(
             "Limit Exceeded",
-            "Your post caption generation limit is exceeded, please upgrade your plan.",
+            "Free limit reached. Please manage your plan to continue.",
             [
               { text: "Cancel", style: "cancel" },
               {
-                text: "Upgrade Plan",
+                text: "Manage Plan",
                 style: "default",
                 onPress: () => Linking.openURL("https://sosh.digital"),
               },

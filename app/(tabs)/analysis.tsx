@@ -1202,7 +1202,8 @@ export default function Analysis() {
   }, [globalEmail]);
 
   return (
-    <View className="flex-1">
+    <View className="flex-1" style={{ alignItems: "center", backgroundColor: "transparent" }}>
+      <View style={{ width: "100%", maxWidth: 600, flex: 1 }}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <ScrollView
@@ -1277,6 +1278,7 @@ export default function Analysis() {
           </View>
         </View>
       </ScrollView>
+      </View>
     </View>
   );
 }

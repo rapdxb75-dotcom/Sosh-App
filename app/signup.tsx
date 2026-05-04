@@ -26,11 +26,13 @@ export default function Signup() {
             keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
           >
             <ScrollView
-              className="flex-1 px-6 pb-8"
+              className="flex-1"
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ flexGrow: 1 }}
+              contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}
             >
-              <SignupForm />
+              <View className="w-full max-w-[500px] px-6 pb-8">
+                <SignupForm />
+              </View>
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
