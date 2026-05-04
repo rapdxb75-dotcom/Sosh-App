@@ -12,6 +12,7 @@ interface UserState {
     plan: "Free" | "Pro" | "Business";
     isSubscribed: boolean;
   };
+  aiConsent: boolean;
   aiAdditions?: {
     poppyAIChatbot?: {
       active: boolean;
@@ -68,6 +69,7 @@ const initialState: UserState = {
     plan: "Free",
     isSubscribed: false,
   },
+  aiConsent: false,
   aiAdditions: undefined,
   systemPrompt: undefined,
   aiChatCount: 0,
@@ -80,12 +82,14 @@ const initialState: UserState = {
 
 // Async thunk to initialize user data from storage
 export const initializeUser = createAsyncThunk("user/initialize", async () => {
-  const [userName, email, profilePicture, token] = await Promise.all([
+  const results = await Promise.all([
     storageService.getUsername(),
     storageService.getEmail(),
     storageService.getProfilePicture(),
     storageService.getToken(),
+    storageService.getAIConsent(),
   ]);
+  const [userName, email, profilePicture, token, aiConsent] = results;
   let subscription: {
     plan: "Free" | "Pro" | "Business";
     isSubscribed: boolean;
@@ -113,6 +117,7 @@ export const initializeUser = createAsyncThunk("user/initialize", async () => {
     profilePicture,
     isLoggedIn: !!token,
     subscription,
+    aiConsent: results[4] || false,
   };
 });
 
@@ -136,6 +141,7 @@ const userSlice = createSlice({
           isSubscribed: boolean;
         };
         onboardingData?: any;
+        aiConsent?: boolean;
       }>,
     ) => {
       if (action.payload.userName !== undefined) {
@@ -173,7 +179,13 @@ const userSlice = createSlice({
       if (action.payload.onboardingData !== undefined) {
         state.onboardingData = action.payload.onboardingData;
       }
+      if (action.payload.aiConsent !== undefined) {
+        state.aiConsent = action.payload.aiConsent;
+      }
       state.isLoggedIn = true;
+    },
+    setAIConsent: (state, action: PayloadAction<boolean>) => {
+      state.aiConsent = action.payload;
     },
     clearUserData: (state) => {
       state.userName = "";
@@ -189,6 +201,7 @@ const userSlice = createSlice({
       state.loginBuffer = null;
       state.onboardingData = undefined;
       state.subscription = { plan: "Free", isSubscribed: false };
+      state.aiConsent = false;
     },
     setRegistrationBuffer: (
       state,
@@ -210,6 +223,7 @@ const userSlice = createSlice({
       state.profilePicture = action.payload.profilePicture;
       state.isLoggedIn = action.payload.isLoggedIn;
       state.subscription = action.payload.subscription;
+      state.aiConsent = action.payload.aiConsent;
     });
   },
 });
@@ -219,6 +233,7 @@ export const {
   clearUserData,
   setRegistrationBuffer,
   setLoginBuffer,
+  setAIConsent,
 } = userSlice.actions;
 
 // Action to update state AND storage
@@ -236,6 +251,7 @@ export const updateUser =
       plan: "Free" | "Pro" | "Business";
       isSubscribed: boolean;
     };
+    aiConsent?: boolean;
   }) =>
     async (dispatch: any) => {
       dispatch(setUserData(data));
@@ -247,6 +263,9 @@ export const updateUser =
       }
       if (data.profilePicture !== undefined) {
         await storageService.setProfilePicture(data.profilePicture || "");
+      }
+      if (data.aiConsent !== undefined) {
+        await storageService.setAIConsent(data.aiConsent);
       }
     };
 

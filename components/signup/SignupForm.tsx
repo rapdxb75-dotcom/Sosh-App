@@ -23,6 +23,7 @@ import Toast from "react-native-toast-message";
 import { useDispatch } from "react-redux";
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
 import { setRegistrationBuffer } from "../../store/userSlice";
+import AIConsentModal from "../common/AIConsentModal";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -41,9 +42,11 @@ export default function SignupForm() {
     password: "",
     confirmPassword: "",
     terms: "",
+    aiConsent: "",
   });
 
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [acceptedAIConsent, setAcceptedAIConsent] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +59,7 @@ export default function SignupForm() {
       password: "",
       confirmPassword: "",
       terms: "",
+      aiConsent: "",
     };
 
     if (!fullName.trim()) {
@@ -94,6 +98,11 @@ export default function SignupForm() {
       isValid = false;
     }
 
+    if (!acceptedAIConsent) {
+      newErrors.aiConsent = "You must accept AI Data Sharing to continue";
+      isValid = false;
+    }
+
     setErrors(newErrors);
 
     if (isValid) {
@@ -107,6 +116,7 @@ export default function SignupForm() {
             email,
             password,
             checkbox: true,
+            aiConsent: true,
           }),
         );
 
@@ -426,15 +436,56 @@ export default function SignupForm() {
               </Text>
             ) : null}
           </View>
+
+          {/* AI Data Sharing Checkbox */}
+          <View className="mt-2">
+            <TouchableOpacity
+              onPress={() => setAcceptedAIConsent(!acceptedAIConsent)}
+              className="flex-row items-center gap-3 px-1"
+              activeOpacity={1}
+            >
+              <View
+                style={{
+                  width: 20,
+                  height: 20,
+                  borderRadius: 4,
+                  borderWidth: 2,
+                  borderColor: acceptedAIConsent ? "#3b82f6" : "rgba(255, 255, 255, 0.3)",
+                  backgroundColor: acceptedAIConsent ? "#3b82f6" : "transparent",
+                }}
+                className="items-center justify-center"
+              >
+                {acceptedAIConsent && <Check size={14} color="white" />}
+              </View>
+              <View className="flex-1">
+                <Text className="text-white/70 text-xs leading-5">
+                  I agree to the{" "}
+                  <Text
+                    className="text-blue-400 font-semibold underline"
+                    onPress={() => router.push("/ai-disclosure")}
+                  >
+                    AI Data Sharing Disclosure
+                  </Text>{" "}
+                  and share my data with trusted AI providers.
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {errors.aiConsent ? (
+              <Text className="text-red-500 text-[10px] ml-8 mt-1 italic">
+                {errors.aiConsent}
+              </Text>
+            ) : null}
+          </View>
         </BlurView>
       </View>
+
 
       {/* Signup Button */}
       <TouchableOpacity
         className="w-full h-14 overflow-hidden rounded-full"
         onPress={handleSignup}
-        disabled={!acceptedTerms}
-        style={{ opacity: acceptedTerms ? 1 : 0.6 }}
+        disabled={!acceptedTerms || !acceptedAIConsent}
+        style={{ opacity: (acceptedTerms && acceptedAIConsent) ? 1 : 0.6 }}
       >
         <ImageBackground
           source={require("../../assets/images/post_without.jpg")}

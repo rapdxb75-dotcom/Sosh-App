@@ -22,7 +22,6 @@ import Svg, {
 import Toast from "react-native-toast-message";
 import { useDispatch } from "react-redux";
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
-import { getTimestampWithTimezone } from "../../utils/format";
 import { useNotification } from "../../context/NotificationContext";
 import authService from "../../services/api/auth";
 import chatService from "../../services/api/chat";
@@ -135,14 +134,14 @@ export default function LoginForm() {
                   initializeFCM().catch((fcmError) => {
                     console.error("❌ FCM Setup error:", fcmError);
                   });
-                  
+
                   // Update last login timestamp with timezone directly in Firebase
                   updateLastLogin(decoded.email).catch((err) => {
                     console.error("❌ Error updating last login:", err);
                   });
 
                   const firebaseData = (await getCurrentUserData(
-                    decoded.email,
+                    decoded.email.toLowerCase().trim(),
                   )) as any;
                   if (firebaseData) {
                     console.log(
@@ -168,8 +167,12 @@ export default function LoginForm() {
                     firebaseData?.onboardingData &&
                     Object.keys(firebaseData.onboardingData).length > 0;
 
-                  if (!hasOnboardingData) {
-                    // User has no onboarding data - redirect to onboarding
+                  // Business users bypass onboarding check and go directly to home
+                  const isBusinessUser =
+                    decoded.subscription?.toLowerCase() === "business";
+
+                  if (!hasOnboardingData && !isBusinessUser) {
+                    // User has no onboarding data and is not a Business user - redirect to onboarding
                     console.log(
                       "⚠️ No onboarding data found, redirecting to onboarding...",
                     );

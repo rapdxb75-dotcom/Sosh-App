@@ -8,6 +8,7 @@ const UNREAD_NOTIFICATIONS_COUNT_KEY = "app_unread_notifications_count";
 const EMAIL_KEY = "user_email";
 const HAS_LAUNCHED_KEY = "has_launched";
 const SUBSCRIPTION_KEY = "subscription"; // Matching the string user uses in userSlice.ts
+const AI_CONSENT_KEY = "ai_consent";
 
 const storageService = {
   /**
@@ -182,6 +183,30 @@ const storageService = {
       return value !== null ? JSON.parse(value) : false;
     } catch (error) {
       console.error("Error getting launch status", error);
+      return false;
+    }
+  },
+
+  /**
+   * Set AI data sharing consent
+   */
+  setAIConsent: async (value: boolean) => {
+    try {
+      await AsyncStorage.setItem(AI_CONSENT_KEY, JSON.stringify(value));
+    } catch (error) {
+      console.error("Error saving AI consent", error);
+    }
+  },
+
+  /**
+   * Get AI data sharing consent
+   */
+  getAIConsent: async () => {
+    try {
+      const value = await AsyncStorage.getItem(AI_CONSENT_KEY);
+      return value !== null ? JSON.parse(value) : false;
+    } catch (error) {
+      console.error("Error getting AI consent", error);
       return false;
     }
   },

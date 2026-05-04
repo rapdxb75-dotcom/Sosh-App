@@ -28,11 +28,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { FontFamily, normalize } from "../constants/Fonts";
 import { useNotification } from "../context/NotificationContext";
 import authService from "../services/api/auth";
-import { updateUserOnboardingData, updateLastLogin } from "../services/firebase";
+import { updateLastLogin, updateUserOnboardingData } from "../services/firebase";
 import storageService from "../services/storage";
 import { RootState } from "../store/store";
 import { clearUserData, setLoginBuffer, setUserData } from "../store/userSlice";
-import { getTimestampWithTimezone } from "../utils/format";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -328,6 +327,44 @@ export default function Onboarding() {
   const progress = ((currentStep + 1) / STEPS.length) * 100;
   const stepData = STEPS[currentStep];
 
+  const isStepValid = () => {
+    const answer = answers[stepData.key];
+
+    if (stepData.type === "textarea") {
+      return !!answer?.trim();
+    }
+
+    if (stepData.type === "multi-select") {
+      return Array.isArray(answer) && answer.length > 0;
+    }
+
+    if (stepData.type === "mixed") {
+      if (!answer) return false;
+      return stepData.parts.some((part: any) => {
+        const partAnswer = answer[part.id];
+        if (part.type === "textarea") {
+          return !!partAnswer?.trim();
+        }
+        if (part.type === "multi-select-chips") {
+          return Array.isArray(partAnswer) && partAnswer.length > 0;
+        }
+        if (part.type === "select") {
+          return !!partAnswer;
+        }
+        if (part.type === "platform-select") {
+          const platforms = Object.keys(partAnswer || {});
+          if (platforms.length === 0) return false;
+          return platforms.every(
+            (p) => partAnswer[p].selected && !!partAnswer[p].count,
+          );
+        }
+        return true;
+      });
+    }
+
+    return true;
+  };
+
   const handleNext = async () => {
     Haptics.selectionAsync();
     setDirection("forward");
@@ -377,12 +414,13 @@ export default function Onboarding() {
         try {
           setLoading(true);
 
+          const userEmail = loginBuffer.email.toLowerCase().trim();
           console.log(
             "🚀 Updating onboarding data for logged-in user:",
-            loginBuffer.email,
+            userEmail,
           );
           const success = await updateUserOnboardingData(
-            loginBuffer.email,
+            userEmail,
             onboardingData,
           );
 
@@ -392,17 +430,17 @@ export default function Onboarding() {
           console.log("✅ Onboarding data updated successfully");
 
           // Call login API
-          if (loginBuffer.email && loginBuffer.password) {
+          if (userEmail && loginBuffer.password) {
             console.log("🔑 Calling login API...");
             const loginResponse = await authService.login({
-              email: loginBuffer.email,
+              email: userEmail,
               password: loginBuffer.password,
             });
 
             if (loginResponse.token) {
               await storageService.setToken(loginResponse.token);
               // Update last login timestamp with timezone directly in Firebase
-              updateLastLogin(loginBuffer.email).catch((err) => {
+              updateLastLogin(userEmail).catch((err) => {
                 console.error("❌ Error updating last login:", err);
               });
             }
@@ -1132,18 +1170,24 @@ export default function Onboarding() {
             <TouchableOpacity
               onPress={handleNext}
               activeOpacity={0.7}
-              disabled={loading}
-              className={`flex-1 h-16 rounded-full items-center justify-center flex-row gap-2 ${loading ? "bg-white/50" : "bg-white"}`}
+              disabled={loading || !isStepValid()}
+              className={`flex-1 h-16 rounded-full items-center justify-center flex-row gap-2 ${(loading || !isStepValid()) ? "bg-white/30" : "bg-white"}`}
             >
               {loading ? (
                 <ActivityIndicator color="black" />
               ) : (
                 <>
-                  <Text className="text-black font-bold text-lg">
+                  <Text
+                    className={`font-bold text-lg ${loading || !isStepValid() ? "text-white/50" : "text-black"
+                      }`}
+                  >
                     {currentStep === STEPS.length - 1 ? "Finish" : "Next"}
                   </Text>
                   {currentStep < STEPS.length - 1 && (
-                    <ArrowRight color="black" size={20} />
+                    <ArrowRight
+                      color={loading || !isStepValid() ? "#ffffff50" : "black"}
+                      size={20}
+                    />
                   )}
                 </>
               )}

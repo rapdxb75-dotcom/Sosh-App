@@ -48,7 +48,7 @@ import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
 import chatService, { Conversation, Message } from "../../services/api/chat";
-import poppyService from "../../services/api/poppy";
+// Poppy AI removed
 import { incrementAIChatCount } from "../../services/firebase";
 import {
   isSpeechRecognitionAvailable,
@@ -56,6 +56,7 @@ import {
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
 import { RootState } from "../../store/store";
+import AIConsentModal from "../../components/common/AIConsentModal";
 const AI_CHAT_LIMIT = 5;
 
 /* ---------- Gradient Ring Component ---------- */
@@ -604,14 +605,11 @@ export default function AI() {
   const aiAdditions = useSelector((state: RootState) => state.user.aiAdditions);
   const subscription = useSelector((state: RootState) => state.user.subscription);
   const systemPrompt = useSelector((state: RootState) => state.user.systemPrompt);
-  const aiChatCount = useSelector((state: RootState) => state.user.aiChatCount || 0);
+  const aiConsent = useSelector((state: RootState) => state.user.aiConsent);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const router = useRouter();
 
-  // Get dynamic boardId and chatId from user's aiAdditions
-  const poppyBoardId =
-    aiAdditions?.poppyAIChatbot?.boardId || "weathered-grassland-TB9JJ";
-  const poppyChatId =
-    aiAdditions?.poppyAIChatbot?.chatId || "chatNode-hidden-butterfly-ugi_J";
+  // Poppy AI variables removed
   const { addNotification } = useNotification();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -1276,6 +1274,10 @@ export default function AI() {
 
   const handleSendMessage = async () => {
     console.log("📤 [AI] handleSendMessage triggered. Current messages state length:", messages.length);
+    if (!aiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
     if (!inputText.trim() || isSending || !userEmail) return;
 
     const content = inputText.trim();
@@ -1361,7 +1363,7 @@ export default function AI() {
 
       const isFreePlan = subscription?.plan === "Free";
       const isProPlan = subscription?.plan === "Pro";
-      const useClaude = isFreePlan || isProPlan;
+      const useClaude = true; // Poppy AI removed as per user request
 
       if (isFreePlan && aiChatCount >= AI_CHAT_LIMIT) {
         Alert.alert(
@@ -2297,6 +2299,10 @@ export default function AI() {
         </KeyboardAvoidingView>
       </Modal>
       </View>
+      <AIConsentModal 
+        visible={showConsentModal} 
+        onClose={() => setShowConsentModal(false)} 
+      />
     </View>
   );
 }
