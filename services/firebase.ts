@@ -242,11 +242,18 @@ export const getCurrentUserData = async (userEmail: string) => {
       return null;
     }
 
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
 
-    // Try to get user by email as document ID
-    const userDocRef = doc(db, "users", userEmail);
-    const userDoc = await getDoc(userDocRef);
+    // Try to get user by email as document ID (normalized)
+    const userDocRef = doc(db, "users", normalizedEmail);
+    let userDoc = await getDoc(userDocRef);
+
+    // If not found, try raw email as document ID
+    if (!userDoc.exists() && userEmail !== normalizedEmail) {
+      const rawDocRef = doc(db, "users", userEmail);
+      userDoc = await getDoc(rawDocRef);
+    }
 
     if (userDoc.exists()) {
       const { profilePicture, ...userData } = userDoc.data();
@@ -257,10 +264,16 @@ export const getCurrentUserData = async (userEmail: string) => {
 
       return userDataWithId;
     } else {
-      // If not found by document ID, try querying by email field
+      // If not found by document ID, try querying by email field (normalized)
       const usersCollection = collection(db, "users");
-      const q = query(usersCollection, where("email", "==", userEmail));
-      const querySnapshot = await getDocs(q);
+      const q = query(usersCollection, where("email", "==", normalizedEmail));
+      let querySnapshot = await getDocs(q);
+
+      // If still not found, try querying by raw email field
+      if (querySnapshot.empty && userEmail !== normalizedEmail) {
+        const rawQ = query(usersCollection, where("email", "==", userEmail));
+        querySnapshot = await getDocs(rawQ);
+      }
 
       if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
@@ -291,8 +304,9 @@ export const listenToUserData = (
     return () => {}; // Return empty unsubscribe function
   }
 
+  const normalizedEmail = userEmail.trim().toLowerCase();
   const { db } = initializeFirebase();
-  const userDocRef = doc(db, "users", userEmail);
+  const userDocRef = doc(db, "users", normalizedEmail);
 
   // Set up real-time listener
   const unsubscribe = onSnapshot(
@@ -330,8 +344,9 @@ export const updatePoppyTokenCredits = async (
       return false;
     }
 
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
-    const userDocRef = doc(db, "users", userEmail);
+    const userDocRef = doc(db, "users", normalizedEmail);
 
     // Use increment to add credits to existing value
     await updateDoc(userDocRef, {
@@ -344,7 +359,8 @@ export const updatePoppyTokenCredits = async (
     if (error.code === "not-found") {
       try {
         const { db } = initializeFirebase();
-        const userDocRef = doc(db, "users", userEmail);
+        const normalizedEmail = userEmail.trim().toLowerCase();
+        const userDocRef = doc(db, "users", normalizedEmail);
         await setDoc(userDocRef, { poppyToken: creditsUsed }, { merge: true });
         return true;
       } catch (setError) {
@@ -362,8 +378,9 @@ export const incrementAIChatCount = async (userEmail: string) => {
   try {
     if (!userEmail) return false;
 
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
-    const userDocRef = doc(db, "users", userEmail);
+    const userDocRef = doc(db, "users", normalizedEmail);
 
     await setDoc(
       userDocRef,
@@ -384,8 +401,9 @@ export const incrementAIChatCount = async (userEmail: string) => {
 export const incrementPostCaptionCount = async (userEmail: string) => {
   try {
     if (!userEmail) return false;
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
-    const userDocRef = doc(db, "users", userEmail);
+    const userDocRef = doc(db, "users", normalizedEmail);
     await setDoc(
       userDocRef,
       { postCaptionCount: increment(1) },
@@ -402,8 +420,9 @@ export const incrementPostCaptionCount = async (userEmail: string) => {
 export const incrementReelCaptionCount = async (userEmail: string) => {
   try {
     if (!userEmail) return false;
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
-    const userDocRef = doc(db, "users", userEmail);
+    const userDocRef = doc(db, "users", normalizedEmail);
     await setDoc(
       userDocRef,
       { reelCaptionCount: increment(1) },
@@ -426,14 +445,62 @@ export const updateUserOnboardingData = async (
       return false;
     }
 
+    const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
-    const userDocRef = doc(db, "users", userEmail);
+    const userDocRef = doc(db, "users", normalizedEmail);
 
     await setDoc(userDocRef, { onboardingData }, { merge: true });
     console.log("✅ Onboarding data saved to Firebase for:", userEmail);
     return true;
   } catch (error) {
     console.error("Error updating onboarding data in Firebase:", error);
+    return false;
+  }
+};
+
+// Update Last Login with Timezone
+export const updateLastLogin = async (userEmail: string) => {
+  try {
+    if (!userEmail) return false;
+
+    const normalizedEmail = userEmail.trim().toLowerCase();
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", normalizedEmail);
+
+    const now = new Date();
+    const offset = -now.getTimezoneOffset();
+    const diff = offset >= 0 ? "+" : "-";
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const timestampWithTimezone =
+      now.getFullYear() +
+      "-" +
+      pad(now.getMonth() + 1) +
+      "-" +
+      pad(now.getDate()) +
+      "T" +
+      pad(now.getHours()) +
+      ":" +
+      pad(now.getMinutes()) +
+      ":" +
+      pad(now.getSeconds()) +
+      diff +
+      pad(Math.floor(Math.abs(offset) / 60)) +
+      ":" +
+      pad(Math.abs(offset) % 60);
+
+    const updateData = { lastLogin: timestampWithTimezone };
+    console.log(`🔥 Updating Firebase for ${userEmail}:`, JSON.stringify(updateData, null, 2));
+
+    await setDoc(
+      userDocRef,
+      updateData,
+      { merge: true },
+    );
+
+    console.log(`✅ Last login updated for ${userEmail}: ${timestampWithTimezone}`);
+    return true;
+  } catch (error) {
+    console.error("Error updating lastLogin:", error);
     return false;
   }
 };

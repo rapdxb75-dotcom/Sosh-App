@@ -46,7 +46,7 @@ import Header from "../components/common/Header";
 import { useNotification } from "../context/NotificationContext";
 import anthropicService from "../services/api/anthropic";
 import createPostService from "../services/api/createPost";
-import poppyService from "../services/api/poppy";
+// Poppy AI removed
 import {
   incrementPostCaptionCount,
   incrementReelCaptionCount,
@@ -65,6 +65,7 @@ import {
   setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
+import AIConsentModal from "../components/common/AIConsentModal";
 import { getFreeTierSystemPrompt } from "../utils/prompts";
 import { generateVideoThumbnail } from "../utils/video";
 
@@ -275,6 +276,8 @@ export default function PostPreview() {
   const globalUserName = user.userName;
   const globalProfilePicture = user.profilePicture;
   const [isPublishing, setIsPublishing] = useState(false);
+  const aiConsent = user.aiConsent;
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const isFreePlan = user.subscription?.plan === "Free";
   const isBackgroundPublishing = useRef(false);
 
@@ -455,6 +458,10 @@ export default function PostPreview() {
   );
 
   const handleGenerateCaption = async () => {
+    if (!aiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!data?.caption?.trim()) {
       Toast.show({
@@ -479,11 +486,10 @@ export default function PostPreview() {
       }
 
       const isReel = data?.activeTab === "Reel";
-      const boardId = user.aiAdditions?.poppyShortCaption?.boardId;
-      const chatId = user.aiAdditions?.poppyShortCaption?.chatId;
+      // Poppy AI variables removed
       const isFreePlan = user.subscription?.plan === "Free";
       const isProPlan = user.subscription?.plan === "Pro";
-      const useClaude = isFreePlan || isProPlan;
+      const useClaude = true; // Poppy AI removed as per user request
 
       // Limit Enforcement for Free Plan
       if (isFreePlan) {
@@ -2636,6 +2642,10 @@ export default function PostPreview() {
         </BlurView>
       </Modal>
       </View>
+      <AIConsentModal
+        visible={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+      />
     </View>
   );
 }

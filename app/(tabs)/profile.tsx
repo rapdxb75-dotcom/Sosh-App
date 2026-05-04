@@ -174,6 +174,7 @@ export default function Profile() {
     (state: RootState) => state.user.profilePicture,
   );
   const globalEmail = useSelector((state: RootState) => state.user.email);
+  const aiConsent = useSelector((state: RootState) => state.user.aiConsent);
   const subscription = useSelector(
     (state: RootState) => state.user.subscription,
   );
@@ -959,6 +960,9 @@ export default function Profile() {
                 }
               />
             ))}
+
+            {/* Privacy and Data Sharing Section */}
+            <PrivacySection />
           </View>
         </View>
       </ScrollView>
@@ -1043,147 +1047,236 @@ export default function Profile() {
               padding: 20,
             }}
           >
-            <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-8 items-center">
-              {/* Close Button */}
-              <TouchableOpacity
-                onPress={() => setEditModalVisible(false)}
-                className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
+            <View 
+              className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] overflow-hidden"
+              style={{ maxHeight: '80%' }}
+            >
+              <ScrollView 
+                contentContainerStyle={{ padding: 32, alignItems: 'center' }}
+                showsVerticalScrollIndicator={false}
               >
-                <Text className="text-white/60 text-lg font-medium">×</Text>
-              </TouchableOpacity>
-
-              {/* Profile Image with Ring */}
-              <View className="mb-6 items-center justify-center relative">
-                {/* Reusing Gradient Ring Logic but larger */}
-                <View
-                  style={{
-                    width: 100,
-                    height: 100,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                {/* Close Button */}
+                <TouchableOpacity
+                  onPress={() => setEditModalVisible(false)}
+                  className="absolute right-0 top-0 w-9 h-9 items-center justify-center z-10"
                 >
-                  <BlurView
-                    intensity={5}
+                  <Text className="text-white/60 text-lg font-medium">×</Text>
+                </TouchableOpacity>
+
+                {/* Profile Image with Ring */}
+                <View className="mb-6 items-center justify-center relative">
+                  {/* Reusing Gradient Ring Logic but larger */}
+                  <View
                     style={{
                       width: 100,
                       height: 100,
-                      borderRadius: 50,
-                      overflow: "hidden",
                       alignItems: "center",
                       justifyContent: "center",
                     }}
                   >
-                    <Svg width={90} height={90}>
-                      <Defs>
-                        <SvgLinearGradient
-                          id="editProfileGrad"
-                          x1="0%"
-                          y1="0%"
-                          x2="100%"
-                          y2="100%"
-                        >
-                          <Stop
-                            offset="0%"
-                            stopColor="#FFFFFF"
-                            stopOpacity="1"
-                          />
-                          <Stop
-                            offset="50%"
-                            stopColor="#000000"
-                            stopOpacity="1"
-                          />
-                          <Stop
-                            offset="100%"
-                            stopColor="#FFFFFF"
-                            stopOpacity="1"
-                          />
-                        </SvgLinearGradient>
-                      </Defs>
-                      <Circle
-                        cx={45}
-                        cy={45}
-                        r={44}
-                        stroke="url(#editProfileGrad)"
-                        strokeWidth={1}
-                        fill="transparent"
-                      />
-                    </Svg>
-                  </BlurView>
-                  <Image
-                    source={
-                      image
-                        ? {
-                            uri:
-                              image.startsWith("http") ||
-                              image.startsWith("file") ||
-                              image.startsWith("data:")
-                                ? image
-                                : `data:image/png;base64,${image}`,
-                          }
-                        : require("../../assets/images/avtar.png")
-                    }
-                    className="w-[82px] h-[82px] absolute rounded-full"
-                    resizeMode={image ? "cover" : "contain"}
-                  />
+                    <BlurView
+                      intensity={5}
+                      style={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 50,
+                        overflow: "hidden",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Svg width={90} height={90}>
+                        <Defs>
+                          <SvgLinearGradient
+                            id="editProfileGrad"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="100%"
+                          >
+                            <Stop
+                              offset="0%"
+                              stopColor="#FFFFFF"
+                              stopOpacity="1"
+                            />
+                            <Stop
+                              offset="50%"
+                              stopColor="#000000"
+                              stopOpacity="1"
+                            />
+                            <Stop
+                              offset="100%"
+                              stopColor="#FFFFFF"
+                              stopOpacity="1"
+                            />
+                          </SvgLinearGradient>
+                        </Defs>
+                        <Circle
+                          cx={45}
+                          cy={45}
+                          r={44}
+                          stroke="url(#editProfileGrad)"
+                          strokeWidth={1}
+                          fill="transparent"
+                        />
+                      </Svg>
+                    </BlurView>
+                    <Image
+                      source={
+                        image
+                          ? {
+                              uri:
+                                image.startsWith("http") ||
+                                image.startsWith("file") ||
+                                image.startsWith("data:")
+                                  ? image
+                                  : `data:image/png;base64,${image}`,
+                            }
+                          : require("../../assets/images/avtar.png")
+                      }
+                      className="w-[82px] h-[82px] absolute rounded-full"
+                      resizeMode={image ? "cover" : "contain"}
+                    />
+                  </View>
                 </View>
-              </View>
 
-              {/* Upload New Button */}
-              <BlurView
-                intensity={14}
-                tint="dark"
-                className="upload-container w-full h-[68px]"
-              >
-                <TouchableOpacity
-                  className="upload-content w-full h-full"
-                  onPress={pickImage}
-                >
-                  <Upload size={20} color="white" />
-                  <Text className="text-white font-medium text-[16px] font-inter mt-2">
-                    Upload new
-                  </Text>
-                </TouchableOpacity>
-              </BlurView>
-
-              {/* Username Input */}
-              <View className="w-full mb-8">
-                <Text className="text-white font-semibold text-base mb-2 font-inter">
-                  User name
-                </Text>
+                {/* Upload New Button */}
                 <BlurView
                   intensity={14}
                   tint="dark"
-                  className="rounded-[16px] overflow-hidden"
+                  className="upload-container w-full h-[68px]"
                 >
-                  <View className="input-field justify-center">
-                    <TextInput
-                      value={username}
-                      onChangeText={setUsername}
-                      placeholder="Enter username"
-                      placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                      className="flex-1 font-inter py-0 text-white"
-                      style={{ fontFamily: "Inter_400Regular" }}
-                      textAlignVertical="center"
-                    />
-                  </View>
+                  <TouchableOpacity
+                    className="upload-content w-full h-full"
+                    onPress={pickImage}
+                  >
+                    <Upload size={20} color="white" />
+                    <Text className="text-white font-medium text-[16px] font-inter mt-2">
+                      Upload new
+                    </Text>
+                  </TouchableOpacity>
                 </BlurView>
-              </View>
 
-              {/* Save Button */}
-              <TouchableOpacity
-                onPress={handleSaveProfile}
-                className={`btn-save ${loading ? "opacity-70" : ""}`}
-                disabled={loading}
-              >
-                <Text className="text-white font-medium text-lg">
-                  {loading ? "Saving..." : "Save"}
-                </Text>
-              </TouchableOpacity>
+                {/* Username Input */}
+                <View className="w-full mb-8">
+                  <Text className="text-white font-semibold text-base mb-2 font-inter">
+                    User name
+                  </Text>
+                  <BlurView
+                    intensity={14}
+                    tint="dark"
+                    className="rounded-[16px] overflow-hidden"
+                  >
+                    <View className="input-field justify-center">
+                      <TextInput
+                        value={username}
+                        onChangeText={setUsername}
+                        placeholder="Enter username"
+                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                        className="flex-1 font-inter py-0 text-white"
+                        style={{ fontFamily: "Inter_400Regular" }}
+                        textAlignVertical="center"
+                      />
+                    </View>
+                  </BlurView>
+                </View>
+
+                {/* Save Button */}
+                <TouchableOpacity
+                  onPress={handleSaveProfile}
+                  className={`btn-save ${loading ? "opacity-70" : ""}`}
+                  disabled={loading}
+                >
+                  <Text className="text-white font-medium text-lg">
+                    {loading ? "Saving..." : "Save"}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      </View>
+    </View>
+  );
+}
+
+function PrivacySection() {
+  const aiConsent = useSelector((state: RootState) => state.user.aiConsent);
+  const subscription = useSelector((state: RootState) => state.user.subscription);
+  const dispatch = useDispatch();
+
+  const toggleConsent = async () => {
+    const newValue = !aiConsent;
+    dispatch(updateUser({ aiConsent: newValue }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const activeServices = [
+    { name: "Claude (Anthropic)", active: true },
+    { name: "Ayrshare", active: subscription?.plan !== "Free" },
+    { name: "Zernio", active: subscription?.plan === "Business" },
+  ];
+
+  return (
+    <View className="mt-8 mb-8">
+      <Text className="text-white text-lg font-medium mb-4">
+        Privacy and Data Sharing
+      </Text>
+      
+      <View 
+        className="rounded-[24px] overflow-hidden"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          borderWidth: 1,
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+        }}
+      >
+        <BlurView intensity={20} tint="light" className="p-5">
+          <View className="flex-row items-center justify-between mb-4">
+            <View className="flex-1 mr-4">
+              <Text className="text-white font-semibold text-base">AI Data Sharing</Text>
+              <Text className="text-white/60 text-xs mt-1">
+                Allow Sosh to share necessary data with AI providers to enable intelligent features.
+              </Text>
+            </View>
+            <TouchableOpacity 
+              onPress={toggleConsent}
+              className={`w-[52px] h-[30px] rounded-full justify-center px-[3px] ${aiConsent ? 'bg-[#1DB954]' : 'bg-white/20'}`}
+            >
+              <View 
+                className={`w-[24px] h-[24px] rounded-full bg-white shadow-sm ${aiConsent ? 'self-end' : 'self-start'}`}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View className="h-[1px] bg-white/10 my-2" />
+
+          <Text className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-3 mt-2">
+            Active Third-Party Services
+          </Text>
+
+          {activeServices.map((service, index) => (
+            <View key={index} className="flex-row items-center justify-between py-2">
+              <Text className={`text-sm ${service.active ? 'text-white/80' : 'text-white/30'}`}>
+                {service.name}
+              </Text>
+              <View className={`px-2 py-1 rounded-md ${service.active ? 'bg-[#1DB954]/10' : 'bg-white/5'}`}>
+                <Text className={`text-[10px] font-bold ${service.active ? 'text-[#1DB954]' : 'text-white/30'}`}>
+                  {service.active ? 'ENABLED' : 'LOCKED'}
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          {!aiConsent && (
+            <View className="bg-red-500/10 p-3 rounded-xl mt-4 border border-red-500/20">
+              <Text className="text-red-400 text-xs text-center font-medium">
+                Note: Disabling data sharing will deactivate AI chat and caption generation features.
+              </Text>
+            </View>
+          )}
+        </BlurView>
       </View>
     </View>
   );

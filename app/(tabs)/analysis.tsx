@@ -1,7 +1,7 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect } from "expo-router";
-import { Minus, Plus, TrendingUp } from "lucide-react-native";
+import { Minus, Plus, TrendingUp, TrendingDown } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -45,6 +45,7 @@ interface PlatformData {
   icon: any;
   followers: string;
   growth: string;
+  growthValue: number;
   metrics: {
     views: number;
     likes: number;
@@ -101,13 +102,7 @@ const AnimatedCounter = ({ value }: { value: number }) => {
   }, [value]);
 
   const formatCompactNumber = (number: number) => {
-    if (number >= 1000000) {
-      return (number / 1000000).toFixed(1) + "M";
-    }
-    if (number >= 1000) {
-      return (number / 1000).toFixed(1) + "K";
-    }
-    return Math.round(number).toString();
+    return number?.toString() || "0";
   };
 
   return (
@@ -470,13 +465,7 @@ const PlatformCard = ({
   };
 
   const formatCompactNumber = (number: number) => {
-    if (number >= 1000000) {
-      return (number / 1000000).toFixed(1) + "M";
-    }
-    if (number >= 1000) {
-      return (number / 1000).toFixed(1) + "K";
-    }
-    return Math.round(number).toString();
+    return number?.toString() || "0";
   };
 
   return (
@@ -521,11 +510,18 @@ const PlatformCard = ({
                     gap: 10,
                     borderRadius: 8,
                     padding: 4,
-                    backgroundColor: "#098F3E1F",
+                    backgroundColor: platform.growthValue >= 0 ? "#098F3E1F" : "#FF4D4D1F",
                   }}
                 >
-                  <TrendingUp size={12} color="#00FF94" />
-                  <Text className="text-[#00FF94] text-[12px] font-inter">
+                  {platform.growthValue >= 0 ? (
+                    <TrendingUp size={12} color="#00FF94" />
+                  ) : (
+                    <TrendingDown size={12} color="#FF4D4D" />
+                  )}
+                  <Text 
+                    className="text-[12px] font-inter"
+                    style={{ color: platform.growthValue >= 0 ? "#00FF94" : "#FF4D4D" }}
+                  >
                     {platform.growth}
                   </Text>
                 </View>
@@ -1001,25 +997,42 @@ export default function Analysis() {
   const buildPlatformsData = (userData: any): PlatformData[] => {
     const analytics = userData.analytics || {};
 
-    const calculateGrowth = (metrics: any) => {
-      const views = metrics.views || 0;
-      const engagement =
-        (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
+    const calculateGrowthResult = (metrics: any, directGrowth?: any) => {
+      let growth: number;
 
-      if (views === 0 && engagement === 0) return "0% this month";
+      // Use direct growth if provided (can be positive or negative)
+      if (directGrowth !== undefined && directGrowth !== null) {
+        growth = typeof directGrowth === "string" ? parseFloat(directGrowth) : directGrowth;
+      } else {
+        const views = metrics.views || 0;
+        const engagement =
+          (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
 
-      // Calculate growth based on views and engagement weight
-      // More views or engagement = higher growth percentage
-      const totalPower = views + engagement * 10;
-      let growth;
+        if (views === 0 && engagement === 0) {
+          return { growth: "0% this month", growthValue: 0 };
+        }
 
-      if (totalPower > 50000) growth = 24.5;
-      else if (totalPower > 10000) growth = 18.2;
-      else if (totalPower > 1000) growth = 12.4;
-      else if (totalPower > 100) growth = 8.7;
-      else growth = 4.2;
+        // Calculate growth based on views and engagement weight
+        const totalPower = views + engagement * 10;
+        if (totalPower > 50000) growth = 24.5;
+        else if (totalPower > 10000) growth = 18.2;
+        else if (totalPower > 1000) growth = 12.4;
+        else if (totalPower > 100) growth = 8.7;
+        else growth = 4.2;
+      }
 
-      return `${growth}% this month`;
+      const sign = growth >= 0 ? "+" : "";
+      return {
+        growth: `${sign}${growth}% this month`,
+        growthValue: growth,
+      };
+    };
+
+    const formatFollowers = (count: any, label: string) => {
+      const num = typeof count === "number" ? count : parseFloat(count || "0");
+      const sign = num >= 0 ? "+" : "-";
+      const absNum = Math.abs(num);
+      return `${sign} ${absNum} ${label}`;
     };
 
     const platforms: PlatformData[] = [
@@ -1027,8 +1040,8 @@ export default function Analysis() {
         id: "instagram",
         name: "Instagram",
         icon: require("../../assets/icons/instagram.png"),
-        followers: `+ ${analytics.instagram?.followersCount || 0} followers`,
-        growth: calculateGrowth({
+        followers: formatFollowers(analytics.instagram?.followersCount, "followers"),
+        ...calculateGrowthResult({
           views: analytics.instagram?.viewsCount,
           likes: analytics.instagram?.likesCount,
           comments: analytics.instagram?.commentsCount,
@@ -1044,8 +1057,8 @@ export default function Analysis() {
         id: "tiktok",
         name: "TikTok",
         icon: require("../../assets/icons/tiktok.png"),
-        followers: `+ ${analytics.tiktok?.followerCount || 0} followers`,
-        growth: calculateGrowth({
+        followers: formatFollowers(analytics.tiktok?.followerCount, "followers"),
+        ...calculateGrowthResult({
           views: analytics.tiktok?.viewCountTotal,
           likes: analytics.tiktok?.likeCountTotal,
           comments: analytics.tiktok?.commentCountTotal,
@@ -1062,8 +1075,8 @@ export default function Analysis() {
         id: "facebook",
         name: "Facebook",
         icon: require("../../assets/icons/facebook.png"),
-        followers: `+ ${analytics.facebook?.followersCount || 0} followers`,
-        growth: calculateGrowth({
+        followers: formatFollowers(analytics.facebook?.followersCount, "followers"),
+        ...calculateGrowthResult({
           views:
             (analytics.facebook?.pageVideoViews || 0) +
             (analytics.facebook?.pageMediaView || 0),
@@ -1083,13 +1096,21 @@ export default function Analysis() {
         id: "youtube",
         name: "YouTube",
         icon: require("../../assets/icons/youtube.png"),
-        followers: `+ ${analytics.youtube?.subscriberCount || 0} subscribers`,
-        growth: calculateGrowth({
-          views: analytics.youtube?.viewCount,
-          likes: analytics.youtube?.likes,
-          comments: analytics.youtube?.comments,
-          shares: analytics.youtube?.shares,
-        }),
+        followers: (() => {
+          const gained = analytics.youtube?.subscribersGained || 0;
+          const lost = analytics.youtube?.subscribersLost || 0;
+          const net = gained - lost;
+          return formatFollowers(net, "subscribers");
+        })(),
+        ...calculateGrowthResult(
+          {
+            views: analytics.youtube?.viewCount,
+            likes: analytics.youtube?.likes,
+            comments: analytics.youtube?.comments,
+            shares: analytics.youtube?.shares,
+          },
+          analytics.youtube?.subscriberGrowthPercent,
+        ),
         metrics: {
           views: analytics.youtube?.viewCount || 0,
           likes: analytics.youtube?.likes || 0,
@@ -1101,8 +1122,8 @@ export default function Analysis() {
         id: "twitter",
         name: "Twitter",
         icon: require("../../assets/icons/twitter.png"),
-        followers: `+ ${analytics.twitter?.followersCount || 0} followers`,
-        growth: calculateGrowth({
+        followers: formatFollowers(analytics.twitter?.followersCount, "followers"),
+        ...calculateGrowthResult({
           likes: analytics.twitter?.likeCount,
         }),
         metrics: {
@@ -1116,16 +1137,22 @@ export default function Analysis() {
         id: "snapchat",
         name: "Snapchat",
         icon: require("../../assets/icons/snapchat.png"),
-        followers: `+ ${analytics.snapchat?.subscribers || 0} subscribers`,
-        growth: calculateGrowth({
-          views:
-            analytics.snapchat?.spotlightViews || analytics.snapchat?.views,
-          likes: analytics.snapchat?.favorites,
-          comments: analytics.snapchat?.replies,
-          shares: analytics.snapchat?.shares,
-        }),
+        followers: formatFollowers(analytics.snapchat?.subscribersGained, "subscribers"),
+        ...calculateGrowthResult(
+          {
+            views:
+              analytics.snapchat?.viewCountTotal ||
+              analytics.snapchat?.spotlightViews ||
+              analytics.snapchat?.views,
+            likes: analytics.snapchat?.favorites,
+            comments: analytics.snapchat?.replies,
+            shares: analytics.snapchat?.shares,
+          },
+          analytics.snapchat?.subscriberGrowthPercent,
+        ),
         metrics: {
           views:
+            analytics.snapchat?.viewCountTotal ||
             analytics.snapchat?.spotlightViews ||
             analytics.snapchat?.views ||
             0,

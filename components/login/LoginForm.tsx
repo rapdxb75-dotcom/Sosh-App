@@ -29,6 +29,7 @@ import {
   getCurrentUserData,
   initializeFCM,
   initializeFirebase,
+  updateLastLogin,
 } from "../../services/firebase";
 import storageService from "../../services/storage";
 import {
@@ -134,8 +135,13 @@ export default function LoginForm() {
                     console.error("❌ FCM Setup error:", fcmError);
                   });
 
+                  // Update last login timestamp with timezone directly in Firebase
+                  updateLastLogin(decoded.email).catch((err) => {
+                    console.error("❌ Error updating last login:", err);
+                  });
+
                   const firebaseData = (await getCurrentUserData(
-                    decoded.email,
+                    decoded.email.toLowerCase().trim(),
                   )) as any;
                   if (firebaseData) {
                     console.log(
@@ -161,8 +167,12 @@ export default function LoginForm() {
                     firebaseData?.onboardingData &&
                     Object.keys(firebaseData.onboardingData).length > 0;
 
-                  if (!hasOnboardingData) {
-                    // User has no onboarding data - redirect to onboarding
+                  // Business users bypass onboarding check and go directly to home
+                  const isBusinessUser =
+                    decoded.subscription?.toLowerCase() === "business";
+
+                  if (!hasOnboardingData && !isBusinessUser) {
+                    // User has no onboarding data and is not a Business user - redirect to onboarding
                     console.log(
                       "⚠️ No onboarding data found, redirecting to onboarding...",
                     );
