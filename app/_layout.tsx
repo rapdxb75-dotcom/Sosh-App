@@ -17,6 +17,7 @@ import NoInternet from "../components/common/NoInternet";
 import NotificationModal from "../components/common/NotificationModal";
 import { PRELOAD_ASSETS } from "../constants/Assets";
 import { NotificationProvider } from "../context/NotificationContext";
+import { UserActivityDetector } from "../components/common/UserActivityDetector";
 import "../global.css";
 import {
   getCurrentUserData,
@@ -176,43 +177,45 @@ export default function RootLayout() {
       <NotificationProvider>
         <ErrorBoundary>
           <FirebaseDataFetcher />
-          <View
-            onLayout={onLayoutRootView}
-            style={{ flex: 1, backgroundColor: "#000" }}
-          >
-            <StatusBar
-              style="light"
-              translucent
-              backgroundColor="transparent"
-            />
+          <UserActivityDetector>
+            <View
+              onLayout={onLayoutRootView}
+              style={{ flex: 1, backgroundColor: "#000" }}
+            >
+              <StatusBar
+                style="light"
+                translucent
+                backgroundColor="transparent"
+              />
 
-            <View style={{ flex: 1 }}>
-              <Image
-                source={require("../assets/images/background.png")}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  width: "100%",
-                  height: "100%",
-                }}
-                resizeMode="cover"
-              />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: {
-                    backgroundColor: "transparent",
-                  },
-                  animation: "none",
-                }}
-              />
+              <View style={{ flex: 1 }}>
+                <Image
+                  source={require("../assets/images/background.png")}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: "100%",
+                    height: "100%",
+                  }}
+                  resizeMode="cover"
+                />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: {
+                      backgroundColor: "transparent",
+                    },
+                    animation: "none",
+                  }}
+                />
+              </View>
+              <NotificationModal />
+              <Toast config={toastConfig} />
             </View>
-            <NotificationModal />
-            <Toast config={toastConfig} />
-          </View>
+          </UserActivityDetector>
         </ErrorBoundary>
       </NotificationProvider>
     </Provider>

@@ -102,7 +102,8 @@ const AnimatedCounter = ({ value }: { value: number }) => {
   }, [value]);
 
   const formatCompactNumber = (number: number) => {
-    return number?.toString() || "0";
+    if (number === undefined || number === null) return "0";
+    return number.toLocaleString("en-US");
   };
 
   return (
@@ -465,7 +466,8 @@ const PlatformCard = ({
   };
 
   const formatCompactNumber = (number: number) => {
-    return number?.toString() || "0";
+    if (number === undefined || number === null) return "0";
+    return number.toLocaleString("en-US");
   };
 
   return (
@@ -857,8 +859,10 @@ const PlatformCard = ({
                       }}
                     >
                       <Text
-                        className="text-white text-[13px] font-medium font-inter"
+                        className="text-white font-medium font-inter"
+                        style={{ fontSize: platform.id === "snapchat" ? 11 : 13 }}
                         numberOfLines={1}
+                        adjustsFontSizeToFit
                       >
                         {platform.id === "snapchat"
                           ? "Story Views"
@@ -1009,7 +1013,7 @@ export default function Analysis() {
           (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
 
         if (views === 0 && engagement === 0) {
-          return { growth: "0% this month", growthValue: 0 };
+          return { growth: "0% last 90 days", growthValue: 0 };
         }
 
         // Calculate growth based on views and engagement weight
@@ -1023,7 +1027,7 @@ export default function Analysis() {
 
       const sign = growth >= 0 ? "+" : "";
       return {
-        growth: `${sign}${growth}% this month`,
+        growth: `${sign}${growth}% last 90 days`,
         growthValue: growth,
       };
     };
@@ -1032,7 +1036,7 @@ export default function Analysis() {
       const num = typeof count === "number" ? count : parseFloat(count || "0");
       const sign = num >= 0 ? "+" : "-";
       const absNum = Math.abs(num);
-      return `${sign} ${absNum} ${label}`;
+      return `${sign} ${absNum.toLocaleString("en-US")} ${label}`;
     };
 
     const platforms: PlatformData[] = [

@@ -9,7 +9,9 @@ import {
   collection,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
+  getDocsFromServer,
   getFirestore,
   increment,
   onSnapshot,
@@ -239,57 +241,78 @@ export const initializeFCM = async () => {
 export const getCurrentUserData = async (userEmail: string) => {
   try {
     if (!userEmail) {
+      console.warn("⚠️ getCurrentUserData called with empty email");
       return null;
     }
 
     const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
 
+    console.log(`🔍 [Firebase] Fetching data for: ${normalizedEmail} (Raw: ${userEmail})`);
+
     // Try to get user by email as document ID (normalized)
     const userDocRef = doc(db, "users", normalizedEmail);
-    let userDoc = await getDoc(userDocRef);
+    // Use getDocFromServer to ensure we bypass any local cache if this is a fresh login
+    let userDoc = await getDocFromServer(userDocRef).catch(() => getDoc(userDocRef));
 
     // If not found, try raw email as document ID
     if (!userDoc.exists() && userEmail !== normalizedEmail) {
+      console.log(`🔍 [Firebase] Document ID ${normalizedEmail} not found, trying raw email: ${userEmail}`);
       const rawDocRef = doc(db, "users", userEmail);
-      userDoc = await getDoc(rawDocRef);
+      userDoc = await getDocFromServer(rawDocRef).catch(() => getDoc(rawDocRef));
     }
 
     if (userDoc.exists()) {
-      const { profilePicture, ...userData } = userDoc.data();
-      const userDataWithId = {
+      console.log(`✅ [Firebase] Document found for ${userDoc.id}`);
+      const data = userDoc.data();
+      const { profilePicture, ...userData } = data;
+      
+      if (userData.onboardingData) {
+        console.log(`✅ [Firebase] Onboarding data found for ${userDoc.id} (${Object.keys(userData.onboardingData).length} keys)`);
+      } else {
+        console.warn(`⚠️ [Firebase] No onboardingData field found in document for ${userDoc.id}`);
+      }
+
+      return {
         id: userDoc.id,
         ...userData,
       };
-
-      return userDataWithId;
     } else {
+      console.log(`🔍 [Firebase] Document ID fetch failed, trying query for email field: ${normalizedEmail}`);
       // If not found by document ID, try querying by email field (normalized)
       const usersCollection = collection(db, "users");
       const q = query(usersCollection, where("email", "==", normalizedEmail));
-      let querySnapshot = await getDocs(q);
+      let querySnapshot = await getDocsFromServer(q).catch(() => getDocs(q));
 
       // If still not found, try querying by raw email field
       if (querySnapshot.empty && userEmail !== normalizedEmail) {
         const rawQ = query(usersCollection, where("email", "==", userEmail));
-        querySnapshot = await getDocs(rawQ);
+        querySnapshot = await getDocsFromServer(rawQ).catch(() => getDocs(rawQ));
       }
 
       if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
-        const { profilePicture, ...userData } = userDoc.data();
-        const userDataWithId = {
+        console.log(`✅ [Firebase] Document found via query for ${userDoc.id}`);
+        const data = userDoc.data();
+        const { profilePicture, ...userData } = data;
+
+        if (userData.onboardingData) {
+          console.log(`✅ [Firebase] Onboarding data found via query for ${userDoc.id}`);
+        } else {
+          console.warn(`⚠️ [Firebase] No onboardingData field found in queried document for ${userDoc.id}`);
+        }
+
+        return {
           id: userDoc.id,
           ...userData,
         };
-
-        return userDataWithId;
       } else {
+        console.error(`❌ [Firebase] No document found for email: ${userEmail}`);
         return null;
       }
     }
   } catch (error) {
-    console.error("Error fetching user data:", error);
+    console.error("❌ [Firebase] Error fetching user data:", error);
     return null;
   }
 };
@@ -465,8 +488,34 @@ export const updateLastLogin = async (userEmail: string) => {
 
     const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
-    const userDocRef = doc(db, "users", normalizedEmail);
 
+    // Find the correct document ID (could be normalized email, raw email, or random ID)
+    let userDocId = normalizedEmail;
+    const userDocRef = doc(db, "users", normalizedEmail);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      const rawDocRef = doc(db, "users", userEmail);
+      const rawDoc = await getDoc(rawDocRef);
+      if (rawDoc.exists()) {
+        userDocId = userEmail;
+      } else {
+        const usersCollection = collection(db, "users");
+        const q = query(usersCollection, where("email", "==", normalizedEmail));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          userDocId = querySnapshot.docs[0].id;
+        } else if (userEmail !== normalizedEmail) {
+          const rawQ = query(usersCollection, where("email", "==", userEmail));
+          const rawQuerySnapshot = await getDocs(rawQ);
+          if (!rawQuerySnapshot.empty) {
+            userDocId = rawQuerySnapshot.docs[0].id;
+          }
+        }
+      }
+    }
+
+    const finalDocRef = doc(db, "users", userDocId);
     const now = new Date();
     const offset = -now.getTimezoneOffset();
     const diff = offset >= 0 ? "+" : "-";
@@ -489,10 +538,10 @@ export const updateLastLogin = async (userEmail: string) => {
       pad(Math.abs(offset) % 60);
 
     const updateData = { lastLogin: timestampWithTimezone };
-    console.log(`🔥 Updating Firebase for ${userEmail}:`, JSON.stringify(updateData, null, 2));
+    console.log(`🔥 Updating Firebase for ${userEmail} (Doc: ${userDocId}):`, JSON.stringify(updateData, null, 2));
 
     await setDoc(
-      userDocRef,
+      finalDocRef,
       updateData,
       { merge: true },
     );
@@ -501,6 +550,78 @@ export const updateLastLogin = async (userEmail: string) => {
     return true;
   } catch (error) {
     console.error("Error updating lastLogin:", error);
+    return false;
+  }
+};
+
+// Update User Activity Status (updates lastLogin based on activity)
+export const updateUserActivityStatus = async (
+  userEmail: string,
+) => {
+  try {
+    if (!userEmail) return false;
+
+    const normalizedEmail = userEmail.trim().toLowerCase();
+    const { db } = initializeFirebase();
+
+    // Find the correct document ID (could be normalized email, raw email, or random ID)
+    let userDocId = normalizedEmail;
+    const userDocRef = doc(db, "users", normalizedEmail);
+    const userDoc = await getDoc(userDocRef);
+
+    if (!userDoc.exists()) {
+      const rawDocRef = doc(db, "users", userEmail);
+      const rawDoc = await getDoc(rawDocRef);
+      if (rawDoc.exists()) {
+        userDocId = userEmail;
+      } else {
+        const usersCollection = collection(db, "users");
+        const q = query(usersCollection, where("email", "==", normalizedEmail));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          userDocId = querySnapshot.docs[0].id;
+        } else if (userEmail !== normalizedEmail) {
+          const rawQ = query(usersCollection, where("email", "==", userEmail));
+          const rawQuerySnapshot = await getDocs(rawQ);
+          if (!rawQuerySnapshot.empty) {
+            userDocId = rawQuerySnapshot.docs[0].id;
+          }
+        }
+      }
+    }
+
+    const finalDocRef = doc(db, "users", userDocId);
+    const now = new Date();
+    const offset = -now.getTimezoneOffset();
+    const diff = offset >= 0 ? "+" : "-";
+    const pad = (num: number) => String(num).padStart(2, "0");
+    const timestampWithTimezone =
+      now.getFullYear() +
+      "-" +
+      pad(now.getMonth() + 1) +
+      "-" +
+      pad(now.getDate()) +
+      "T" +
+      pad(now.getHours()) +
+      ":" +
+      pad(now.getMinutes()) +
+      ":" +
+      pad(now.getSeconds()) +
+      diff +
+      pad(Math.floor(Math.abs(offset) / 60)) +
+      ":" +
+      pad(Math.abs(offset) % 60);
+
+    const updateData = {
+      lastLogin: timestampWithTimezone,
+    };
+
+    console.log(`🔄 [Firebase] Updating activity for ${userEmail} (Doc: ${userDocId})`);
+    await setDoc(finalDocRef, updateData, { merge: true });
+
+    return true;
+  } catch (error) {
+    console.error("Error updating lastLogin status:", error);
     return false;
   }
 };
