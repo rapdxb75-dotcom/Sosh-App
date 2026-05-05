@@ -100,6 +100,29 @@ const userService = {
       throw error;
     }
   },
+  /**
+   * Delete user account permanently
+   * @param email User email
+   * @returns Promise with success response
+   */
+  deleteAccount: async (email: string) => {
+    try {
+      const token = await storageService.getToken();
+      console.log("[Delete Account API Request] Payload:", { email });
+      const response = await apiClient.post("/delete-user", {
+        email,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      console.log("[Delete Account API Response]:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Delete Account API Error:", error);
+      throw error;
+    }
+  },
 };
 
 export default userService;

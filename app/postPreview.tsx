@@ -65,7 +65,6 @@ import {
   setPreviewData,
 } from "../store/previewStore";
 import { RootState } from "../store/store";
-import AIConsentModal from "../components/common/AIConsentModal";
 import { getFreeTierSystemPrompt } from "../utils/prompts";
 import { generateVideoThumbnail } from "../utils/video";
 
@@ -277,7 +276,6 @@ export default function PostPreview() {
   const globalProfilePicture = user.profilePicture;
   const [isPublishing, setIsPublishing] = useState(false);
   const aiConsent = user.aiConsent;
-  const [showConsentModal, setShowConsentModal] = useState(false);
   const isFreePlan = user.subscription?.plan === "Free";
   const isBackgroundPublishing = useRef(false);
 
@@ -458,10 +456,6 @@ export default function PostPreview() {
   );
 
   const handleGenerateCaption = async () => {
-    if (!aiConsent) {
-      setShowConsentModal(true);
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!data?.caption?.trim()) {
       Toast.show({
@@ -2642,10 +2636,6 @@ export default function PostPreview() {
         </BlurView>
       </Modal>
       </View>
-      <AIConsentModal
-        visible={showConsentModal}
-        onClose={() => setShowConsentModal(false)}
-      />
     </View>
   );
 }

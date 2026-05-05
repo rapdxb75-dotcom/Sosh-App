@@ -199,6 +199,17 @@ const storageService = {
   },
 
   /**
+   * Alias for setAIConsent to match usage in modal
+   */
+  saveAIConsent: async (value: boolean) => {
+    try {
+      await AsyncStorage.setItem(AI_CONSENT_KEY, JSON.stringify(value));
+    } catch (error) {
+      console.error("Error saving AI consent", error);
+    }
+  },
+
+  /**
    * Get AI data sharing consent
    */
   getAIConsent: async () => {

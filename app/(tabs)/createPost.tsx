@@ -71,7 +71,6 @@ import {
   setPreviewData,
 } from "../../store/previewStore";
 import { RootState } from "../../store/store";
-import AIConsentModal from "../../components/common/AIConsentModal";
 import { getFreeTierSystemPrompt } from "../../utils/prompts";
 import { generateVideoThumbnail } from "../../utils/video";
 
@@ -380,7 +379,6 @@ export default function CreatePost() {
   const isFreePlan = user.subscription?.plan === "Free";
   const isProPlan = user.subscription?.plan === "Pro";
   const aiConsent = user.aiConsent;
-  const [showConsentModal, setShowConsentModal] = useState(false);
 
   // Social media connections state
   const [socialMediaData, setSocialMediaData] = useState<SocialMediaData>({});
@@ -1089,10 +1087,6 @@ export default function CreatePost() {
 
   // AI Caption Generation Handler
   const handleGenerateCaption = async () => {
-    if (!aiConsent) {
-      setShowConsentModal(true);
-      return;
-    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!caption.trim()) {
       Toast.show({
@@ -3425,10 +3419,6 @@ export default function CreatePost() {
           </View>
         </BlurView>
       </Modal>
-      <AIConsentModal
-        visible={showConsentModal}
-        onClose={() => setShowConsentModal(false)}
-      />
     </View>
   );
 }

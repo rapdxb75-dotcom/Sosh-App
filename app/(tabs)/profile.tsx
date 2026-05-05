@@ -2,8 +2,8 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import { useFocusEffect } from "expo-router";
-import { Upload } from "lucide-react-native";
+import { router, useFocusEffect } from "expo-router";
+import { Trash2, Upload } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -38,7 +38,7 @@ import { getCurrentUserData, listenToUserData } from "../../services/firebase";
 import storageService from "../../services/storage";
 import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
-import { updateUser } from "../../store/userSlice";
+import { clearUserData, updateUser } from "../../store/userSlice";
 import { formatNumber } from "../../utils/format";
 
 let ImageCropPicker: any = null;
@@ -180,6 +180,7 @@ export default function Profile() {
   );
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const [selectedPlatformKey, setSelectedPlatformKey] = useState<string | null>(
@@ -423,6 +424,63 @@ export default function Profile() {
         type: "error",
         text1: "Update Error",
         text2: error.message || "An error occurred while saving",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (!globalEmail) {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "User email not found",
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await userService.deleteAccount(globalEmail);
+
+      if (response && response.success) {
+        Toast.show({
+          type: "success",
+          text1: "Account Deleted",
+          text2: "Your account has been deleted successfully.",
+        });
+
+        addNotification({
+          type: "neutral",
+          title: "Account Deleted",
+          message: "Your account has been deleted successfully.",
+        });
+
+        // Slight delay for feedback
+        setTimeout(async () => {
+          router.replace("/login");
+          setTimeout(async () => {
+            dispatch(clearUserData());
+            await storageService.logout();
+          }, 100);
+        }, 1000);
+
+        setDeleteModalVisible(false);
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Deletion Failed",
+          text2: response?.message || "Failed to delete account",
+        });
+      }
+    } catch (error: any) {
+      console.error("Delete account error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Deletion Failed",
+        text2: error.message || "An error occurred while deleting account",
       });
     } finally {
       setLoading(false);
@@ -747,297 +805,244 @@ export default function Profile() {
   return (
     <View className="flex-1" style={{ alignItems: "center", backgroundColor: "transparent" }}>
       <View style={{ width: "100%", maxWidth: 500, flex: 1 }}>
-      <ScrollView
-        ref={scrollRef}
-        style={{ flex: 1 }}
-        bounces={true}
-        overScrollMode="always"
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
-        {...(Platform.OS === "ios"
-          ? {
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          bounces={true}
+          overScrollMode="always"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
+          {...(Platform.OS === "ios"
+            ? {
               contentInset: { top: insets.top },
               contentOffset: { x: 0, y: -insets.top },
             }
-          : {})}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#dbfaff"
-            colors={["#dbfaff"]}
-            progressViewOffset={insets.top + 20}
-          />
-        }
-      >
-        {/* Header */}
-        <View
-          style={Platform.OS === "ios" ? { marginTop: -insets.top } : undefined}
+            : {})}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#dbfaff"
+              colors={["#dbfaff"]}
+              progressViewOffset={insets.top + 20}
+            />
+          }
         >
-          <Header />
+          {/* Header */}
+          <View
+            style={Platform.OS === "ios" ? { marginTop: -insets.top } : undefined}
+          >
+            <Header />
 
-          <View className="w-full px-5">
-            <Text className="page-title text-white mb-4 mt-8">
-              Your{"\n"}Account
-            </Text>
+            <View className="w-full px-5">
+              <Text className="page-title text-white mb-4 mt-8">
+                Your{"\n"}Account
+              </Text>
 
-            {/* Profile Card with Gradient Border Overlay */}
-            <View
-              className="rounded-[32px] overflow-hidden mb-8"
-              style={{
-                shadowColor: "#000000",
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.45,
-                shadowRadius: 24,
-                elevation: 12,
-              }}
-            >
-              <BlurView intensity={30} tint="light" className="p-[1px]">
-                <LinearGradient
-                  colors={[
-                    "rgba(255, 255, 255, 0.1)",
-                    "rgba(255, 255, 255, 0.1)",
-                  ]}
-                  style={{
-                    borderRadius: 32,
-                    paddingVertical: 20,
-                    paddingHorizontal: 10,
-                    position: "relative",
-                  }}
-                >
-                  {/* Gradient Border SVG (Taller to hide bottom stroke) */}
-                  <View style={StyleSheet.absoluteFill} pointerEvents="none">
-                    <Svg height="120%" width="100%">
-                      <Defs>
-                        <SvgLinearGradient
-                          id="cardBorderGrad"
-                          x1="0%"
-                          y1="0%"
-                          x2="0%"
-                          y2="100%"
-                        >
-                          <Stop
-                            offset="0%"
-                            stopColor="rgba(255, 255, 255, 0.7)"
-                            stopOpacity="1"
-                          />
-                          <Stop
-                            offset="100%"
-                            stopColor="rgba(0, 0, 0, 0.7)"
-                            stopOpacity="1"
-                          />
-                        </SvgLinearGradient>
-                      </Defs>
-                      <Rect
-                        x="0.5"
-                        y="0.5"
-                        width="99.7%"
-                        height="87%" // Relative to SVG height="120%", this puts bottom edge way outside container
-                        rx="32"
-                        ry="32"
-                        stroke="url(#cardBorderGrad)"
-                        strokeWidth="1"
-                        fill="transparent"
-                      />
-                    </Svg>
-                  </View>
+              {/* Profile Card with Gradient Border Overlay */}
+              <View
+                className="rounded-[32px] overflow-hidden mb-8"
+                style={{
+                  shadowColor: "#000000",
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.45,
+                  shadowRadius: 24,
+                  elevation: 12,
+                }}
+              >
+                <BlurView intensity={30} tint="light" className="p-[1px]">
+                  <LinearGradient
+                    colors={[
+                      "rgba(255, 255, 255, 0.1)",
+                      "rgba(255, 255, 255, 0.1)",
+                    ]}
+                    style={{
+                      borderRadius: 32,
+                      paddingVertical: 20,
+                      paddingHorizontal: 10,
+                      position: "relative",
+                    }}
+                  >
+                    {/* Gradient Border SVG (Taller to hide bottom stroke) */}
+                    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+                      <Svg height="120%" width="100%">
+                        <Defs>
+                          <SvgLinearGradient
+                            id="cardBorderGrad"
+                            x1="0%"
+                            y1="0%"
+                            x2="0%"
+                            y2="100%"
+                          >
+                            <Stop
+                              offset="0%"
+                              stopColor="rgba(255, 255, 255, 0.7)"
+                              stopOpacity="1"
+                            />
+                            <Stop
+                              offset="100%"
+                              stopColor="rgba(0, 0, 0, 0.7)"
+                              stopOpacity="1"
+                            />
+                          </SvgLinearGradient>
+                        </Defs>
+                        <Rect
+                          x="0.5"
+                          y="0.5"
+                          width="99.7%"
+                          height="87%" // Relative to SVG height="120%", this puts bottom edge way outside container
+                          rx="32"
+                          ry="32"
+                          stroke="url(#cardBorderGrad)"
+                          strokeWidth="1"
+                          fill="transparent"
+                        />
+                      </Svg>
+                    </View>
 
-                  {/* User Header */}
-                  <View className="flex-row items-center justify-between mb-2 px-2">
-                    <View className="flex-row items-center gap-3">
-                      <View className="w-[50px] h-[50px] items-center justify-center">
-                        <GradientRingSVG />
-                        <Image
-                          source={
-                            image
-                              ? {
+                    {/* User Header */}
+                    <View className="flex-row items-center justify-between mb-2 px-2">
+                      <View className="flex-row items-center gap-3">
+                        <View className="w-[50px] h-[50px] items-center justify-center">
+                          <GradientRingSVG />
+                          <Image
+                            source={
+                              image
+                                ? {
                                   uri:
                                     image.startsWith("http") ||
-                                    image.startsWith("file") ||
-                                    image.startsWith("data:")
+                                      image.startsWith("file") ||
+                                      image.startsWith("data:")
                                       ? image
                                       : `data:image/png;base64,${image}`,
                                 }
-                              : require("../../assets/images/avtar.png")
-                          }
-                          className="w-[45px] h-[45px] rounded-full"
-                          resizeMode={image ? "cover" : "contain"}
-                        />
+                                : require("../../assets/images/avtar.png")
+                            }
+                            className="w-[45px] h-[45px] rounded-full"
+                            resizeMode={image ? "cover" : "contain"}
+                          />
+                        </View>
+                        <Text className="profile-username text-white">
+                          {username}
+                        </Text>
                       </View>
-                      <Text className="profile-username text-white">
-                        {username}
-                      </Text>
+                      <TouchableOpacity
+                        className="rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]"
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          setEditModalVisible(true);
+                        }}
+                        style={{
+                          shadowColor: "#000000",
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 8,
+                          elevation: 6,
+                        }}
+                      >
+                        <Image
+                          source={require("../../assets/icons/edit.png")}
+                          className="w-5 h-5"
+                          resizeMode="contain"
+                        />
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      className="rounded-[12px] p-[8px] bg-[rgba(255,255,255,0.12)]"
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        setEditModalVisible(true);
-                      }}
-                      style={{
-                        shadowColor: "#000000",
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.3,
-                        shadowRadius: 8,
-                        elevation: 6,
-                      }}
-                    >
-                      <Image
-                        source={require("../../assets/icons/edit.png")}
-                        className="w-5 h-5"
-                        resizeMode="contain"
+
+                    {/* Stats Grid */}
+                    <View className="flex-row flex-wrap gap-3 p-2">
+                      <StatItem
+                        label="Sosh Views"
+                        value={
+                          analytics.totalViews > 0
+                            ? formatNumber(analytics.totalViews)
+                            : "0"
+                        }
                       />
-                    </TouchableOpacity>
-                  </View>
+                      <StatItem
+                        label="Sosh Likes"
+                        value={
+                          analytics.totalLikes > 0
+                            ? formatNumber(analytics.totalLikes)
+                            : "0"
+                        }
+                      />
+                      <StatItem
+                        label="Platforms"
+                        value={SOCIAL_PLATFORMS.filter((p) =>
+                          isPlatformConnected(p.key),
+                        ).length.toString()}
+                      />
+                      <StatItem
+                        label="Sosh Posts"
+                        value={
+                          analytics.totalPosts > 0
+                            ? formatNumber(analytics.totalPosts)
+                            : "0"
+                        }
+                      />
+                    </View>
+                  </LinearGradient>
+                </BlurView>
+              </View>
 
-                  {/* Stats Grid */}
-                  <View className="flex-row flex-wrap gap-3 p-2">
-                    <StatItem
-                      label="Sosh Views"
-                      value={
-                        analytics.totalViews > 0
-                          ? formatNumber(analytics.totalViews)
-                          : "0"
-                      }
-                    />
-                    <StatItem
-                      label="Sosh Likes"
-                      value={
-                        analytics.totalLikes > 0
-                          ? formatNumber(analytics.totalLikes)
-                          : "0"
-                      }
-                    />
-                    <StatItem
-                      label="Platforms"
-                      value={SOCIAL_PLATFORMS.filter((p) =>
-                        isPlatformConnected(p.key),
-                      ).length.toString()}
-                    />
-                    <StatItem
-                      label="Sosh Posts"
-                      value={
-                        analytics.totalPosts > 0
-                          ? formatNumber(analytics.totalPosts)
-                          : "0"
-                      }
-                    />
-                  </View>
-                </LinearGradient>
-              </BlurView>
+              {/* Subscription Section */}
+              <PlanCard />
+
+              {/* Connected Accounts */}
+              <Text className="text-white text-lg font-medium mb-4">
+                Connected accounts
+              </Text>
+
+              {SOCIAL_PLATFORMS.filter(
+                (p) => !(subscription?.plan === "Pro" && p.key === "snapchat"),
+              ).map((platform) => (
+                <ConnectedAccountItem
+                  key={platform.key}
+                  icon={platform.icon}
+                  name={platform.name}
+                  status={getPlatformStatus(platform.key)}
+                  connectedUsername={getPlatformUsername(platform.key)}
+                  platformUrl={getPlatformUrl(platform.key)}
+                  isConnected={isPlatformConnected(platform.key)}
+                  isConnecting={connectingPlatform === platform.key}
+                  isPending={pendingConnections.indexOf(platform.key) !== -1}
+                  onIconPress={() =>
+                    handleOpenConnectedPlatform(platform.key, platform.name)
+                  }
+                  onConnect={() => handleConnectPress(platform.key)}
+                  onDisconnect={() =>
+                    handleDisconnectPress(platform.name, platform.key)
+                  }
+                />
+              ))}
+
+              {/* Logout & Delete Account Buttons */}
+              <View className="mt-6 mb-8 gap-4">
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setDeleteModalVisible(true);
+                  }}
+                  className="w-full h-14 rounded-2xl flex-row items-center justify-center bg-red-500/10 border border-red-500/20"
+                >
+                  <Trash2 size={18} color="#ef4444" />
+                  <Text className="text-red-500 font-bold text-base ml-2">Delete Account</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            {/* Subscription Section */}
-            <PlanCard />
-
-            {/* Connected Accounts */}
-            <Text className="text-white text-lg font-medium mb-4">
-              Connected accounts
-            </Text>
-
-            {SOCIAL_PLATFORMS.filter(
-              (p) => !(subscription?.plan === "Pro" && p.key === "snapchat"),
-            ).map((platform) => (
-              <ConnectedAccountItem
-                key={platform.key}
-                icon={platform.icon}
-                name={platform.name}
-                status={getPlatformStatus(platform.key)}
-                connectedUsername={getPlatformUsername(platform.key)}
-                platformUrl={getPlatformUrl(platform.key)}
-                isConnected={isPlatformConnected(platform.key)}
-                isConnecting={connectingPlatform === platform.key}
-                isPending={pendingConnections.indexOf(platform.key) !== -1}
-                onIconPress={() =>
-                  handleOpenConnectedPlatform(platform.key, platform.name)
-                }
-                onConnect={() => handleConnectPress(platform.key)}
-                onDisconnect={() =>
-                  handleDisconnectPress(platform.name, platform.key)
-                }
-              />
-            ))}
-
-            {/* Privacy and Data Sharing Section */}
-            <PrivacySection />
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Disconnect Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0,0,0,0.7)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 20,
-          }}
+        {/* Disconnect Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={() => setModalVisible(false)}
         >
-          <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6 items-center">
-            {/* Close Button */}
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
-            >
-              <Text className="text-white/60 text-lg font-medium">×</Text>
-            </TouchableOpacity>
-
-            <Text className="text-white text-center text-[22px] leading-8 mt-6 font-inter">
-              Are you sure you want to
-            </Text>
-            <Text className="text-white text-center text-[22px] leading-8 mb-8 font-inter font-bold">
-              disconnect your {selectedAccount} account?
-            </Text>
-
-            <TouchableOpacity
-              onPress={confirmDisconnect}
-              className={`btn-modal-disconnect ${loading ? "opacity-70" : ""}`}
-              disabled={loading}
-            >
-              <Text className="text-white font-medium text-lg font-inter">
-                {loading ? "Disconnecting..." : "Disconnect account"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setModalVisible(false)}
-              disabled={loading}
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                width: "100%",
-                height: 52,
-                borderRadius: 13,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              <Text className="text-white font-medium text-lg font-inter">
-                Go Back
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Edit Profile Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={editModalVisible}
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View
             style={{
               flex: 1,
@@ -1047,240 +1052,272 @@ export default function Profile() {
               padding: 20,
             }}
           >
-            <View 
-              className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] overflow-hidden"
-              style={{ maxHeight: '80%' }}
-            >
-              <ScrollView 
-                contentContainerStyle={{ padding: 32, alignItems: 'center' }}
-                showsVerticalScrollIndicator={false}
+            <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] p-6 items-center">
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                className="absolute right-4 top-4 w-9 h-9 items-center justify-center"
               >
-                {/* Close Button */}
-                <TouchableOpacity
-                  onPress={() => setEditModalVisible(false)}
-                  className="absolute right-0 top-0 w-9 h-9 items-center justify-center z-10"
-                >
-                  <Text className="text-white/60 text-lg font-medium">×</Text>
-                </TouchableOpacity>
+                <Text className="text-white/60 text-lg font-medium">×</Text>
+              </TouchableOpacity>
 
-                {/* Profile Image with Ring */}
-                <View className="mb-6 items-center justify-center relative">
-                  {/* Reusing Gradient Ring Logic but larger */}
-                  <View
-                    style={{
-                      width: 100,
-                      height: 100,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
+              <Text className="text-white text-center text-[22px] leading-8 mt-6 font-inter">
+                Are you sure you want to
+              </Text>
+              <Text className="text-white text-center text-[22px] leading-8 mb-8 font-inter font-bold">
+                disconnect your {selectedAccount} account?
+              </Text>
+
+              <TouchableOpacity
+                onPress={confirmDisconnect}
+                className={`btn-modal-disconnect ${loading ? "opacity-70" : ""}`}
+                disabled={loading}
+              >
+                <Text className="text-white font-medium text-lg font-inter">
+                  {loading ? "Disconnecting..." : "Disconnect account"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                disabled={loading}
+                style={{
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  width: "100%",
+                  height: 52,
+                  borderRadius: 13,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                <Text className="text-white font-medium text-lg font-inter">
+                  Go Back
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Edit Profile Modal */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={editModalVisible}
+          onRequestClose={() => setEditModalVisible(false)}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: "rgba(0,0,0,0.7)",
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 20,
+              }}
+            >
+              <View
+                className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[24px] overflow-hidden"
+                style={{ maxHeight: '80%' }}
+              >
+                <ScrollView
+                  contentContainerStyle={{ padding: 32, alignItems: 'center' }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* Close Button */}
+                  <TouchableOpacity
+                    onPress={() => setEditModalVisible(false)}
+                    className="absolute right-0 top-0 w-9 h-9 items-center justify-center z-10"
                   >
-                    <BlurView
-                      intensity={5}
+                    <Text className="text-white/60 text-lg font-medium">×</Text>
+                  </TouchableOpacity>
+
+                  {/* Profile Image with Ring */}
+                  <View className="mb-6 items-center justify-center relative">
+                    {/* Reusing Gradient Ring Logic but larger */}
+                    <View
                       style={{
                         width: 100,
                         height: 100,
-                        borderRadius: 50,
-                        overflow: "hidden",
                         alignItems: "center",
                         justifyContent: "center",
                       }}
                     >
-                      <Svg width={90} height={90}>
-                        <Defs>
-                          <SvgLinearGradient
-                            id="editProfileGrad"
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="100%"
-                          >
-                            <Stop
-                              offset="0%"
-                              stopColor="#FFFFFF"
-                              stopOpacity="1"
-                            />
-                            <Stop
-                              offset="50%"
-                              stopColor="#000000"
-                              stopOpacity="1"
-                            />
-                            <Stop
-                              offset="100%"
-                              stopColor="#FFFFFF"
-                              stopOpacity="1"
-                            />
-                          </SvgLinearGradient>
-                        </Defs>
-                        <Circle
-                          cx={45}
-                          cy={45}
-                          r={44}
-                          stroke="url(#editProfileGrad)"
-                          strokeWidth={1}
-                          fill="transparent"
-                        />
-                      </Svg>
-                    </BlurView>
-                    <Image
-                      source={
-                        image
-                          ? {
+                      <BlurView
+                        intensity={5}
+                        style={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: 50,
+                          overflow: "hidden",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Svg width={90} height={90}>
+                          <Defs>
+                            <SvgLinearGradient
+                              id="editProfileGrad"
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="100%"
+                            >
+                              <Stop
+                                offset="0%"
+                                stopColor="#FFFFFF"
+                                stopOpacity="1"
+                              />
+                              <Stop
+                                offset="50%"
+                                stopColor="#000000"
+                                stopOpacity="1"
+                              />
+                              <Stop
+                                offset="100%"
+                                stopColor="#FFFFFF"
+                                stopOpacity="1"
+                              />
+                            </SvgLinearGradient>
+                          </Defs>
+                          <Circle
+                            cx={45}
+                            cy={45}
+                            r={44}
+                            stroke="url(#editProfileGrad)"
+                            strokeWidth={1}
+                            fill="transparent"
+                          />
+                        </Svg>
+                      </BlurView>
+                      <Image
+                        source={
+                          image
+                            ? {
                               uri:
                                 image.startsWith("http") ||
-                                image.startsWith("file") ||
-                                image.startsWith("data:")
+                                  image.startsWith("file") ||
+                                  image.startsWith("data:")
                                   ? image
                                   : `data:image/png;base64,${image}`,
                             }
-                          : require("../../assets/images/avtar.png")
-                      }
-                      className="w-[82px] h-[82px] absolute rounded-full"
-                      resizeMode={image ? "cover" : "contain"}
-                    />
+                            : require("../../assets/images/avtar.png")
+                        }
+                        className="w-[82px] h-[82px] absolute rounded-full"
+                        resizeMode={image ? "cover" : "contain"}
+                      />
+                    </View>
                   </View>
-                </View>
 
-                {/* Upload New Button */}
-                <BlurView
-                  intensity={14}
-                  tint="dark"
-                  className="upload-container w-full h-[68px]"
-                >
-                  <TouchableOpacity
-                    className="upload-content w-full h-full"
-                    onPress={pickImage}
-                  >
-                    <Upload size={20} color="white" />
-                    <Text className="text-white font-medium text-[16px] font-inter mt-2">
-                      Upload new
-                    </Text>
-                  </TouchableOpacity>
-                </BlurView>
-
-                {/* Username Input */}
-                <View className="w-full mb-8">
-                  <Text className="text-white font-semibold text-base mb-2 font-inter">
-                    User name
-                  </Text>
+                  {/* Upload New Button */}
                   <BlurView
                     intensity={14}
                     tint="dark"
-                    className="rounded-[16px] overflow-hidden"
+                    className="upload-container w-full h-[68px]"
                   >
-                    <View className="input-field justify-center">
-                      <TextInput
-                        value={username}
-                        onChangeText={setUsername}
-                        placeholder="Enter username"
-                        placeholderTextColor="rgba(255, 255, 255, 0.5)"
-                        className="flex-1 font-inter py-0 text-white"
-                        style={{ fontFamily: "Inter_400Regular" }}
-                        textAlignVertical="center"
-                      />
-                    </View>
+                    <TouchableOpacity
+                      className="upload-content w-full h-full"
+                      onPress={pickImage}
+                    >
+                      <Upload size={20} color="white" />
+                      <Text className="text-white font-medium text-[16px] font-inter mt-2">
+                        Upload new
+                      </Text>
+                    </TouchableOpacity>
                   </BlurView>
-                </View>
 
-                {/* Save Button */}
-                <TouchableOpacity
-                  onPress={handleSaveProfile}
-                  className={`btn-save ${loading ? "opacity-70" : ""}`}
-                  disabled={loading}
-                >
-                  <Text className="text-white font-medium text-lg">
-                    {loading ? "Saving..." : "Save"}
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
-      </View>
-    </View>
-  );
-}
+                  {/* Username Input */}
+                  <View className="w-full mb-8">
+                    <Text className="text-white font-semibold text-base mb-2 font-inter">
+                      User name
+                    </Text>
+                    <BlurView
+                      intensity={14}
+                      tint="dark"
+                      className="rounded-[16px] overflow-hidden"
+                    >
+                      <View className="input-field justify-center">
+                        <TextInput
+                          value={username}
+                          onChangeText={setUsername}
+                          placeholder="Enter username"
+                          placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                          className="flex-1 font-inter py-0 text-white"
+                          style={{ fontFamily: "Inter_400Regular" }}
+                          textAlignVertical="center"
+                        />
+                      </View>
+                    </BlurView>
+                  </View>
 
-function PrivacySection() {
-  const aiConsent = useSelector((state: RootState) => state.user.aiConsent);
-  const subscription = useSelector((state: RootState) => state.user.subscription);
-  const dispatch = useDispatch();
-
-  const toggleConsent = async () => {
-    const newValue = !aiConsent;
-    dispatch(updateUser({ aiConsent: newValue }));
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
-  const activeServices = [
-    { name: "Claude (Anthropic)", active: true },
-    { name: "Ayrshare", active: subscription?.plan !== "Free" },
-    { name: "Zernio", active: subscription?.plan === "Business" },
-  ];
-
-  return (
-    <View className="mt-8 mb-8">
-      <Text className="text-white text-lg font-medium mb-4">
-        Privacy and Data Sharing
-      </Text>
-      
-      <View 
-        className="rounded-[24px] overflow-hidden"
-        style={{
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        <BlurView intensity={20} tint="light" className="p-5">
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-1 mr-4">
-              <Text className="text-white font-semibold text-base">AI Data Sharing</Text>
-              <Text className="text-white/60 text-xs mt-1">
-                Allow Sosh to share necessary data with AI providers to enable intelligent features.
-              </Text>
-            </View>
-            <TouchableOpacity 
-              onPress={toggleConsent}
-              className={`w-[52px] h-[30px] rounded-full justify-center px-[3px] ${aiConsent ? 'bg-[#1DB954]' : 'bg-white/20'}`}
-            >
-              <View 
-                className={`w-[24px] h-[24px] rounded-full bg-white shadow-sm ${aiConsent ? 'self-end' : 'self-start'}`}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <View className="h-[1px] bg-white/10 my-2" />
-
-          <Text className="text-white/40 text-[10px] font-bold uppercase tracking-wider mb-3 mt-2">
-            Active Third-Party Services
-          </Text>
-
-          {activeServices.map((service, index) => (
-            <View key={index} className="flex-row items-center justify-between py-2">
-              <Text className={`text-sm ${service.active ? 'text-white/80' : 'text-white/30'}`}>
-                {service.name}
-              </Text>
-              <View className={`px-2 py-1 rounded-md ${service.active ? 'bg-[#1DB954]/10' : 'bg-white/5'}`}>
-                <Text className={`text-[10px] font-bold ${service.active ? 'text-[#1DB954]' : 'text-white/30'}`}>
-                  {service.active ? 'ENABLED' : 'LOCKED'}
-                </Text>
+                  {/* Save Button */}
+                  <TouchableOpacity
+                    onPress={handleSaveProfile}
+                    className={`btn-save ${loading ? "opacity-70" : ""}`}
+                    disabled={loading}
+                  >
+                    <Text className="text-white font-medium text-lg">
+                      {loading ? "Saving..." : "Save"}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
               </View>
             </View>
-          ))}
-
-          {!aiConsent && (
-            <View className="bg-red-500/10 p-3 rounded-xl mt-4 border border-red-500/20">
-              <Text className="text-red-400 text-xs text-center font-medium">
-                Note: Disabling data sharing will deactivate AI chat and caption generation features.
-              </Text>
-            </View>
-          )}
-        </BlurView>
+          </TouchableWithoutFeedback>
+        </Modal>
       </View>
+      {/* Delete Account Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.8)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <View className="bg-[#0f0f0f] w-full max-w-[340px] rounded-[32px] p-8 items-center border border-white/10">
+            <View className="w-16 h-16 bg-red-500/10 rounded-full items-center justify-center mb-6">
+              <Trash2 size={32} color="#ef4444" />
+            </View>
+
+            <Text className="text-white text-center text-2xl font-bold mb-2">
+              Delete Account?
+            </Text>
+            <Text className="text-white/60 text-center text-base mb-8 leading-6">
+              This action is permanent and will delete all your data, including connected social accounts and generated posts.
+            </Text>
+
+            <TouchableOpacity
+              onPress={handleDeleteAccount}
+              className={`w-full h-14 bg-red-500 rounded-2xl items-center justify-center mb-3 ${loading ? "opacity-70" : ""}`}
+              disabled={loading}
+            >
+              <Text className="text-white font-bold text-lg">
+                {loading ? "Deleting..." : "Delete Permanently"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setDeleteModalVisible(false)}
+              disabled={loading}
+              className="w-full h-14 bg-white/5 rounded-2xl items-center justify-center"
+            >
+              <Text className="text-white font-bold text-lg">Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
+
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (

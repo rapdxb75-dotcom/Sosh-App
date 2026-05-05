@@ -56,7 +56,6 @@ import {
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
 import { RootState } from "../../store/store";
-import AIConsentModal from "../../components/common/AIConsentModal";
 const AI_CHAT_LIMIT = 5;
 
 /* ---------- Gradient Ring Component ---------- */
@@ -606,7 +605,6 @@ export default function AI() {
   const subscription = useSelector((state: RootState) => state.user.subscription);
   const systemPrompt = useSelector((state: RootState) => state.user.systemPrompt);
   const aiConsent = useSelector((state: RootState) => state.user.aiConsent);
-  const [showConsentModal, setShowConsentModal] = useState(false);
   const router = useRouter();
 
   // Poppy AI variables removed
@@ -1273,11 +1271,6 @@ export default function AI() {
   );
 
   const handleSendMessage = async () => {
-    console.log("📤 [AI] handleSendMessage triggered. Current messages state length:", messages.length);
-    if (!aiConsent) {
-      setShowConsentModal(true);
-      return;
-    }
     if (!inputText.trim() || isSending || !userEmail) return;
 
     const content = inputText.trim();
@@ -2299,10 +2292,6 @@ export default function AI() {
         </KeyboardAvoidingView>
       </Modal>
       </View>
-      <AIConsentModal 
-        visible={showConsentModal} 
-        onClose={() => setShowConsentModal(false)} 
-      />
     </View>
   );
 }

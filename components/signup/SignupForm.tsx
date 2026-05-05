@@ -23,7 +23,6 @@ import Toast from "react-native-toast-message";
 import { useDispatch } from "react-redux";
 import { FontFamily, FontSize, normalize } from "../../constants/Fonts";
 import { setRegistrationBuffer } from "../../store/userSlice";
-import AIConsentModal from "../common/AIConsentModal";
 
 export default function SignupForm() {
   const router = useRouter();
