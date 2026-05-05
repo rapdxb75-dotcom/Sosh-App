@@ -155,10 +155,11 @@ export default function LoginForm() {
                         aiChatCount: firebaseData.aiChatCount || 0,
                         postCaptionCount: firebaseData.postCaptionCount || 0,
                         reelCaptionCount: firebaseData.reelCaptionCount || 0,
+                        onboardingData: firebaseData.onboardingData,
                       }),
                     );
                     console.log(
-                      "✅ Firebase data (aiAdditions/systemPrompt/aiChatCount/captionCounts) loaded on login",
+                      "✅ Firebase data (aiAdditions/systemPrompt/counts/onboarding) loaded on login",
                     );
                   }
 
@@ -174,8 +175,16 @@ export default function LoginForm() {
                   if (!hasOnboardingData && !isBusinessUser) {
                     // User has no onboarding data and is not a Business user - redirect to onboarding
                     console.log(
-                      "⚠️ No onboarding data found, redirecting to onboarding...",
+                      `⚠️ No onboarding data found for ${decoded.email}. (hasOnboardingData: ${hasOnboardingData}, isBusinessUser: ${isBusinessUser})`,
                     );
+                    
+                    // Add a tiny bit of diagnostic info
+                    if (firebaseData) {
+                      console.log("🔥 Firebase document keys:", Object.keys(firebaseData));
+                    } else {
+                      console.warn("🔥 Firebase document is NULL or UNDEFINED");
+                    }
+
                     dispatch(
                       setLoginBuffer({
                         token: response.token,
