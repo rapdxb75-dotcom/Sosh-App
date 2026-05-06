@@ -1,7 +1,7 @@
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Stack, useFocusEffect } from "expo-router";
-import { Minus, Plus, TrendingUp, TrendingDown } from "lucide-react-native";
+import { Minus, Plus, TrendingDown, TrendingUp } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -316,12 +316,14 @@ const PlatformCard = ({
       case "youtube":
         return "90 days";
       case "tiktok":
-        return "60 days";
+        return "90 days";
       case "snapchat":
         return "90 days";
+      /*
       case "twitter":
       case "x":
         return "90 days";
+      */
       default:
         return "90 days";
     }
@@ -520,7 +522,7 @@ const PlatformCard = ({
                   ) : (
                     <TrendingDown size={12} color="#FF4D4D" />
                   )}
-                  <Text 
+                  <Text
                     className="text-[12px] font-inter"
                     style={{ color: platform.growthValue >= 0 ? "#00FF94" : "#FF4D4D" }}
                   >
@@ -1001,7 +1003,7 @@ export default function Analysis() {
   const buildPlatformsData = (userData: any): PlatformData[] => {
     const analytics = userData.analytics || {};
 
-    const calculateGrowthResult = (metrics: any, directGrowth?: any) => {
+    const calculateGrowthResult = (metrics: any, days: number = 90, directGrowth?: any) => {
       let growth: number;
 
       // Use direct growth if provided (can be positive or negative)
@@ -1013,7 +1015,7 @@ export default function Analysis() {
           (metrics.likes || 0) + (metrics.comments || 0) + (metrics.shares || 0);
 
         if (views === 0 && engagement === 0) {
-          return { growth: "0% last 90 days", growthValue: 0 };
+          return { growth: `0% last ${days} days`, growthValue: 0 };
         }
 
         // Calculate growth based on views and engagement weight
@@ -1027,7 +1029,7 @@ export default function Analysis() {
 
       const sign = growth >= 0 ? "+" : "";
       return {
-        growth: `${sign}${growth}% last 90 days`,
+        growth: `${sign}${growth}% last ${days} days`,
         growthValue: growth,
       };
     };
@@ -1049,7 +1051,7 @@ export default function Analysis() {
           views: analytics.instagram?.viewsCount,
           likes: analytics.instagram?.likesCount,
           comments: analytics.instagram?.commentsCount,
-        }),
+        }, 90),
         metrics: {
           views: analytics.instagram?.viewsCount || 0,
           likes: analytics.instagram?.likesCount || 0,
@@ -1067,7 +1069,7 @@ export default function Analysis() {
           likes: analytics.tiktok?.likeCountTotal,
           comments: analytics.tiktok?.commentCountTotal,
           shares: analytics.tiktok?.shareCountTotal,
-        }),
+        }, 90),
         metrics: {
           views: analytics.tiktok?.viewCountTotal || 0,
           likes: analytics.tiktok?.likeCountTotal || 0,
@@ -1086,7 +1088,7 @@ export default function Analysis() {
             (analytics.facebook?.pageMediaView || 0),
           likes: analytics.facebook?.likesCount,
           comments: analytics.facebook?.pagePostEngagements,
-        }),
+        }, 85),
         metrics: {
           views:
             (analytics.facebook?.pageVideoViews || 0) +
@@ -1113,6 +1115,7 @@ export default function Analysis() {
             comments: analytics.youtube?.comments,
             shares: analytics.youtube?.shares,
           },
+          90,
           analytics.youtube?.subscriberGrowthPercent,
         ),
         metrics: {
@@ -1122,21 +1125,23 @@ export default function Analysis() {
           shares: analytics.youtube?.shares || 0,
         },
       },
-      {
-        id: "twitter",
-        name: "Twitter",
-        icon: require("../../assets/icons/twitter.png"),
-        followers: formatFollowers(analytics.twitter?.followersCount, "followers"),
-        ...calculateGrowthResult({
-          likes: analytics.twitter?.likeCount,
-        }),
-        metrics: {
-          views: 0,
-          likes: analytics.twitter?.likeCount || 0,
-          comments: 0,
-          shares: 0,
-        },
-      },
+      /*
+            {
+              id: "twitter",
+              name: "Twitter",
+              icon: require("../../assets/icons/twitter.png"),
+              followers: formatFollowers(analytics.twitter?.followersCount, "followers"),
+              ...calculateGrowthResult({
+                likes: analytics.twitter?.likeCount,
+              }),
+              metrics: {
+                views: 0,
+                likes: analytics.twitter?.likeCount || 0,
+                comments: 0,
+                shares: 0,
+              },
+            },
+      */
       {
         id: "snapchat",
         name: "Snapchat",
@@ -1152,6 +1157,7 @@ export default function Analysis() {
             comments: analytics.snapchat?.replies,
             shares: analytics.snapchat?.shares,
           },
+          90,
           analytics.snapchat?.subscriberGrowthPercent,
         ),
         metrics: {
@@ -1235,80 +1241,80 @@ export default function Analysis() {
   return (
     <View className="flex-1" style={{ alignItems: "center", backgroundColor: "transparent" }}>
       <View style={{ width: "100%", maxWidth: 600, flex: 1 }}>
-      <Stack.Screen options={{ headerShown: false }} />
+        <Stack.Screen options={{ headerShown: false }} />
 
-      <ScrollView
-        ref={scrollRef}
-        style={{ flex: 1 }}
-        bounces={true}
-        overScrollMode="always"
-        contentContainerStyle={{
-          paddingBottom: 160,
-        }}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        {...(Platform.OS === "ios"
-          ? {
-            contentInset: { top: insets.top },
-            contentOffset: { x: 0, y: -insets.top },
+        <ScrollView
+          ref={scrollRef}
+          style={{ flex: 1 }}
+          bounces={true}
+          overScrollMode="always"
+          contentContainerStyle={{
+            paddingBottom: 160,
+          }}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          {...(Platform.OS === "ios"
+            ? {
+              contentInset: { top: insets.top },
+              contentOffset: { x: 0, y: -insets.top },
+            }
+            : {})}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#FFFFFF"
+              colors={["#FFFFFF"]}
+              progressViewOffset={insets.top + 20}
+            />
           }
-          : {})}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#FFFFFF"
-            colors={["#FFFFFF"]}
-            progressViewOffset={insets.top + 20}
-          />
-        }
-      >
-        {/* Header */}
-        <View
-          style={Platform.OS === "ios" ? { marginTop: -insets.top } : undefined}
         >
-          <Header />
+          {/* Header */}
+          <View
+            style={Platform.OS === "ios" ? { marginTop: -insets.top } : undefined}
+          >
+            <Header />
 
-          <View className="px-5">
-            <Text className="page-title text-white mb-4 mt-8">
-              Your{"\n"}Analytics
-            </Text>
+            <View className="px-5">
+              <Text className="page-title text-white mb-4 mt-8">
+                Your{"\n"}Analytics
+              </Text>
 
-            <Text className="section-title text-white mb-4 font-semibold">
-              Platform Breakdown
-            </Text>
+              <Text className="section-title text-white mb-4 font-semibold">
+                Platform Breakdown
+              </Text>
 
-            {loading ? (
-              <>
-                {[1, 2, 3, 4].map((key) => (
-                  <PlatformSkeletonCard key={key} />
-                ))}
-              </>
-            ) : platformsData.length === 0 ? (
-              <View className="items-center justify-center py-10 mt-10">
-                <Text className="text-white/60 text-center font-inter text-base leading-6">
-                  No connected accounts!{"\n"}Please connect them in your
-                  profile.
-                </Text>
-              </View>
-            ) : (
-              platformsData.map((platform) => (
-                <PlatformCard
-                  key={platform.id}
-                  platform={platform}
-                  isExpanded={expandedPlatform === platform.id}
-                  onToggle={() =>
-                    setExpandedPlatform(
-                      expandedPlatform === platform.id ? "" : platform.id,
-                    )
-                  }
-                  screenWidth={width}
-                />
-              ))
-            )}
+              {loading ? (
+                <>
+                  {[1, 2, 3, 4].map((key) => (
+                    <PlatformSkeletonCard key={key} />
+                  ))}
+                </>
+              ) : platformsData.length === 0 ? (
+                <View className="items-center justify-center py-10 mt-10">
+                  <Text className="text-white/60 text-center font-inter text-base leading-6">
+                    No connected accounts!{"\n"}Please connect them in your
+                    profile.
+                  </Text>
+                </View>
+              ) : (
+                platformsData.map((platform) => (
+                  <PlatformCard
+                    key={platform.id}
+                    platform={platform}
+                    isExpanded={expandedPlatform === platform.id}
+                    onToggle={() =>
+                      setExpandedPlatform(
+                        expandedPlatform === platform.id ? "" : platform.id,
+                      )
+                    }
+                    screenWidth={width}
+                  />
+                ))
+              )}
+            </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
       </View>
     </View>
   );

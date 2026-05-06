@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import { Trash2, Upload } from "lucide-react-native";
+import { Crown, Rocket, Trash2, Upload, Zap } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -32,6 +32,8 @@ import Svg, {
 import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
+import Paywall from "../../components/subscription/Paywall";
+import { ProTierIcon, BusinessTierIcon } from "../../components/subscription/TierIcons";
 import { useNotification } from "../../context/NotificationContext";
 import userService from "../../services/api/user";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
@@ -186,6 +188,7 @@ export default function Profile() {
   const [selectedPlatformKey, setSelectedPlatformKey] = useState<string | null>(
     null,
   );
+  const [paywallVisible, setPaywallVisible] = useState(false);
 
   // Local state for the edit modal
   const [username, setUsername] = useState(globalUserName);
@@ -728,14 +731,26 @@ export default function Profile() {
     const isPremium = isPro || isBusiness;
 
     const getGradientColors = (): [string, string, ...string[]] => {
-      if (isBusiness) return ["#DAA520", "#8B4513", "#191414"]; // Business Gold/Bronze
-      if (isPro) return ["#1DB954", "#0A2A12"]; // Pro Green
+      if (isBusiness) return ["rgba(255, 138, 0, 0.25)", "rgba(25, 15, 0, 0.6)"]; // Business Orange
+      if (isPro) return ["rgba(59, 130, 246, 0.2)", "rgba(10, 20, 42, 0.5)"]; // Pro Blue
       return ["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]; // Free
     };
 
+    const getTierColor = () => {
+      if (isBusiness) return "#FF8A00";
+      if (isPro) return "#3b82f6";
+      return "#FFFFFF";
+    };
+
+    const getTierIcon = () => {
+      if (isBusiness) return <BusinessTierIcon size={22} color="#FF8A00" />;
+      if (isPro) return <ProTierIcon size={22} color="#3b82f6" />;
+      return <Crown size={18} color="#FFFFFF" />;
+    };
+
     const getPlanLabel = () => {
-      if (isBusiness) return "Business";
-      if (isPro) return "Pro";
+      if (isBusiness) return "Enterprise";
+      if (isPro) return "Pro Tier";
       return "Free";
     };
 
@@ -768,17 +783,20 @@ export default function Profile() {
               padding: 24,
             }}
           >
-            <View className="flex-row justify-between items-center mb-4">
+            <View className="flex-row justify-between items-center mb-6">
               <View>
-                <Text className="text-white/60 text-xs font-bold uppercase tracking-widest mb-1">
-                  Current Plan
-                </Text>
-                <Text className="text-white text-2xl font-bold">
+                <Text className="text-white text-3xl font-bold font-inter">
                   Sosh {displayPlan}
                 </Text>
               </View>
-              <View className="bg-white/20 px-3 py-1 rounded-full">
-                <Text className="text-white text-[10px] font-bold uppercase">
+              <View className="flex-row items-center">
+                <View className="mr-2">
+                  {getTierIcon()}
+                </View>
+                <Text
+                  className="text-xs font-bold uppercase tracking-[2px]"
+                  style={{ color: getTierColor() }}
+                >
                   {getPlanLabel()}
                 </Text>
               </View>
@@ -788,14 +806,35 @@ export default function Profile() {
               {getDescription()}
             </Text>
 
-            <TouchableOpacity
-              onPress={handleUpgradeNavigation}
-              className={`w-full h-12 rounded-full items-center justify-center ${isPremium ? "bg-white" : "bg-[#fff]"}`}
-            >
-              <Text className="font-bold text-base text-black">
-                {isPremium ? "Manage Subscription" : "Upgrade Now"}
-              </Text>
-            </TouchableOpacity>
+            <View className="gap-3">
+              <TouchableOpacity
+                onPress={handleUpgradeNavigation}
+                className="w-full h-12 rounded-full items-center justify-center bg-white"
+                style={{
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3.84,
+                  elevation: 5,
+                }}
+              >
+                <Text className="font-bold text-base text-black">
+                  Manage via Web
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setPaywallVisible(true);
+                }}
+                className="w-full h-12 rounded-full items-center justify-center border border-white/30"
+              >
+                <Text className="font-bold text-base text-white">
+                  Manage via App Store
+                </Text>
+              </TouchableOpacity>
+            </View>
           </LinearGradient>
         </BlurView>
       </View>
@@ -1035,6 +1074,7 @@ export default function Profile() {
             </View>
           </View>
         </ScrollView>
+        <Paywall visible={paywallVisible} onClose={() => setPaywallVisible(false)} />
 
         {/* Disconnect Modal */}
         <Modal
@@ -1395,7 +1435,7 @@ function ConnectedAccountItem({
           <Text className="platform-card-name">{name}</Text>
           <View className="flex-row items-start mt-1">
             <View
-              className={`w-2.5 h-2.5 rounded-full mr-3 mt-1.5 ${isConnected ? "bg-[#11B259]" : "bg-red-500"}`}
+              className={`w-2.5 h-2.5 rounded-full mr-3 mt-1.5 ${isConnected ? "bg-green-500" : "bg-red-500"}`}
             />
             <View>
               <Text className="text-white/60 font-inter text-[13px]">
