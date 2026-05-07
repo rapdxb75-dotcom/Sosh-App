@@ -139,76 +139,76 @@ export default function Home() {
       }}
     >
       <View style={{ width: "100%", maxWidth: 500, flex: 1 }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flex: 1, paddingBottom: bottomPadding }}
-        bounces={true}
-        overScrollMode="always"
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor="#FFFFFF"
-            colors={["#FFFFFF"]}
-            progressViewOffset={Platform.OS === "ios" ? 0 : insets.top + 20}
-          />
-        }
-      >
-        {/* Header */}
-        <Header disableTopSpacing />
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flex: 1, paddingBottom: bottomPadding }}
+          bounces={true}
+          overScrollMode="always"
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#FFFFFF"
+              colors={["#FFFFFF"]}
+              progressViewOffset={Platform.OS === "ios" ? 0 : insets.top + 20}
+            />
+          }
+        >
+          {/* Header */}
+          <Header disableTopSpacing />
 
-        <View className="w-full px-5 flex-1">
-          <Text className="page-title text-white mb-4 mt-8">
-            Hello{"\n"}
-            {userName},{"\n"}lets create
-          </Text>
-          <View className="flex-row items-center gap-2 mb-10">
-            <View className="w-2 h-2 rounded-full bg-green-500" />
-            <Text className="font-inter font-semibold text-[15px] leading-5 tracking-[-0.15px] text-[#FFFFFF99]">
-              Live Data • Updated just now
+          <View className="w-full px-5 flex-1">
+            <Text className="page-title text-white mb-4 mt-8">
+              Hello{"\n"}
+              {userName},{"\n"}lets create
             </Text>
-          </View>
-
-          {/* Stats */}
-          <View className="flex-1">
-            {/* Followers */}
-            <View style={{ flex: 1.1 }} className="mb-3">
-              <StatCard
-                title="Followers"
-                value={formatNumber(analytics.totalFollowers)}
-                trend="+0% this month"
-                fullWidth
-                loading={isLoading}
-              />
+            <View className="flex-row items-center gap-2 mb-10">
+              <View className="w-2 h-2 rounded-full bg-green-500" />
+              <Text className="font-inter font-semibold text-[15px] leading-5 tracking-[-0.15px] text-[#FFFFFF99]">
+                Live Data • Updated just now
+              </Text>
             </View>
 
-            {/* Likes + Views */}
-            <View style={{ flex: 1.9 }} className="flex-row gap-3">
-              <View className="flex-1">
+            {/* Stats */}
+            <View className="flex-1">
+              {/* Followers */}
+              <View style={{ flex: 1.1 }} className="mb-3">
                 <StatCard
-                  title="Likes"
-                  value={formatNumber(analytics.totalLikes)}
-                  trend="+0% this month"
+                  title="Followers"
+                  value={formatNumber(analytics.totalFollowers)}
+                  trend="+0% last 90 days"
+                  fullWidth
                   loading={isLoading}
-                  badge="90 days"
                 />
               </View>
 
-              <View className="flex-1">
-                <StatCard
-                  title="Views"
-                  value={formatNumber(analytics.totalViews)}
-                  trend="+0% this month"
-                  loading={isLoading}
-                  badge="90 days"
-                />
+              {/* Likes + Views */}
+              <View style={{ flex: 1.9 }} className="flex-row gap-3">
+                <View className="flex-1">
+                  <StatCard
+                    title="Likes"
+                    value={formatNumber(analytics.totalLikes)}
+                    trend="+0% last 90 days"
+                    loading={isLoading}
+                    badge="90 days"
+                  />
+                </View>
+
+                <View className="flex-1">
+                  <StatCard
+                    title="Views"
+                    value={formatNumber(analytics.totalViews)}
+                    trend="+0% last 90 days"
+                    loading={isLoading}
+                    badge="90 days"
+                  />
+                </View>
               </View>
             </View>
           </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
       </View>
     </View>
   );
