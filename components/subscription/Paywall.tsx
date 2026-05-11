@@ -2,7 +2,6 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { CheckCircle2, ExternalLink, RefreshCw, X } from "lucide-react-native";
-import { ProTierIcon, BusinessTierIcon } from "./TierIcons";
 import { useEffect, useRef } from "react";
 import {
   Animated,
@@ -18,6 +17,8 @@ import {
   View,
 } from "react-native";
 import Toast from "react-native-toast-message";
+import { SKUS, useIAP } from "../../hooks/useIAP";
+import { BusinessTierIcon, ProTierIcon } from "./TierIcons";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -38,6 +39,7 @@ const PlanFeature = ({ text, icon: Icon, color = "#fff" }: { text: string; icon:
 export const Paywall = ({ visible, onClose }: PaywallProps) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
+  const { handlePurchase: purchaseIAP, handleRestore: restoreIAP } = useIAP(onClose);
 
   useEffect(() => {
     if (visible) {
@@ -60,26 +62,31 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
     }
   }, [visible]);
 
-  const handleRestore = () => {
+  const handleRestore = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Toast.show({
       type: "info",
       text1: "Restoring Purchases",
       text2: "Checking your Apple ID for active subscriptions...",
     });
+
+    await restoreIAP();
   };
 
   const handleManageSubscriptions = () => {
     Linking.openURL("https://apps.apple.com/account/subscriptions");
   };
 
-  const handlePurchase = (plan: string) => {
+  const handlePurchase = async (plan: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Toast.show({
       type: "info",
       text1: "Initiating Secure Purchase",
       text2: `Connecting to App Store for Sosh ${plan}...`,
     });
+
+    const sku = plan === "Pro" ? SKUS.PRO : SKUS.BUSINESS;
+    await purchaseIAP(sku);
   };
 
   return (
@@ -134,9 +141,7 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
             </View>
 
             {/* Pro Plan Card */}
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => handlePurchase("Pro")}
+            <View
               style={{ marginBottom: 24, position: "relative", zIndex: 10 }}
             >
               <View style={styles.popularBadge}>
@@ -156,10 +161,10 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                   </View>
                   <View className="items-end">
                     <View className="flex-row items-center">
-                      <Text className="text-white/30 text-sm line-through mr-2 font-inter">$299</Text>
-                      <Text className="text-white text-2xl font-bold font-inter">$224</Text>
+                      <Text className="text-white/30 text-sm line-through mr-2 font-inter">$99</Text>
+                      <Text className="text-white text-2xl font-bold font-inter">$79</Text>
                     </View>
-                    <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-right">per month{"\n"}(25% off beta sale)</Text>
+                    <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-right">first month{"\n"}(20% off beta sale)</Text>
                   </View>
                 </View>
 
@@ -172,16 +177,18 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                   <PlanFeature icon={CheckCircle2} color="#3b82f6" text="Smart captions per platform" />
                 </View>
 
-                <View style={styles.proButton}>
+                <TouchableOpacity
+                  style={styles.proButton}
+                  activeOpacity={0.9}
+                  onPress={() => handlePurchase("Pro")}
+                >
                   <Text style={styles.proButtonText}>Subscribe Pro</Text>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
-            </TouchableOpacity>
+            </View>
 
             {/* Business Plan Card */}
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => handlePurchase("Business")}
+            <View
               className="mb-8"
             >
               <LinearGradient
@@ -201,7 +208,7 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                       <Text className="text-white/30 text-sm line-through mr-2 font-inter">$799</Text>
                       <Text className="text-white text-2xl font-bold font-inter">$599</Text>
                     </View>
-                    <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-right">per month{"\n"}(25% off beta sale)</Text>
+                    <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-right">first month{"\n"}(25% off beta sale)</Text>
                   </View>
                 </View>
 
@@ -214,16 +221,20 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                   <PlanFeature icon={CheckCircle2} color="#FF8A00" text="24/7 support & Team seats" />
                 </View>
 
-                <View style={styles.buttonContainer}>
+                <TouchableOpacity
+                  style={styles.buttonContainer}
+                  activeOpacity={0.9}
+                  onPress={() => handlePurchase("Business")}
+                >
                   <LinearGradient
                     colors={["#FF8A00", "#E67A00"]}
                     style={styles.gradientButton}
                   >
                     <Text style={styles.businessButtonText}>Elevate Your Business</Text>
                   </LinearGradient>
-                </View>
+                </TouchableOpacity>
               </LinearGradient>
-            </TouchableOpacity>
+            </View>
 
             {/* Compliance & Links */}
             <View className="items-center mb-10">
@@ -260,6 +271,9 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
             </View>
           </ScrollView>
         </Animated.View>
+
+        {/* Render Toast inside Modal so it's visible on top */}
+        <Toast position="bottom" bottomOffset={40} />
       </View>
     </Modal>
   );
