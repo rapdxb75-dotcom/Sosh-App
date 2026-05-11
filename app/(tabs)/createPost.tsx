@@ -47,7 +47,7 @@ import Svg, {
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
 import { showEditor } from "react-native-video-trim";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
@@ -70,7 +70,8 @@ import {
   getPreviewData,
   setPreviewData,
 } from "../../store/previewStore";
-import { RootState } from "../../store/store";
+import { RootState, AppDispatch } from "../../store/store";
+import { updateUser } from "../../store/userSlice";
 import { getFreeTierSystemPrompt } from "../../utils/prompts";
 import { generateVideoThumbnail } from "../../utils/video";
 
@@ -370,6 +371,7 @@ export default function CreatePost() {
   const { width } = useWindowDimensions();
   const { addNotification } = useNotification();
   const scrollViewRef = useRef<ScrollView>(null);
+  const dispatch = useDispatch<AppDispatch>();
 
   // Get user email from Redux
   const user = useSelector((state: RootState) => state.user);
@@ -485,6 +487,7 @@ export default function CreatePost() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showCaptionModal, setShowCaptionModal] = useState(false);
   const [showCoverModal, setShowCoverModal] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const isBackgroundPublishing = useRef(false);
@@ -1088,6 +1091,10 @@ export default function CreatePost() {
   // AI Caption Generation Handler
   const handleGenerateCaption = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!aiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
     if (!caption.trim()) {
       Toast.show({
         type: "error",
@@ -3419,6 +3426,68 @@ export default function CreatePost() {
           </View>
         </BlurView>
       </Modal>
+
+      {/* AI Consent Modal */}
+      <Modal
+        visible={showConsentModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View className="bg-[#1A1A1A] w-full max-w-[340px] rounded-[32px] p-6 border border-white/10">
+            <View className="items-center mb-6">
+              <View className="w-16 h-16 bg-blue-500/10 rounded-full items-center justify-center mb-4">
+                <Text style={{ fontSize: 32 }}>🔒</Text>
+              </View>
+              <Text className="text-white text-2xl font-bold font-inter text-center">
+                Before You Continue
+              </Text>
+            </View>
+
+            <Text className="text-white/80 font-inter text-base mb-4 leading-6 text-center">
+              Sosh uses AI to power your content generation and chat features.
+            </Text>
+
+            <Text className="text-white/80 font-inter text-base mb-4 leading-6">
+              By continuing, you agree to share the following with <Text className="font-bold text-white">{user.subscription?.plan === "Business" ? "Poppy AI" : "Claude (by Anthropic)"}</Text>, our AI provider:
+            </Text>
+
+            <View className="ml-2 mb-6 gap-2">
+              <Text className="text-white/80 font-inter text-sm">• Your prompts and chat messages</Text>
+              <Text className="text-white/80 font-inter text-sm">• Brand voice and content data</Text>
+              <Text className="text-white/80 font-inter text-sm">• Captions and content drafts</Text>
+              <Text className="text-white/80 font-inter text-sm">• Conversation history</Text>
+            </View>
+
+            <Text className="text-white/60 font-inter text-sm mb-6 text-center">
+              Your data is processed only to generate AI responses.
+            </Text>
+
+            <TouchableOpacity onPress={() => Linking.openURL('https://sosh.digital/privacy-policy')} className="mb-6">
+              <Text className="text-blue-400 font-inter text-center">View Privacy Policy</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => {
+                dispatch(updateUser({ aiConsent: true }));
+                setShowConsentModal(false);
+              }}
+              className="w-full h-14 bg-white rounded-2xl items-center justify-center mb-3"
+            >
+              <Text className="text-black font-bold text-lg">I Agree and Continue</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowConsentModal(false)}
+              className="w-full h-14 bg-white/10 rounded-2xl items-center justify-center"
+            >
+              <Text className="text-white font-bold text-lg">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }

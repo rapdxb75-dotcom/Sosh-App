@@ -1058,8 +1058,31 @@ export default function Profile() {
                 />
               ))}
 
-              {/* Logout & Delete Account Buttons */}
+              {/* Account Settings & Delete Buttons */}
               <View className="mt-6 mb-8 gap-4">
+                {aiConsent && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      dispatch(updateUser({ aiConsent: false }));
+                      Toast.show({
+                        type: "success",
+                        text1: "Consent Revoked",
+                        text2: "AI data sharing consent revoked",
+                      });
+                      addNotification({
+                        type: "neutral",
+                        title: "Consent Revoked",
+                        message: "AI data sharing consent has been revoked.",
+                      });
+                    }}
+                    className="w-full h-14 rounded-2xl flex-row items-center justify-center bg-yellow-500/10 border border-yellow-500/20"
+                  >
+                    <Text style={{ fontSize: 18 }}>🔒</Text>
+                    <Text className="text-yellow-500 font-bold text-base ml-2">Revoke AI Consent</Text>
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

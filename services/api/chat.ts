@@ -13,10 +13,12 @@ export interface Conversation {
 export type GetConversationsResponse = Conversation[];
 
 export interface CreateConversationPayload {
-    boardId: string;
-    chatId: string;
+    boardId?: string | null;
+    chatId?: string | null;
     name: string;
+    subscription?: string;
 }
+
 
 export interface CreateConversationResponse {
     success: boolean;
@@ -82,7 +84,9 @@ const chatService = {
                 payload,
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+            console.log("📥 [API] createConversation RAW response:", JSON.stringify(response.data, null, 2));
             return response.data;
+
         } catch (error) {
             console.error("Create Conversation API Error:", error);
             throw error;

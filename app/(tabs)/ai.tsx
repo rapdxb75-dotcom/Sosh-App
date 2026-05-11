@@ -42,20 +42,23 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { MarkdownText } from "../../components/common/MarkdownText";
 import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
 import chatService, { Conversation, Message } from "../../services/api/chat";
-// Poppy AI removed
+import poppyService from "../../services/api/poppy";
 import { incrementAIChatCount } from "../../services/firebase";
+
+
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
-import { RootState } from "../../store/store";
+import { RootState, AppDispatch } from "../../store/store";
+import { updateUser } from "../../store/userSlice";
 const AI_CHAT_LIMIT = 5;
 
 /* ---------- Gradient Ring Component ---------- */
@@ -605,9 +608,18 @@ export default function AI() {
   const subscription = useSelector((state: RootState) => state.user.subscription);
   const systemPrompt = useSelector((state: RootState) => state.user.systemPrompt);
   const aiConsent = useSelector((state: RootState) => state.user.aiConsent);
+  const aiChatCount = useSelector((state: RootState) => state.user.aiChatCount);
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
-  // Poppy AI variables removed
+  // Get dynamic boardId and chatId from user's aiAdditions with hardcoded fallbacks from working version
+  const poppyBoardId =
+    aiAdditions?.poppyAIChatbot?.boardId || null;
+  const poppyChatId =
+    aiAdditions?.poppyAIChatbot?.chatId || null;
+
+
+
   const { addNotification } = useNotification();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -1111,15 +1123,28 @@ export default function AI() {
       return;
     }
 
+    if (subscription?.plan === "Free") {
+      setCreateError("Conversation management is not available on the Free plan.");
+      return;
+    }
+
+
     setIsCreating(true);
     setCreateError(null);
 
     try {
       const response = await chatService.createConversation({
-        boardId: poppyBoardId,
-        chatId: poppyChatId,
+        ...(subscription?.plan === "Business" ? {
+          boardId: poppyBoardId,
+          chatId: poppyChatId,
+        } : {}),
         name: conversationName.trim(),
+        subscription: subscription?.plan,
       });
+
+      console.log("📥 [API Response] Create Conversation:", response);
+
+
 
       // Refresh conversations list
       await fetchConversations();
@@ -1271,9 +1296,31 @@ export default function AI() {
   );
 
   const handleSendMessage = async () => {
+    const isFreePlan = subscription?.plan === "Free";
+    const isProPlan = subscription?.plan === "Pro";
+    const aiChatCountValue = aiChatCount || 0;
+
+
+    if (isFreePlan && aiChatCountValue >= AI_CHAT_LIMIT) {
+      Alert.alert(
+        "Limit Exceeded",
+        "Free limit reached. Please manage your plan to continue.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Manage Plan",
+            style: "default",
+            onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
+          },
+        ]
+      );
+      return;
+    }
+
     if (!inputText.trim() || isSending || !userEmail) return;
 
     const content = inputText.trim();
+
     console.log("📤 [AI] Sending User Message:", content);
     setInputText("");
     setIsSending(true);
@@ -1316,19 +1363,34 @@ export default function AI() {
         const title =
           content.length > 30 ? content.substring(0, 30) + "..." : content;
 
+        console.log("📡 [AI] Creating new conversation on backend...");
+
+
         const response = await chatService.createConversation({
           boardId: poppyBoardId,
           chatId: poppyChatId,
           name: title,
+          subscription: subscription?.plan,
         });
 
-        if (response && response.conversationId) {
-          currentConversationId = response.conversationId;
+
+        console.log("📥 [API Response] Auto-create Conversation:", response);
+
+
+
+        const returnedId = response.conversationId || response.id || response._id;
+        if (response && returnedId) {
+          currentConversationId = returnedId;
           setActiveConversationId(currentConversationId);
           fetchConversations();
-        } else {
+
+        } else if (subscription?.plan !== "Free") {
+          // If not a Free plan and no ID was returned, something is wrong
           throw new Error("Failed to create new conversation");
+        } else {
+          console.warn("⚠️ [AI] No conversationId returned for Free user. Continuing without persistence.");
         }
+
       }
 
       // 2. Save User Message to History AND start AI stream IN PARALLEL
@@ -1354,41 +1416,42 @@ export default function AI() {
         rafIdRef.current = null;
       };
 
-      const isFreePlan = subscription?.plan === "Free";
-      const isProPlan = subscription?.plan === "Pro";
-      const useClaude = true; // Poppy AI removed as per user request
+      const useClaude = subscription?.plan !== "Business";
 
-      if (isFreePlan && aiChatCount >= AI_CHAT_LIMIT) {
-        Alert.alert(
-          "Limit Exceeded",
-          "Free limit reached. Please manage your plan to continue.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Manage Plan",
-              style: "default",
-              onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
-            },
-          ]
-        );
-        return;
-      }
+
 
       console.log(`🤖 AI Provider (Stream): ${useClaude ? "Anthropic (Claude)" : "Poppy AI"}`);
 
+      console.log("📍 [AI] ID check before Promise.all:", { currentConversationId, activeConversationId });
+
       const [,] = await Promise.all([
+
         // Save user message (fire-and-forget, don't block streaming)
-        chatService.manageHistory(
-          currentConversationId!,
-          content,
-          userEmail,
-          "User",
-        ),
+        (() => {
+          if (!currentConversationId) {
+            console.warn("⏭️ [AI] Skipping manageHistory (User): No currentConversationId");
+            return Promise.resolve();
+          }
+          console.log("💾 [AI] Calling manageHistory (User)...");
+          return chatService.manageHistory(
+            currentConversationId,
+            content,
+            userEmail,
+            "User",
+          );
+        })(),
+
+
+
+
         // Stream from Poppy AI or Anthropic (for Free/Pro plan)
         useClaude
           ? anthropicService.streamMessage(content, (delta) => {
+            if (!delta) return;
             fullAIResponse += delta;
             streamBufferRef.current = fullAIResponse;
+            console.log(`🧩 [Claude] Chunk received (${delta.length} chars)`);
+
 
             // Schedule a batched UI update on the next animation frame
             if (!rafIdRef.current) {
@@ -1425,8 +1488,11 @@ export default function AI() {
             poppyChatId,
             userEmail,
             (delta) => {
+              if (!delta) return;
               fullAIResponse += delta;
               streamBufferRef.current = fullAIResponse;
+              console.log(`🧩 [Poppy] Chunk received (${delta.length} chars)`);
+
 
               // Schedule a batched UI update on the next animation frame
               if (!rafIdRef.current) {
@@ -1451,20 +1517,30 @@ export default function AI() {
       console.log("🔄 [AI] Chat Pair:", { message: content, response: fullAIResponse });
 
       // 4. Save AI Response to History in background (don't block UI)
-      if (fullAIResponse) {
+      if (fullAIResponse && currentConversationId) {
+        console.log("💾 [AI] Calling manageHistory (AI)...");
         chatService
           .manageHistory(
-            currentConversationId!,
+            currentConversationId,
             fullAIResponse,
             userEmail,
             "Model",
           )
-          .catch(() => { });
+          .then(() => console.log("✅ [AI] manageHistory (AI) complete"))
+          .catch((err) => console.error("❌ [AI] manageHistory (AI) failed:", err));
 
         if (isFreePlan) {
           incrementAIChatCount(userEmail).catch(() => { });
         }
+      } else {
+        console.warn("⏭️ [AI] Skipping manageHistory (AI):", {
+          hasResponse: !!fullAIResponse,
+          hasId: !!currentConversationId
+        });
       }
+
+
+
 
       // Final scroll only if user is at bottom
       if (isUserAtBottomRef.current) {
@@ -1472,8 +1548,11 @@ export default function AI() {
           scrollViewRef.current?.scrollToEnd({ animated: false });
         }, 50);
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error("❌ [AI] Chat error:", error);
+      Alert.alert("Chat Error", error?.message || "Failed to get response from AI. Please try again.");
       setMessages((prev) => prev.filter((m) => m._id !== aiMessageId));
+
     } finally {
       setIsSending(false);
       setTimeout(() => {
@@ -1571,726 +1650,788 @@ export default function AI() {
     <View style={{ flex: 1, backgroundColor: "transparent", alignItems: "center" }}>
       <View style={{ width: "100%", maxWidth: 500, flex: 1 }}>
         <View style={{ flex: 1 }}>
-        {/* Header Container (Absolute to match Home/Profile) */}
-        <View
-          className="absolute top-0 left-0 right-0 z-10"
-          style={{ paddingTop: Math.max(insets.top + 10, normalize(55)) }}
-        >
-          <View className="flex-row items-center justify-between px-5">
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                openSidebar();
-              }}
-              style={{
-                width: normalize(38),
-                height: normalize(38),
-                backgroundColor: "#00000080",
-              }}
-              className="items-center justify-center rounded-full relative"
-            >
-              <GradientRingSVG />
-              <Image
-                source={require("../../assets/icons/menu.png")}
-                className="w-6 h-6"
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-            <Text className="text-white text-xl font-bold font-inter">
-              Sosh AI
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setActiveConversationId(null);
-                setMessages([]);
-                setMessageReactions({});
-                setInputText("");
-              }}
-              style={{ width: normalize(38), height: normalize(38) }}
-              className="items-center justify-center rounded-full relative"
-            >
-              <GradientRingSVG />
-              <Plus color="#fff" size={20} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Content Container with Keyboard Avoiding */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
-          enabled={!isCreateModalVisible && !isEditModalVisible}
-        >
+          {/* Header Container (Absolute to match Home/Profile) */}
           <View
-            style={{
-              flex: 1,
-              paddingHorizontal: 20,
-              paddingTop: Math.max(insets.top + 60, normalize(110)),
-              paddingBottom: isKeyboardVisible ? 20 : insets.bottom + 110,
-            }}
+            className="absolute top-0 left-0 right-0 z-10"
+            style={{ paddingTop: Math.max(insets.top + 10, normalize(55)) }}
           >
-            {/* Chat Messages or Greeting Content */}
-            {activeConversationId ? (
-              // Show chat messages when conversation is active
-              <ScrollView
-                ref={scrollViewRef}
-                className="flex-1"
-                contentContainerStyle={{
-                  paddingVertical: 20,
-                  paddingBottom: 40,
+            <View className="flex-row items-center justify-between px-5">
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  openSidebar();
                 }}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                onScroll={(e) => {
-                  const { contentOffset, contentSize, layoutMeasurement } =
-                    e.nativeEvent;
-                  // Dismiss keyboard only when scrolling UP
-                  if (
-                    isKeyboardVisible &&
-                    contentOffset.y < lastScrollY.current - 5
-                  ) {
-                    Keyboard.dismiss();
-                  }
-                  lastScrollY.current = contentOffset.y;
-                  const distanceFromBottom =
-                    contentSize.height -
-                    layoutMeasurement.height -
-                    contentOffset.y;
-                  const atBottom = distanceFromBottom < 80;
-                  // Update ref for streaming auto-scroll (no re-render)
-                  isUserAtBottomRef.current = atBottom;
-                  if (atBottom !== isAtBottom) {
-                    setIsAtBottom(atBottom);
-                    Animated.timing(scrollToBottomAnim, {
-                      toValue: atBottom ? 0 : 1,
-                      duration: 200,
-                      useNativeDriver: true,
-                    }).start();
-                  }
-                }}
-                scrollEventThrottle={16}
-              >
-                {isLoadingMessages ? (
-                  <View className="flex-1 items-center justify-center py-20">
-                    <ActivityIndicator size="large" color="#fff" />
-                    <Text className="text-white/60 font-inter mt-4">
-                      Loading messages...
-                    </Text>
-                  </View>
-                ) : messages.length > 0 ? (
-                  messages.map((message, index) => (
-                    <ChatMessage
-                      key={`${message._id}-${index}`}
-                      message={message}
-                      profilePicture={profilePicture}
-                      onFeedback={handleMessageFeedback}
-                      feedback={messageReactions[message._id] ?? null}
-                      actionsDisabled={isSending}
-                    />
-                  ))
-                ) : (
-                  <View className="flex-1 items-center justify-center py-20">
-                    <Text className="text-white/60 font-inter">
-                      No messages yet
-                    </Text>
-                  </View>
-                )}
-              </ScrollView>
-            ) : (
-              // Show greeting when no conversation is active
-              <TouchableWithoutFeedback
-                onPress={Keyboard.dismiss}
-                accessible={false}
-              >
-                <View className="flex-1 items-center justify-center">
-                  <View className="items-center">
-                    <Text
-                      className="text-white font-normal text-center mb-2"
-                      style={{
-                        fontFamily: "Questrial_400Regular",
-                        fontSize: Math.min(width * 0.1, 42),
-                        lineHeight: Math.min(width * 0.12, 50),
-                      }}
-                    >
-                      Hi, {userName}
-                    </Text>
-                    <Text
-                      className="text-white/60 font-inter text-center"
-                      style={{ fontSize: Math.min(width * 0.045, 18) }}
-                    >
-                      How may I help you?
-                    </Text>
-                  </View>
-                </View>
-              </TouchableWithoutFeedback>
-            )}
-
-            {/* Scroll to Bottom Button — ChatGPT style */}
-            {activeConversationId && (
-              <Animated.View
-                pointerEvents={isAtBottom ? "none" : "auto"}
                 style={{
-                  alignItems: "center",
-                  height: 0,
-                  overflow: "visible",
-                  zIndex: 10,
-                  opacity: scrollToBottomAnim,
-                  transform: [
-                    {
-                      scale: scrollToBottomAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.8, 1],
-                      }),
-                    },
-                  ],
+                  width: normalize(38),
+                  height: normalize(38),
+                  backgroundColor: "#00000080",
                 }}
+                className="items-center justify-center rounded-full relative"
               >
-                <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                    setIsAtBottom(true);
-                    Animated.timing(scrollToBottomAnim, {
-                      toValue: 0,
-                      duration: 200,
-                      useNativeDriver: true,
-                    }).start();
-                  }}
-                  activeOpacity={0.7}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    backgroundColor: "#0A0A0A",
-                    borderWidth: 1,
-                    borderColor: "rgba(255, 255, 255, 0.3)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginTop: -36,
-                  }}
-                >
-                  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-                    <Path
-                      d="M12 5v14M5 12l7 7 7-7"
-                      stroke="#fff"
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Svg>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
-
-            {/* Bottom Input Area */}
-            <View style={{ paddingTop: 10 }}>
-              <View className="flex-row items-center gap-3">
-                <View
-                  className="flex-1 h-[56px] rounded-full overflow-hidden"
-                  style={{ position: "relative" }}
-                >
-                  <BlurView intensity={30} tint="dark" className="flex-1">
-                    <View
-                      className="flex-1 flex-row items-center pl-5 pr-4 rounded-full"
-                      style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
-                    >
-                      {/* SVG Gradient Border */}
-                      <View
-                        style={{ position: "absolute", inset: 0 }}
-                        pointerEvents="none"
-                      >
-                        <Svg height="100%" width="100%">
-                          <Defs>
-                            <SvgLinearGradient
-                              id="inputBorderGrad"
-                              x1="0%"
-                              y1="0%"
-                              x2="100%"
-                              y2="0%"
-                            >
-                              <Stop
-                                offset="0%"
-                                stopColor="rgba(141, 138, 138, 0.4)"
-                                stopOpacity="1"
-                              />
-                              <Stop
-                                offset="48.56%"
-                                stopColor="rgba(65, 65, 65, 0.4)"
-                                stopOpacity="1"
-                              />
-                              <Stop
-                                offset="100%"
-                                stopColor="rgba(141, 138, 138, 0.4)"
-                                stopOpacity="1"
-                              />
-                            </SvgLinearGradient>
-                          </Defs>
-                          <Rect
-                            x="0.34"
-                            y="0.34"
-                            width="99.3%"
-                            height="99%"
-                            rx="28"
-                            ry="28"
-                            stroke="url(#inputBorderGrad)"
-                            strokeWidth="0.68"
-                            fill="transparent"
-                          />
-                        </Svg>
-                      </View>
-                      <TextInput
-                        value={inputText}
-                        onChangeText={setInputText}
-                        onFocus={() => setIsKeyboardVisible(true)}
-                        onBlur={() => setIsKeyboardVisible(false)}
-                        placeholder={
-                          isListening ? "Listening..." : "Type your message..."
-                        }
-                        placeholderTextColor="rgba(255,255,255,0.6)"
-                        className="flex-1 h-[44px] px-1 py-0 text-white"
-                        style={{
-                          textAlignVertical: "center",
-                          paddingTop: Platform.OS === "ios" ? 12 : 0,
-                        }}
-                        selectionColor="#fff"
-                        multiline={true}
-                      />
-                      <TouchableOpacity
-                        onPress={isListening ? stopListening : startListening}
-                        style={{
-                          width: 40,
-                          height: 40,
-                        }}
-                      >
-                        <Animated.View
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            backgroundColor: isListening
-                              ? "#ef4444"
-                              : "rgba(0,0,0,0.3)",
-                            position: "relative",
-                            transform: [{ scale: pulseAnim }],
-                          }}
-                        >
-                          {!isListening && <GradientRingSVG />}
-                          {isListening ? (
-                            <View
-                              style={{
-                                width: 12,
-                                height: 12,
-                                backgroundColor: "#fff",
-                                borderRadius: 3,
-                              }}
-                            />
-                          ) : (
-                            <Image
-                              source={require("../../assets/icons/voice.png")}
-                              className="w-5 h-5"
-                              resizeMode="contain"
-                            />
-                          )}
-                        </Animated.View>
-                      </TouchableOpacity>
-                    </View>
-                  </BlurView>
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    handleSendMessage();
-                  }}
-                  disabled={!inputText.trim() || isSending}
-                  className="w-[56px] h-[56px] rounded-full items-center justify-center overflow-hidden"
-                  style={{ opacity: !inputText.trim() || isSending ? 0.7 : 1 }}
-                >
-                  <ImageBackground
-                    source={require("../../assets/images/post_without.jpg")}
-                    className="w-full h-full items-center justify-center"
-                    resizeMode="cover"
-                  >
-                    <View className="absolute inset-0 bg-blue-500/20" />
-                    {isSending ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Image
-                        source={require("../../assets/icons/send-msg.png")}
-                        className="w-6 h-6"
-                        resizeMode="contain"
-                      />
-                    )}
-                  </ImageBackground>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-
-      {/* Sidebar Overlay */}
-      <Modal
-        visible={isModalVisible}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeSidebar}
-      >
-        <View className="flex-1 flex-row">
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              closeSidebar();
-            }}
-            className="absolute inset-0 bg-black/60"
-          />
-          <Animated.View
-            style={{
-              width: sidebarWidth,
-              height: "100%",
-              left: -9,
-              borderTopRightRadius: 24,
-              borderBottomRightRadius: 24,
-              overflow: "hidden",
-              transform: [{ translateX: slideAnim }],
-              paddingTop: Math.max(insets.top, 40),
-              paddingBottom: Math.max(insets.bottom, 24),
-            }}
-            className="bg-[#0A0A0A] p-6"
-          >
-            <View className="flex-row items-center justify-between mb-8">
-              <Text className="text-white text-2xl font-bold font-inter">
-                Chat History
+                <GradientRingSVG />
+                <Image
+                  source={require("../../assets/icons/menu.png")}
+                  className="w-6 h-6"
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+              <Text className="text-white text-xl font-bold font-inter">
+                Sosh AI
               </Text>
               <TouchableOpacity
-                onPress={closeSidebar}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveConversationId(null);
+                  setMessages([]);
+                  setMessageReactions({});
+                  setInputText("");
+                }}
                 style={{ width: normalize(38), height: normalize(38) }}
                 className="items-center justify-center rounded-full relative"
               >
                 <GradientRingSVG />
-                <X color="#fff" size={24} />
+                <Plus color="#fff" size={20} />
               </TouchableOpacity>
             </View>
+          </View>
 
-            <TouchableOpacity
-              onPress={openCreateModalFromDrawer}
-              className="flex-row items-center bg-white/10 p-4 rounded-xl mb-8 border border-white/5"
-            >
-              <Plus color="#fff" size={20} />
-              <Text className="text-white ml-3 font-inter font-medium text-base">
-                New chat
-              </Text>
-            </TouchableOpacity>
-
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              showsVerticalScrollIndicator={false}
-              bounces={true}
-            >
-              {isLoadingConversations ? (
-                <View className="items-center justify-center py-8">
-                  <ActivityIndicator size="large" color="#fff" />
-                  <Text className="text-white/60 font-inter text-sm mt-4">
-                    Loading conversations...
-                  </Text>
-                </View>
-              ) : conversationsError ? (
-                <View className="items-center justify-center py-8">
-                  <Text className="text-red-400 font-inter text-sm">
-                    {conversationsError}
-                  </Text>
-                </View>
-              ) : conversations.length > 0 ? (
-                <>
-                  <Text className="text-white/40 font-inter font-medium text-sm mb-4 tracking-wider">
-                    Recent chats
-                  </Text>
-                  {conversations.map((conversation) => (
-                    <ChatItem
-                      key={conversation._id}
-                      conversation={conversation}
-                      onSelect={(id) => {
-                        loadHistory(id);
-                        closeSidebar();
-                      }}
-                      onEdit={openEditModal}
-                      onDelete={(id) => {
-                        setConversationToDelete(id);
-                        setIsDeleteModalVisible(true);
-                      }}
-                    />
-                  ))}
-                </>
-              ) : (
-                <View className="items-center justify-center py-8">
-                  <Text className="text-white/60 font-inter text-sm">
-                    No conversations yet
-                  </Text>
-                </View>
-              )}
-            </ScrollView>
-          </Animated.View>
-
-          {/* Delete Confirmation Overlay (Global Sibling) */}
-          {isDeleteModalVisible && (
+          {/* Content Container with Keyboard Avoiding */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+            enabled={!isCreateModalVisible && !isEditModalVisible}
+          >
             <View
-              className="bg-black/80 items-center justify-center p-4 z-50 elevation-5"
-              style={StyleSheet.absoluteFill}
+              style={{
+                flex: 1,
+                paddingHorizontal: 20,
+                paddingTop: Math.max(insets.top + 60, normalize(110)),
+                paddingBottom: isKeyboardVisible ? 20 : insets.bottom + 110,
+              }}
             >
-              <TouchableOpacity
-                activeOpacity={1}
-                onPress={() => !isDeleting && setIsDeleteModalVisible(false)}
-                style={StyleSheet.absoluteFill}
-              />
-              <View
-                className="bg-[#1A1A1A] w-full max-w-xs p-6 rounded-2xl border border-white/10 z-10 elevation-5"
-                style={{ zIndex: 100 }}
-              >
-                <Text className="text-white text-lg font-bold font-inter text-center mb-2">
-                  Delete Chat?
-                </Text>
-                <Text className="text-white/60 text-sm font-inter text-center mb-6">
-                  Are you sure you want to delete this chat? This action cannot
-                  be undone.
-                </Text>
+              {/* Chat Messages or Greeting Content */}
+              {activeConversationId || messages.length > 0 ? (
 
-                <View className="flex-row gap-3">
+                // Show chat messages when conversation is active
+                <ScrollView
+                  ref={scrollViewRef}
+                  className="flex-1"
+                  contentContainerStyle={{
+                    paddingVertical: 20,
+                    paddingBottom: 40,
+                  }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  onScroll={(e) => {
+                    const { contentOffset, contentSize, layoutMeasurement } =
+                      e.nativeEvent;
+                    // Dismiss keyboard only when scrolling UP
+                    if (
+                      isKeyboardVisible &&
+                      contentOffset.y < lastScrollY.current - 5
+                    ) {
+                      Keyboard.dismiss();
+                    }
+                    lastScrollY.current = contentOffset.y;
+                    const distanceFromBottom =
+                      contentSize.height -
+                      layoutMeasurement.height -
+                      contentOffset.y;
+                    const atBottom = distanceFromBottom < 80;
+                    // Update ref for streaming auto-scroll (no re-render)
+                    isUserAtBottomRef.current = atBottom;
+                    if (atBottom !== isAtBottom) {
+                      setIsAtBottom(atBottom);
+                      Animated.timing(scrollToBottomAnim, {
+                        toValue: atBottom ? 0 : 1,
+                        duration: 200,
+                        useNativeDriver: true,
+                      }).start();
+                    }
+                  }}
+                  scrollEventThrottle={16}
+                >
+                  {isLoadingMessages ? (
+                    <View className="flex-1 items-center justify-center py-20">
+                      <ActivityIndicator size="large" color="#fff" />
+                      <Text className="text-white/60 font-inter mt-4">
+                        Loading messages...
+                      </Text>
+                    </View>
+                  ) : messages.length > 0 ? (
+                    messages.map((message, index) => (
+                      <ChatMessage
+                        key={`${message._id}-${index}`}
+                        message={message}
+                        profilePicture={profilePicture}
+                        onFeedback={handleMessageFeedback}
+                        feedback={messageReactions[message._id] ?? null}
+                        actionsDisabled={isSending}
+                      />
+                    ))
+                  ) : (
+                    <View className="flex-1 items-center justify-center py-20">
+                      <Text className="text-white/60 font-inter">
+                        No messages yet
+                      </Text>
+                    </View>
+                  )}
+                </ScrollView>
+              ) : (
+                // Show greeting when no conversation is active
+                <TouchableWithoutFeedback
+                  onPress={Keyboard.dismiss}
+                  accessible={false}
+                >
+                  <View className="flex-1 items-center justify-center">
+                    <View className="items-center">
+                      <Text
+                        className="text-white font-normal text-center mb-2"
+                        style={{
+                          fontFamily: "Questrial_400Regular",
+                          fontSize: Math.min(width * 0.1, 42),
+                          lineHeight: Math.min(width * 0.12, 50),
+                        }}
+                      >
+                        Hi, {userName}
+                      </Text>
+                      <Text
+                        className="text-white/60 font-inter text-center"
+                        style={{ fontSize: Math.min(width * 0.045, 18) }}
+                      >
+                        How may I help you?
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableWithoutFeedback>
+              )}
+
+              {/* Scroll to Bottom Button — ChatGPT style */}
+              {activeConversationId && (
+                <Animated.View
+                  pointerEvents={isAtBottom ? "none" : "auto"}
+                  style={{
+                    alignItems: "center",
+                    height: 0,
+                    overflow: "visible",
+                    zIndex: 10,
+                    opacity: scrollToBottomAnim,
+                    transform: [
+                      {
+                        scale: scrollToBottomAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.8, 1],
+                        }),
+                      },
+                    ],
+                  }}
+                >
                   <TouchableOpacity
-                    className="flex-1 py-3 bg-white/10 rounded-xl items-center"
-                    onPress={() => setIsDeleteModalVisible(false)}
-                    disabled={isDeleting}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
+                      setIsAtBottom(true);
+                      Animated.timing(scrollToBottomAnim, {
+                        toValue: 0,
+                        duration: 200,
+                        useNativeDriver: true,
+                      }).start();
+                    }}
+                    activeOpacity={0.7}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: "#0A0A0A",
+                      borderWidth: 1,
+                      borderColor: "rgba(255, 255, 255, 0.3)",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginTop: -36,
+                    }}
                   >
-                    <Text className="text-white font-semibold">Cancel</Text>
+                    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+                      <Path
+                        d="M12 5v14M5 12l7 7 7-7"
+                        stroke="#fff"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    className="flex-1 py-3 bg-red-500/20 items-center justify-center rounded-xl"
-                    onPress={handleDeleteConversation}
-                    disabled={isDeleting}
+                </Animated.View>
+              )}
+
+              {/* Bottom Input Area */}
+              <View style={{ paddingTop: 10 }}>
+                <View className="flex-row items-center gap-3">
+                  <View
+                    className="flex-1 h-[56px] rounded-full overflow-hidden"
+                    style={{ position: "relative" }}
                   >
-                    {isDeleting ? (
-                      <ActivityIndicator size="small" color="#ef4444" />
-                    ) : (
-                      <Text className="text-red-500 font-semibold">Delete</Text>
-                    )}
+                    <BlurView intensity={30} tint="dark" className="flex-1">
+                      <View
+                        className="flex-1 flex-row items-center pl-5 pr-4 rounded-full"
+                        style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
+                      >
+                        {/* SVG Gradient Border */}
+                        <View
+                          style={{ position: "absolute", inset: 0 }}
+                          pointerEvents="none"
+                        >
+                          <Svg height="100%" width="100%">
+                            <Defs>
+                              <SvgLinearGradient
+                                id="inputBorderGrad"
+                                x1="0%"
+                                y1="0%"
+                                x2="100%"
+                                y2="0%"
+                              >
+                                <Stop
+                                  offset="0%"
+                                  stopColor="rgba(141, 138, 138, 0.4)"
+                                  stopOpacity="1"
+                                />
+                                <Stop
+                                  offset="48.56%"
+                                  stopColor="rgba(65, 65, 65, 0.4)"
+                                  stopOpacity="1"
+                                />
+                                <Stop
+                                  offset="100%"
+                                  stopColor="rgba(141, 138, 138, 0.4)"
+                                  stopOpacity="1"
+                                />
+                              </SvgLinearGradient>
+                            </Defs>
+                            <Rect
+                              x="0.34"
+                              y="0.34"
+                              width="99.3%"
+                              height="99%"
+                              rx="28"
+                              ry="28"
+                              stroke="url(#inputBorderGrad)"
+                              strokeWidth="0.68"
+                              fill="transparent"
+                            />
+                          </Svg>
+                        </View>
+                        <TextInput
+                          value={inputText}
+                          onChangeText={setInputText}
+                          onFocus={() => setIsKeyboardVisible(true)}
+                          onBlur={() => setIsKeyboardVisible(false)}
+                          placeholder={
+                            isListening ? "Listening..." : "Type your message..."
+                          }
+                          placeholderTextColor="rgba(255,255,255,0.6)"
+                          className="flex-1 h-[44px] px-1 py-0 text-white"
+                          style={{
+                            textAlignVertical: "center",
+                            paddingTop: Platform.OS === "ios" ? 12 : 0,
+                          }}
+                          selectionColor="#fff"
+                          multiline={true}
+                        />
+                        <TouchableOpacity
+                          onPress={isListening ? stopListening : startListening}
+                          style={{
+                            width: 40,
+                            height: 40,
+                          }}
+                        >
+                          <Animated.View
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              alignItems: "center",
+                              justifyContent: "center",
+                              backgroundColor: isListening
+                                ? "#ef4444"
+                                : "rgba(0,0,0,0.3)",
+                              position: "relative",
+                              transform: [{ scale: pulseAnim }],
+                            }}
+                          >
+                            {!isListening && <GradientRingSVG />}
+                            {isListening ? (
+                              <View
+                                style={{
+                                  width: 12,
+                                  height: 12,
+                                  backgroundColor: "#fff",
+                                  borderRadius: 3,
+                                }}
+                              />
+                            ) : (
+                              <Image
+                                source={require("../../assets/icons/voice.png")}
+                                className="w-5 h-5"
+                                resizeMode="contain"
+                              />
+                            )}
+                          </Animated.View>
+                        </TouchableOpacity>
+                      </View>
+                    </BlurView>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      handleSendMessage();
+                    }}
+                    disabled={isSending}
+                    className="w-[56px] h-[56px] rounded-full items-center justify-center overflow-hidden"
+                    style={{ opacity: isSending ? 0.7 : 1 }}
+
+
+                  >
+                    <ImageBackground
+                      source={require("../../assets/images/post_without.jpg")}
+                      className="w-full h-full items-center justify-center"
+                      resizeMode="cover"
+                    >
+                      <View className="absolute inset-0 bg-blue-500/20" />
+                      {isSending ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Image
+                          source={require("../../assets/icons/send-msg.png")}
+                          className="w-6 h-6"
+                          resizeMode="contain"
+                        />
+                      )}
+                    </ImageBackground>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
-          )}
+          </KeyboardAvoidingView>
         </View>
-      </Modal>
 
-      {/* Edit Conversation Modal */}
-      <Modal
-        visible={isEditModalVisible}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeEditModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? -150 : 0}
-          className="flex-1"
+        {/* Sidebar Overlay */}
+        <Modal
+          visible={isModalVisible}
+          transparent={true}
+          animationType="none"
+          onRequestClose={closeSidebar}
         >
-          <View className="flex-1 items-center justify-center bg-black/70">
+          <View className="flex-1 flex-row">
             <TouchableOpacity
               activeOpacity={1}
-              onPress={Keyboard.dismiss}
-              className="absolute inset-0"
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                closeSidebar();
+              }}
+              className="absolute inset-0 bg-black/60"
             />
-            <TouchableWithoutFeedback
-              onPress={Keyboard.dismiss}
-              accessible={false}
+            <Animated.View
+              style={{
+                width: sidebarWidth,
+                height: "100%",
+                left: -9,
+                borderTopRightRadius: 24,
+                borderBottomRightRadius: 24,
+                overflow: "hidden",
+                transform: [{ translateX: slideAnim }],
+                paddingTop: Math.max(insets.top, 40),
+                paddingBottom: Math.max(insets.bottom, 24),
+              }}
+              className="bg-[#0A0A0A] p-6"
             >
-              <View
-                style={{ width: Math.min(width * 0.85, 350) }}
-                className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
-              >
-                <View className="flex-row items-center justify-between mb-6">
-                  <Text className="text-white text-2xl font-bold font-inter">
-                    Edit Conversation
-                  </Text>
-                  <TouchableOpacity
-                    onPress={closeEditModal}
-                    style={{ width: normalize(32), height: normalize(32) }}
-                    className="items-center justify-center rounded-full bg-white/10"
-                  >
-                    <X color="#fff" size={20} />
-                  </TouchableOpacity>
-                </View>
-
-                <Text className="text-white/60 font-inter text-sm mb-3">
-                  Conversation Name
+              <View className="flex-row items-center justify-between mb-8">
+                <Text className="text-white text-2xl font-bold font-inter">
+                  Chat History
                 </Text>
-
-                <View className="mb-4">
-                  <View
-                    className="h-[56px] rounded-2xl overflow-hidden"
-                    style={{ position: "relative" }}
-                  >
-                    <BlurView intensity={30} tint="dark" className="flex-1">
-                      <View
-                        className="flex-1 px-5 rounded-2xl justify-center"
-                        style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                      >
-                        <TextInput
-                          value={editName}
-                          onChangeText={setEditName}
-                          placeholder="Enter conversation name..."
-                          placeholderTextColor="rgba(255,255,255,0.4)"
-                          className="flex-1 h-[44px] px-1 py-0 text-white"
-                          selectionColor="#fff"
-                          editable={!isEditing}
-                          onSubmitEditing={handleEditConversation}
-                        />
-                      </View>
-                    </BlurView>
-                  </View>
-                </View>
-
-                {editError && (
-                  <Text className="text-red-400 font-inter text-sm mb-4">
-                    {editError}
-                  </Text>
-                )}
-
                 <TouchableOpacity
-                  onPress={handleEditConversation}
-                  disabled={isEditing || !editName.trim()}
-                  className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
-                  style={{
-                    opacity: isEditing || !editName.trim() ? 0.5 : 1,
-                  }}
+                  onPress={closeSidebar}
+                  style={{ width: normalize(38), height: normalize(38) }}
+                  className="items-center justify-center rounded-full relative"
                 >
-                  <ImageBackground
-                    source={require("../../assets/images/post_without.jpg")}
-                    className="w-full h-full items-center justify-center"
-                    resizeMode="cover"
-                  >
-                    <View className="absolute inset-0 bg-blue-500/20" />
-                    {isEditing ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text className="text-white font-inter font-semibold text-base">
-                        Save Changes
-                      </Text>
-                    )}
-                  </ImageBackground>
+                  <GradientRingSVG />
+                  <X color="#fff" size={24} />
                 </TouchableOpacity>
               </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
-      {/* Create Conversation Modal */}
-      <Modal
-        visible={isCreateModalVisible}
-        transparent={true}
-        animationType="none"
-        onRequestClose={closeCreateModal}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? -150 : 0}
-          className="flex-1"
+              <TouchableOpacity
+                onPress={openCreateModalFromDrawer}
+                className="flex-row items-center bg-white/10 p-4 rounded-xl mb-8 border border-white/5"
+              >
+                <Plus color="#fff" size={20} />
+                <Text className="text-white ml-3 font-inter font-medium text-base">
+                  New chat
+                </Text>
+              </TouchableOpacity>
+
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+                bounces={true}
+              >
+                {isLoadingConversations ? (
+                  <View className="items-center justify-center py-8">
+                    <ActivityIndicator size="large" color="#fff" />
+                    <Text className="text-white/60 font-inter text-sm mt-4">
+                      Loading conversations...
+                    </Text>
+                  </View>
+                ) : conversationsError ? (
+                  <View className="items-center justify-center py-8">
+                    <Text className="text-red-400 font-inter text-sm">
+                      {conversationsError}
+                    </Text>
+                  </View>
+                ) : conversations.length > 0 ? (
+                  <>
+                    <Text className="text-white/40 font-inter font-medium text-sm mb-4 tracking-wider">
+                      Recent chats
+                    </Text>
+                    {conversations.map((conversation) => (
+                      <ChatItem
+                        key={conversation._id}
+                        conversation={conversation}
+                        onSelect={(id) => {
+                          loadHistory(id);
+                          closeSidebar();
+                        }}
+                        onEdit={openEditModal}
+                        onDelete={(id) => {
+                          setConversationToDelete(id);
+                          setIsDeleteModalVisible(true);
+                        }}
+                      />
+                    ))}
+                  </>
+                ) : (
+                  <View className="items-center justify-center py-8">
+                    <Text className="text-white/60 font-inter text-sm">
+                      No conversations yet
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            </Animated.View>
+
+            {/* Delete Confirmation Overlay (Global Sibling) */}
+            {isDeleteModalVisible && (
+              <View
+                className="bg-black/80 items-center justify-center p-4 z-50 elevation-5"
+                style={StyleSheet.absoluteFill}
+              >
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => !isDeleting && setIsDeleteModalVisible(false)}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View
+                  className="bg-[#1A1A1A] w-full max-w-xs p-6 rounded-2xl border border-white/10 z-10 elevation-5"
+                  style={{ zIndex: 100 }}
+                >
+                  <Text className="text-white text-lg font-bold font-inter text-center mb-2">
+                    Delete Chat?
+                  </Text>
+                  <Text className="text-white/60 text-sm font-inter text-center mb-6">
+                    Are you sure you want to delete this chat? This action cannot
+                    be undone.
+                  </Text>
+
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      className="flex-1 py-3 bg-white/10 rounded-xl items-center"
+                      onPress={() => setIsDeleteModalVisible(false)}
+                      disabled={isDeleting}
+                    >
+                      <Text className="text-white font-semibold">Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 py-3 bg-red-500/20 items-center justify-center rounded-xl"
+                      onPress={handleDeleteConversation}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <ActivityIndicator size="small" color="#ef4444" />
+                      ) : (
+                        <Text className="text-red-500 font-semibold">Delete</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        </Modal>
+
+        {/* Edit Conversation Modal */}
+        <Modal
+          visible={isEditModalVisible}
+          transparent={true}
+          animationType="none"
+          onRequestClose={closeEditModal}
         >
-          <View className="flex-1 items-center justify-center bg-black/70">
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={Keyboard.dismiss}
-              className="absolute inset-0"
-            />
-            <TouchableWithoutFeedback
-              onPress={Keyboard.dismiss}
-              accessible={false}
-            >
-              <View
-                style={{ width: Math.min(width * 0.85, 350) }}
-                className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? -150 : 0}
+            className="flex-1"
+          >
+            <View className="flex-1 items-center justify-center bg-black/70">
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={Keyboard.dismiss}
+                className="absolute inset-0"
+              />
+              <TouchableWithoutFeedback
+                onPress={Keyboard.dismiss}
+                accessible={false}
               >
-                <View className="flex-row items-center justify-between mb-6">
-                  <Text className="text-white text-2xl font-bold font-inter">
-                    New Conversation
+                <View
+                  style={{ width: Math.min(width * 0.85, 350) }}
+                  className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
+                >
+                  <View className="flex-row items-center justify-between mb-6">
+                    <Text className="text-white text-2xl font-bold font-inter">
+                      Edit Conversation
+                    </Text>
+                    <TouchableOpacity
+                      onPress={closeEditModal}
+                      style={{ width: normalize(32), height: normalize(32) }}
+                      className="items-center justify-center rounded-full bg-white/10"
+                    >
+                      <X color="#fff" size={20} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text className="text-white/60 font-inter text-sm mb-3">
+                    Conversation Name
                   </Text>
+
+                  <View className="mb-4">
+                    <View
+                      className="h-[56px] rounded-2xl overflow-hidden"
+                      style={{ position: "relative" }}
+                    >
+                      <BlurView intensity={30} tint="dark" className="flex-1">
+                        <View
+                          className="flex-1 px-5 rounded-2xl justify-center"
+                          style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                        >
+                          <TextInput
+                            value={editName}
+                            onChangeText={setEditName}
+                            placeholder="Enter conversation name..."
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            className="flex-1 h-[44px] px-1 py-0 text-white"
+                            selectionColor="#fff"
+                            editable={!isEditing}
+                            onSubmitEditing={handleEditConversation}
+                          />
+                        </View>
+                      </BlurView>
+                    </View>
+                  </View>
+
+                  {editError && (
+                    <Text className="text-red-400 font-inter text-sm mb-4">
+                      {editError}
+                    </Text>
+                  )}
+
                   <TouchableOpacity
-                    onPress={closeCreateModal}
-                    style={{ width: normalize(32), height: normalize(32) }}
-                    className="items-center justify-center rounded-full bg-white/10"
+                    onPress={handleEditConversation}
+                    disabled={isEditing || !editName.trim()}
+                    className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
+                    style={{
+                      opacity: isEditing || !editName.trim() ? 0.5 : 1,
+                    }}
                   >
-                    <X color="#fff" size={20} />
+                    <ImageBackground
+                      source={require("../../assets/images/post_without.jpg")}
+                      className="w-full h-full items-center justify-center"
+                      resizeMode="cover"
+                    >
+                      <View className="absolute inset-0 bg-blue-500/20" />
+                      {isEditing ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text className="text-white font-inter font-semibold text-base">
+                          Save Changes
+                        </Text>
+                      )}
+                    </ImageBackground>
                   </TouchableOpacity>
                 </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
-                <Text className="text-white/60 font-inter text-sm mb-3">
-                  Conversation Name
-                </Text>
-
-                <View className="mb-4">
-                  <View
-                    className="h-[56px] rounded-2xl overflow-hidden"
-                    style={{ position: "relative" }}
-                  >
-                    <BlurView intensity={30} tint="dark" className="flex-1">
-                      <View
-                        className="flex-1 px-5 rounded-2xl justify-center"
-                        style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
-                      >
-                        <TextInput
-                          value={conversationName}
-                          onChangeText={setConversationName}
-                          placeholder="Enter conversation name..."
-                          placeholderTextColor="rgba(255,255,255,0.4)"
-                          className="flex-1 h-[44px] px-1 py-0 text-white"
-                          selectionColor="#fff"
-                          editable={!isCreating}
-                          onSubmitEditing={handleCreateConversation}
-                        />
-                      </View>
-                    </BlurView>
-                  </View>
-                </View>
-
-                {createError && (
-                  <Text className="text-red-400 font-inter text-sm mb-4">
-                    {createError}
-                  </Text>
-                )}
-
-                <TouchableOpacity
-                  onPress={handleCreateConversation}
-                  disabled={isCreating || !conversationName.trim()}
-                  className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
-                  style={{
-                    opacity: isCreating || !conversationName.trim() ? 0.5 : 1,
-                  }}
+        {/* Create Conversation Modal */}
+        <Modal
+          visible={isCreateModalVisible}
+          transparent={true}
+          animationType="none"
+          onRequestClose={closeCreateModal}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? -150 : 0}
+            className="flex-1"
+          >
+            <View className="flex-1 items-center justify-center bg-black/70">
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={Keyboard.dismiss}
+                className="absolute inset-0"
+              />
+              <TouchableWithoutFeedback
+                onPress={Keyboard.dismiss}
+                accessible={false}
+              >
+                <View
+                  style={{ width: Math.min(width * 0.85, 350) }}
+                  className="bg-[#1A1A1A] rounded-3xl p-6 border border-white/10"
                 >
-                  <ImageBackground
-                    source={require("../../assets/images/post_without.jpg")}
-                    className="w-full h-full items-center justify-center"
-                    resizeMode="cover"
+                  <View className="flex-row items-center justify-between mb-6">
+                    <Text className="text-white text-2xl font-bold font-inter">
+                      New Conversation
+                    </Text>
+                    <TouchableOpacity
+                      onPress={closeCreateModal}
+                      style={{ width: normalize(32), height: normalize(32) }}
+                      className="items-center justify-center rounded-full bg-white/10"
+                    >
+                      <X color="#fff" size={20} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text className="text-white/60 font-inter text-sm mb-3">
+                    Conversation Name
+                  </Text>
+
+                  <View className="mb-4">
+                    <View
+                      className="h-[56px] rounded-2xl overflow-hidden"
+                      style={{ position: "relative" }}
+                    >
+                      <BlurView intensity={30} tint="dark" className="flex-1">
+                        <View
+                          className="flex-1 px-5 rounded-2xl justify-center"
+                          style={{ backgroundColor: "rgba(255, 255, 255, 0.05)" }}
+                        >
+                          <TextInput
+                            value={conversationName}
+                            onChangeText={setConversationName}
+                            placeholder="Enter conversation name..."
+                            placeholderTextColor="rgba(255,255,255,0.4)"
+                            className="flex-1 h-[44px] px-1 py-0 text-white"
+                            selectionColor="#fff"
+                            editable={!isCreating}
+                            onSubmitEditing={handleCreateConversation}
+                          />
+                        </View>
+                      </BlurView>
+                    </View>
+                  </View>
+
+                  {createError && (
+                    <Text className="text-red-400 font-inter text-sm mb-4">
+                      {createError}
+                    </Text>
+                  )}
+
+                  <TouchableOpacity
+                    onPress={handleCreateConversation}
+                    disabled={isCreating || !conversationName.trim()}
+                    className="h-[56px] rounded-2xl items-center justify-center overflow-hidden"
+                    style={{
+                      opacity: isCreating || !conversationName.trim() ? 0.5 : 1,
+                    }}
                   >
-                    <View className="absolute inset-0 bg-blue-500/20" />
-                    {isCreating ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text className="text-white font-inter font-semibold text-base">
-                        Create Conversation
-                      </Text>
-                    )}
-                  </ImageBackground>
-                </TouchableOpacity>
+                    <ImageBackground
+                      source={require("../../assets/images/post_without.jpg")}
+                      className="w-full h-full items-center justify-center"
+                      resizeMode="cover"
+                    >
+                      <View className="absolute inset-0 bg-blue-500/20" />
+                      {isCreating ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text className="text-white font-inter font-semibold text-base">
+                          Create Conversation
+                        </Text>
+                      )}
+                    </ImageBackground>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* AI Consent Modal */}
+        <Modal
+          visible={!aiConsent && !!userEmail}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => {}}
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+            <View className="bg-[#1A1A1A] w-full max-w-[340px] rounded-[32px] p-6 border border-white/10">
+              <View className="items-center mb-6">
+                <View className="w-16 h-16 bg-blue-500/10 rounded-full items-center justify-center mb-4">
+                  <Text style={{ fontSize: 32 }}>🔒</Text>
+                </View>
+                <Text className="text-white text-2xl font-bold font-inter text-center">
+                  Before You Continue
+                </Text>
               </View>
-            </TouchableWithoutFeedback>
+
+              <Text className="text-white/80 font-inter text-base mb-4 leading-6 text-center">
+                Sosh uses AI to power your content generation and chat features.
+              </Text>
+
+              <Text className="text-white/80 font-inter text-base mb-4 leading-6">
+                By continuing, you agree to share the following with <Text className="font-bold text-white">{subscription?.plan === "Business" ? "Poppy AI" : "Claude (by Anthropic)"}</Text>, our AI provider:
+              </Text>
+
+              <View className="ml-2 mb-6 gap-2">
+                <Text className="text-white/80 font-inter text-sm">• Your prompts and chat messages</Text>
+                <Text className="text-white/80 font-inter text-sm">• Brand voice and content data</Text>
+                <Text className="text-white/80 font-inter text-sm">• Captions and content drafts</Text>
+                <Text className="text-white/80 font-inter text-sm">• Conversation history</Text>
+              </View>
+
+              <Text className="text-white/60 font-inter text-sm mb-6 text-center">
+                Your data is processed only to generate AI responses.
+              </Text>
+
+              <TouchableOpacity onPress={() => Linking.openURL('https://sosh.digital/privacy-policy')} className="mb-6">
+                <Text className="text-blue-400 font-inter text-center">View Privacy Policy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => dispatch(updateUser({ aiConsent: true }))}
+                className="w-full h-14 bg-white rounded-2xl items-center justify-center mb-3"
+              >
+                <Text className="text-black font-bold text-lg">I Agree and Continue</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.replace("/")}
+                className="w-full h-14 bg-white/10 rounded-2xl items-center justify-center"
+              >
+                <Text className="text-white font-bold text-lg">Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        </Modal>
+
       </View>
     </View>
   );
