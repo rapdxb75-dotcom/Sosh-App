@@ -644,7 +644,7 @@ const PlatformCard = ({
                         />
                       }
                       labels={({ datum }) =>
-                        `${datum.dateLabel}\n${Math.round(datum.y2)}`
+                        `${datum.dateLabel}\n${Math.round(datum.y2).toLocaleString("en-US")}`
                       }
                       labelComponent={
                         <CustomTooltipWithDot
