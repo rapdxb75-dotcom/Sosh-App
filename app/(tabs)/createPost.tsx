@@ -496,6 +496,8 @@ export default function CreatePost() {
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const isBackgroundPublishing = useRef(false);
+  // Locks the main scroll while the user is drag-reordering carousel images
+  const [isDraggingGrid, setIsDraggingGrid] = useState(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
@@ -2172,6 +2174,7 @@ export default function CreatePost() {
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={!isDraggingGrid}
       >
         {/* Header */}
         <View className="w-full">
@@ -2356,7 +2359,11 @@ export default function CreatePost() {
                                         numColumns={3}
                                         itemHeight={itemWidth}
                                         data={gridData}
+                                        onDragItemActive={() =>
+                                          setIsDraggingGrid(true)
+                                        }
                                         onDragRelease={(newData) => {
+                                          setIsDraggingGrid(false);
                                           const updatedMedia = newData
                                             .filter(
                                               (item: any) =>
