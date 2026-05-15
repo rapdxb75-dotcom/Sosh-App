@@ -11,15 +11,16 @@ import { ShieldCheck, Cpu, Database, Share2, Sparkles } from 'lucide-react-nativ
 const { height } = Dimensions.get('window');
 
 export const PROVIDERS = [
-  { name: 'Claude (Anthropic)', purpose: 'Smart Content Generation', icon: <Cpu size={20} color="#1DB954" /> },
-  { name: 'Ayrshare', purpose: 'Social Media Connectivity', icon: <Database size={20} color="#1DB954" /> },
-  { name: 'Zernio', purpose: 'Advanced Analytics', icon: <Sparkles size={20} color="#1DB954" /> },
+  { name: 'Anthropic (Claude)', purpose: 'Smart Content Generation & Chat', icon: <Cpu size={20} color="#1DB954" /> },
+  { name: 'Poppy AI', purpose: 'Custom Business Intelligence & Chat', icon: <Sparkles size={20} color="#1DB954" /> },
+  { name: 'Ayrshare', purpose: 'Social Media Publishing & Connectivity', icon: <Database size={20} color="#1DB954" /> },
+  { name: 'Zernio', purpose: 'Advanced Social Analytics', icon: <Share2 size={20} color="#1DB954" /> },
 ];
 
 export const DATA_SHARED = [
-  { icon: <Database size={22} color="#1DB954" />, title: 'Account Data', desc: 'Username and profile info for platform identification.' },
-  { icon: <Cpu size={22} color="#1DB954" />, title: 'Prompts & Input', desc: 'Captions and descriptions you provide for AI processing.' },
-  { icon: <Share2 size={22} color="#1DB954" />, title: 'Media Assets', desc: 'Photos and videos you choose to publish.' },
+  { icon: <Database size={22} color="#1DB954" />, title: 'Account Data', desc: 'Username, profile info, and brand data for platform identification.' },
+  { icon: <Cpu size={22} color="#1DB954" />, title: 'Prompts & Input', desc: 'User-provided prompts, chat messages, and content data for AI processing.' },
+  { icon: <Share2 size={22} color="#1DB954" />, title: 'Media Assets', desc: 'Captions, photos, and videos you choose to process or publish.' },
 ];
 
 interface AIDisclosureViewProps {

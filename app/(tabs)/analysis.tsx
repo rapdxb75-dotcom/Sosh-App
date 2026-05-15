@@ -316,7 +316,7 @@ const PlatformCard = ({
       case "youtube":
         return "90 days";
       case "tiktok":
-        return "90 days";
+        return "60 days";
       case "snapchat":
         return "90 days";
       /*
@@ -1069,7 +1069,7 @@ export default function Analysis() {
           likes: analytics.tiktok?.likeCountTotal,
           comments: analytics.tiktok?.commentCountTotal,
           shares: analytics.tiktok?.shareCountTotal,
-        }, 90),
+        }, 60),
         metrics: {
           views: analytics.tiktok?.viewCountTotal || 0,
           likes: analytics.tiktok?.likeCountTotal || 0,

@@ -47,7 +47,7 @@ import { MarkdownText } from "../../components/common/MarkdownText";
 import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
-import chatService, { Conversation, Message } from "../../services/api/chat";
+import chatService, { Conversation, Message, CreateConversationResponse } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
 import { incrementAIChatCount } from "../../services/firebase";
 
@@ -57,9 +57,12 @@ import {
   speechRecognitionModule,
   useOptionalSpeechRecognitionEvent,
 } from "../../services/speechRecognition";
-import { RootState, AppDispatch } from "../../store/store";
+import { AppDispatch, RootState } from "../../store/store";
 import { updateUser } from "../../store/userSlice";
+import AIConsentModal from "../../components/common/AIConsentModal";
+import Paywall from "../../components/subscription/Paywall";
 const AI_CHAT_LIMIT = 5;
+const PRO_AI_CHAT_LIMIT = 500;
 
 /* ---------- Gradient Ring Component ---------- */
 const GradientRingSVG = () => {
@@ -622,6 +625,7 @@ export default function AI() {
 
   const { addNotification } = useNotification();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
@@ -1310,8 +1314,19 @@ export default function AI() {
           {
             text: "Manage Plan",
             style: "default",
-            onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
+            onPress: () => setPaywallVisible(true),
           },
+        ]
+      );
+      return;
+    }
+
+    if (isProPlan && aiChatCountValue >= PRO_AI_CHAT_LIMIT) {
+      Alert.alert(
+        "Limit Exceeded",
+        "Monthly Pro limit of 500 chats reached. Please contact support or wait until next month.",
+        [
+          { text: "OK", style: "default" },
         ]
       );
       return;
@@ -1366,12 +1381,12 @@ export default function AI() {
         console.log("📡 [AI] Creating new conversation on backend...");
 
 
-        const response = await chatService.createConversation({
-          boardId: poppyBoardId,
-          chatId: poppyChatId,
+        const response = (await chatService.createConversation({
+          boardId: aiAdditions?.poppyAIChatbot?.boardId || null,
+          chatId: aiAdditions?.poppyAIChatbot?.chatId || null,
           name: title,
           subscription: subscription?.plan,
-        });
+        })) as CreateConversationResponse;
 
 
         console.log("📥 [API Response] Auto-create Conversation:", response);
@@ -1484,9 +1499,9 @@ export default function AI() {
           : poppyService.streamMessage(
             currentConversationId!,
             content,
-            poppyBoardId,
-            poppyChatId,
-            userEmail,
+            (aiAdditions?.poppyAIChatbot?.boardId as string) || "",
+            (aiAdditions?.poppyAIChatbot?.chatId as string) || "",
+            userEmail || "",
             (delta) => {
               if (!delta) return;
               fullAIResponse += delta;
@@ -1529,8 +1544,9 @@ export default function AI() {
           .then(() => console.log("✅ [AI] manageHistory (AI) complete"))
           .catch((err) => console.error("❌ [AI] manageHistory (AI) failed:", err));
 
-        if (isFreePlan) {
+        if (isFreePlan || isProPlan) {
           incrementAIChatCount(userEmail).catch(() => { });
+          dispatch(updateUser({ aiChatCount: aiChatCountValue + 1 }));
         }
       } else {
         console.warn("⏭️ [AI] Skipping manageHistory (AI):", {
@@ -2375,62 +2391,16 @@ export default function AI() {
         </Modal>
 
         {/* AI Consent Modal */}
-        <Modal
+        <AIConsentModal
           visible={!aiConsent && !!userEmail}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => {}}
-        >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-            <View className="bg-[#1A1A1A] w-full max-w-[340px] rounded-[32px] p-6 border border-white/10">
-              <View className="items-center mb-6">
-                <View className="w-16 h-16 bg-blue-500/10 rounded-full items-center justify-center mb-4">
-                  <Text style={{ fontSize: 32 }}>🔒</Text>
-                </View>
-                <Text className="text-white text-2xl font-bold font-inter text-center">
-                  Before You Continue
-                </Text>
-              </View>
+          onClose={() => router.replace("/")}
+        />
 
-              <Text className="text-white/80 font-inter text-base mb-4 leading-6 text-center">
-                Sosh uses AI to power your content generation and chat features.
-              </Text>
-
-              <Text className="text-white/80 font-inter text-base mb-4 leading-6">
-                By continuing, you agree to share the following with <Text className="font-bold text-white">{subscription?.plan === "Business" ? "Poppy AI" : "Claude (by Anthropic)"}</Text>, our AI provider:
-              </Text>
-
-              <View className="ml-2 mb-6 gap-2">
-                <Text className="text-white/80 font-inter text-sm">• Your prompts and chat messages</Text>
-                <Text className="text-white/80 font-inter text-sm">• Brand voice and content data</Text>
-                <Text className="text-white/80 font-inter text-sm">• Captions and content drafts</Text>
-                <Text className="text-white/80 font-inter text-sm">• Conversation history</Text>
-              </View>
-
-              <Text className="text-white/60 font-inter text-sm mb-6 text-center">
-                Your data is processed only to generate AI responses.
-              </Text>
-
-              <TouchableOpacity onPress={() => Linking.openURL('https://sosh.digital/privacy-policy')} className="mb-6">
-                <Text className="text-blue-400 font-inter text-center">View Privacy Policy</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => dispatch(updateUser({ aiConsent: true }))}
-                className="w-full h-14 bg-white rounded-2xl items-center justify-center mb-3"
-              >
-                <Text className="text-black font-bold text-lg">I Agree and Continue</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => router.replace("/")}
-                className="w-full h-14 bg-white/10 rounded-2xl items-center justify-center"
-              >
-                <Text className="text-white font-bold text-lg">Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        {/* Paywall Modal */}
+        <Paywall
+          visible={paywallVisible}
+          onClose={() => setPaywallVisible(false)}
+        />
 
       </View>
     </View>
