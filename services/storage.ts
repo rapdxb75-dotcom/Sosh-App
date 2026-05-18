@@ -9,6 +9,7 @@ const EMAIL_KEY = "user_email";
 const HAS_LAUNCHED_KEY = "has_launched";
 const SUBSCRIPTION_KEY = "subscription"; // Matching the string user uses in userSlice.ts
 const AI_CONSENT_KEY = "ai_consent";
+const AI_CHAT_COUNT_KEY = "ai_chat_count";
 
 const storageService = {
   /**
@@ -223,6 +224,30 @@ const storageService = {
   },
 
   /**
+   * Set AI chat count
+   */
+  setAIChatCount: async (count: number) => {
+    try {
+      await AsyncStorage.setItem(AI_CHAT_COUNT_KEY, count.toString());
+    } catch (error) {
+      console.error("Error saving AI chat count", error);
+    }
+  },
+
+  /**
+   * Get AI chat count
+   */
+  getAIChatCount: async () => {
+    try {
+      const count = await AsyncStorage.getItem(AI_CHAT_COUNT_KEY);
+      return count ? parseInt(count, 10) : 0;
+    } catch (error) {
+      console.error("Error getting AI chat count", error);
+      return 0;
+    }
+  },
+
+  /**
    * Set a value in storage
    */
   setItem: async (key: string, value: string) => {
@@ -258,6 +283,7 @@ const storageService = {
         UNREAD_NOTIFICATIONS_COUNT_KEY,
         EMAIL_KEY,
         SUBSCRIPTION_KEY,
+        AI_CHAT_COUNT_KEY,
       ]);
     } catch (error) {
       console.error("Error removing auth data", error);

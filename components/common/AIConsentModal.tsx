@@ -10,8 +10,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight, X } from 'lucide-react-native';
 import { useDispatch } from 'react-redux';
-import { setAIConsent } from '../../store/userSlice';
-import storageService from '../../services/storage';
+import { updateUser } from '../../store/userSlice';
 import AIDisclosureView from './AIDisclosureView';
 
 const { height } = Dimensions.get('window');
@@ -27,8 +26,8 @@ const AIConsentModal: React.FC<AIConsentModalProps> = ({ visible, onClose, showF
 
   const handleAgree = async () => {
     try {
-      await storageService.saveAIConsent(true);
-      dispatch(setAIConsent(true));
+      // @ts-ignore
+      await dispatch(updateUser({ aiConsent: true }));
       onClose();
     } catch (error) {
       console.error('Error saving AI consent:', error);

@@ -89,7 +89,8 @@
           "speechRecognitionPermission": "Sosh requires speech recognition to transcribe your voice into text for captions and AI chat features."
         }
       ],
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "react-native-iap"
     ],
     "experiments": {
       "typedRoutes": true,

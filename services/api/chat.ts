@@ -23,6 +23,8 @@ export interface CreateConversationPayload {
 export interface CreateConversationResponse {
     success: boolean;
     conversationId?: string;
+    id?: string;
+    _id?: string;
     message?: string;
 }
 

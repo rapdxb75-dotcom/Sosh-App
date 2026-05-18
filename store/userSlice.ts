@@ -88,8 +88,9 @@ export const initializeUser = createAsyncThunk("user/initialize", async () => {
     storageService.getProfilePicture(),
     storageService.getToken(),
     storageService.getAIConsent(),
+    storageService.getAIChatCount(),
   ]);
-  const [userName, email, profilePicture, token, aiConsent] = results;
+  const [userName, email, profilePicture, token, aiConsent, aiChatCount] = results;
   let subscription: {
     plan: "Free" | "Pro" | "Business";
     isSubscribed: boolean;
@@ -118,6 +119,7 @@ export const initializeUser = createAsyncThunk("user/initialize", async () => {
     isLoggedIn: !!token,
     subscription,
     aiConsent: results[4] || false,
+    aiChatCount: results[5] || 0,
   };
 });
 
@@ -224,6 +226,7 @@ const userSlice = createSlice({
       state.isLoggedIn = action.payload.isLoggedIn;
       state.subscription = action.payload.subscription;
       state.aiConsent = action.payload.aiConsent;
+      state.aiChatCount = action.payload.aiChatCount;
     });
   },
 });
@@ -266,6 +269,9 @@ export const updateUser =
       }
       if (data.aiConsent !== undefined) {
         await storageService.setAIConsent(data.aiConsent);
+      }
+      if (data.aiChatCount !== undefined) {
+        await storageService.setAIChatCount(data.aiChatCount);
       }
     };
 

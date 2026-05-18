@@ -41,8 +41,10 @@ import Svg, {
   LinearGradient as SvgLinearGradient,
 } from "react-native-svg";
 import Toast from "react-native-toast-message";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import Header from "../components/common/Header";
+import AIConsentModal from "../components/common/AIConsentModal";
+import Paywall from "../components/subscription/Paywall";
 import { useNotification } from "../context/NotificationContext";
 import anthropicService from "../services/api/anthropic";
 import createPostService from "../services/api/createPost";
@@ -50,6 +52,7 @@ import createPostService from "../services/api/createPost";
 import {
   incrementPostCaptionCount,
   incrementReelCaptionCount,
+  incrementAIChatCount,
 } from "../services/firebase";
 import {
   isSpeechRecognitionAvailable,
@@ -64,7 +67,8 @@ import {
   markPreviewPostSuccessReset,
   setPreviewData,
 } from "../store/previewStore";
-import { RootState } from "../store/store";
+import { AppDispatch, RootState } from "../store/store";
+import { updateUser } from "../store/userSlice";
 import { getFreeTierSystemPrompt } from "../utils/prompts";
 import { generateVideoThumbnail } from "../utils/video";
 
@@ -291,10 +295,13 @@ export default function PostPreview() {
     };
   }, [isPublishing]);
 
+  const dispatch = useDispatch<AppDispatch>();
   const [data, setData] = useState<PreviewData | null>(null);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showCoverModal, setShowCoverModal] = useState(false);
   const [showCaptionModal, setShowCaptionModal] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -457,6 +464,10 @@ export default function PostPreview() {
 
   const handleGenerateCaption = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!aiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
     if (!data?.caption?.trim()) {
       Toast.show({
         type: "error",
@@ -483,6 +494,8 @@ export default function PostPreview() {
       // Poppy AI variables removed
       const isFreePlan = user.subscription?.plan === "Free";
       const isProPlan = user.subscription?.plan === "Pro";
+      const aiChatCountValue = user.aiChatCount || 0;
+      const PRO_AI_CHAT_LIMIT = 500;
       const useClaude = true; // Poppy AI removed as per user request
 
       // Limit Enforcement for Free Plan
@@ -496,7 +509,7 @@ export default function PostPreview() {
               {
                 text: "Manage Plan",
                 style: "default",
-                onPress: () => Linking.openURL("https://sosh.digital"),
+                onPress: () => setPaywallVisible(true),
               },
             ],
           );
@@ -510,8 +523,22 @@ export default function PostPreview() {
               {
                 text: "Manage Plan",
                 style: "default",
-                onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
+                onPress: () => setPaywallVisible(true),
               },
+            ],
+          );
+          return;
+        }
+      }
+
+      // Limit Enforcement for Pro Plan
+      if (isProPlan) {
+        if (aiChatCountValue >= PRO_AI_CHAT_LIMIT) {
+          Alert.alert(
+            "Limit Exceeded",
+            "Monthly Pro limit of 500 AI generations reached. Please contact support or wait until next month.",
+            [
+              { text: "OK", style: "default" },
             ],
           );
           return;
@@ -528,15 +555,10 @@ export default function PostPreview() {
         );
       }
 
-      const generatedCaption = useClaude
-        ? await anthropicService.generateMessage(data.caption, finalSystemPrompt)
-        : await poppyService.generateCaption(
-          data.caption,
-          isReel,
-          token,
-          boardId,
-          chatId,
-        );
+      const generatedCaption = await anthropicService.generateMessage(
+        data.caption,
+        finalSystemPrompt,
+      );
 
       setData((prev) => (prev ? { ...prev, caption: generatedCaption } : prev));
 
@@ -554,12 +576,15 @@ export default function PostPreview() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Increment Usage Count
-      if (isFreePlan) {
+      if (isFreePlan && user.email) {
         if (isReel) {
           incrementReelCaptionCount(user.email).catch(console.error);
         } else {
           incrementPostCaptionCount(user.email).catch(console.error);
         }
+      } else if (isProPlan && user.email) {
+        incrementAIChatCount(user.email).catch(console.error);
+        dispatch(updateUser({ aiChatCount: aiChatCountValue + 1 }));
       }
     } catch (error) {
       console.error("Caption generation error:", error);
@@ -2635,6 +2660,19 @@ export default function PostPreview() {
           </View>
         </BlurView>
       </Modal>
+
+      {/* AI Consent Modal */}
+      <AIConsentModal
+        visible={showConsentModal}
+        onClose={() => setShowConsentModal(false)}
+      />
+
+      {/* Paywall Modal */}
+      <Paywall
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+      />
+
       </View>
     </View>
   );

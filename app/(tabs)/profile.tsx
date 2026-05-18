@@ -180,6 +180,7 @@ export default function Profile() {
   const subscription = useSelector(
     (state: RootState) => state.user.subscription,
   );
+  const aiChatCount = useSelector((state: RootState) => state.user.aiChatCount || 0);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -716,9 +717,7 @@ export default function Profile() {
     }
   };
 
-  const handleUpgradeNavigation = () => {
-    Linking.openURL("https://sosh.digital");
-  };
+
 
   const PlanCard = () => {
     const rawPlan = subscription?.plan || "Free";
@@ -806,34 +805,60 @@ export default function Profile() {
               {getDescription()}
             </Text>
 
-            <View className="gap-3">
-              <TouchableOpacity
-                onPress={handleUpgradeNavigation}
-                className="w-full h-12 rounded-full items-center justify-center bg-white"
-                style={{
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 3.84,
-                  elevation: 5,
-                }}
-              >
-                <Text className="font-bold text-base text-black">
-                  Manage via Web
-                </Text>
-              </TouchableOpacity>
+            {isPro && (
+              <View className="mb-6">
+                <View className="flex-row justify-between items-center mb-2">
+                  <Text className="text-white/60 text-xs font-bold uppercase tracking-wider">
+                    Monthly AI Usage
+                  </Text>
+                  <Text className="text-white text-xs font-bold">
+                    {aiChatCount} / 500
+                  </Text>
+                </View>
+                <View className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <View 
+                    className="h-full bg-blue-500 rounded-full"
+                    style={{ width: `${Math.min((aiChatCount / 500) * 100, 100)}%` }}
+                  />
+                </View>
+              </View>
+            )}
 
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setPaywallVisible(true);
-                }}
-                className="w-full h-12 rounded-full items-center justify-center border border-white/30"
-              >
-                <Text className="font-bold text-base text-white">
-                  Manage via App Store
-                </Text>
-              </TouchableOpacity>
+            <View className="gap-3">
+              {!isBusiness && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setPaywallVisible(true);
+                  }}
+                  className="w-full h-12 rounded-full items-center justify-center bg-white"
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 3.84,
+                    elevation: 5,
+                  }}
+                >
+                  <Text className="font-bold text-base text-black">
+                    Upgrade Plan
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {isPremium && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    Linking.openURL("https://apps.apple.com/account/subscriptions");
+                  }}
+                  className="w-full h-12 rounded-full items-center justify-center border border-white/30"
+                >
+                  <Text className="font-bold text-base text-white">
+                    Manage Subscriptions
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </LinearGradient>
         </BlurView>

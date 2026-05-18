@@ -49,13 +49,17 @@ import Toast from "react-native-toast-message";
 import { showEditor } from "react-native-video-trim";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
+import AIConsentModal from "../../components/common/AIConsentModal";
+import Paywall from "../../components/subscription/Paywall";
 import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
 import createPostService from "../../services/api/createPost";
 // Poppy AI removed
+import poppyService from "../../services/api/poppy";
 import {
   incrementPostCaptionCount,
   incrementReelCaptionCount,
+  incrementAIChatCount,
   listenToUserData,
 } from "../../services/firebase";
 import {
@@ -70,7 +74,7 @@ import {
   getPreviewData,
   setPreviewData,
 } from "../../store/previewStore";
-import { RootState, AppDispatch } from "../../store/store";
+import { AppDispatch, RootState } from "../../store/store";
 import { updateUser } from "../../store/userSlice";
 import { getFreeTierSystemPrompt } from "../../utils/prompts";
 import { generateVideoThumbnail } from "../../utils/video";
@@ -488,9 +492,12 @@ export default function CreatePost() {
   const [showCaptionModal, setShowCaptionModal] = useState(false);
   const [showCoverModal, setShowCoverModal] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
   const [isGeneratingCaption, setIsGeneratingCaption] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const isBackgroundPublishing = useRef(false);
+  // Locks the main scroll while the user is drag-reordering carousel images
+  const [isDraggingGrid, setIsDraggingGrid] = useState(false);
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextAppState) => {
@@ -1129,6 +1136,8 @@ export default function CreatePost() {
 
       const isFreePlan = user.subscription?.plan === "Free";
       const isProPlan = user.subscription?.plan === "Pro";
+      const aiChatCountValue = user.aiChatCount || 0;
+      const PRO_AI_CHAT_LIMIT = 500;
       const useClaude = true; // Poppy AI removed as per user request
 
       // Limit Enforcement for Free Plan
@@ -1142,7 +1151,7 @@ export default function CreatePost() {
               {
                 text: "Manage Plan",
                 style: "default",
-                onPress: () => Linking.openURL("https://sosh.digital/?scroll=pricing"),
+                onPress: () => setPaywallVisible(true),
               },
             ],
           );
@@ -1156,8 +1165,22 @@ export default function CreatePost() {
               {
                 text: "Manage Plan",
                 style: "default",
-                onPress: () => Linking.openURL("https://sosh.digital"),
+                onPress: () => setPaywallVisible(true),
               },
+            ],
+          );
+          return;
+        }
+      }
+
+      // Limit Enforcement for Pro Plan
+      if (isProPlan) {
+        if (aiChatCountValue >= PRO_AI_CHAT_LIMIT) {
+          Alert.alert(
+            "Limit Exceeded",
+            "Monthly Pro limit of 500 AI generations reached. Please contact support or wait until next month.",
+            [
+              { text: "OK", style: "default" },
             ],
           );
           return;
@@ -1200,12 +1223,15 @@ export default function CreatePost() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Increment Usage Count
-      if (isFreePlan) {
+      if (isFreePlan && user.email) {
         if (isReel) {
           incrementReelCaptionCount(user.email).catch(console.error);
         } else {
           incrementPostCaptionCount(user.email).catch(console.error);
         }
+      } else if (isProPlan && user.email) {
+        incrementAIChatCount(user.email).catch(console.error);
+        dispatch(updateUser({ aiChatCount: aiChatCountValue + 1 }));
       }
     } catch (error) {
       console.error("Caption generation error:", error);
@@ -2148,6 +2174,7 @@ export default function CreatePost() {
         contentContainerStyle={{ paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={!isDraggingGrid}
       >
         {/* Header */}
         <View className="w-full">
@@ -2332,7 +2359,11 @@ export default function CreatePost() {
                                         numColumns={3}
                                         itemHeight={itemWidth}
                                         data={gridData}
+                                        onDragItemActive={() =>
+                                          setIsDraggingGrid(true)
+                                        }
                                         onDragRelease={(newData) => {
+                                          setIsDraggingGrid(false);
                                           const updatedMedia = newData
                                             .filter(
                                               (item: any) =>
@@ -3428,65 +3459,16 @@ export default function CreatePost() {
       </Modal>
 
       {/* AI Consent Modal */}
-      <Modal
+      <AIConsentModal
         visible={showConsentModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => {}}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View className="bg-[#1A1A1A] w-full max-w-[340px] rounded-[32px] p-6 border border-white/10">
-            <View className="items-center mb-6">
-              <View className="w-16 h-16 bg-blue-500/10 rounded-full items-center justify-center mb-4">
-                <Text style={{ fontSize: 32 }}>🔒</Text>
-              </View>
-              <Text className="text-white text-2xl font-bold font-inter text-center">
-                Before You Continue
-              </Text>
-            </View>
+        onClose={() => setShowConsentModal(false)}
+      />
 
-            <Text className="text-white/80 font-inter text-base mb-4 leading-6 text-center">
-              Sosh uses AI to power your content generation and chat features.
-            </Text>
-
-            <Text className="text-white/80 font-inter text-base mb-4 leading-6">
-              By continuing, you agree to share the following with <Text className="font-bold text-white">{user.subscription?.plan === "Business" ? "Poppy AI" : "Claude (by Anthropic)"}</Text>, our AI provider:
-            </Text>
-
-            <View className="ml-2 mb-6 gap-2">
-              <Text className="text-white/80 font-inter text-sm">• Your prompts and chat messages</Text>
-              <Text className="text-white/80 font-inter text-sm">• Brand voice and content data</Text>
-              <Text className="text-white/80 font-inter text-sm">• Captions and content drafts</Text>
-              <Text className="text-white/80 font-inter text-sm">• Conversation history</Text>
-            </View>
-
-            <Text className="text-white/60 font-inter text-sm mb-6 text-center">
-              Your data is processed only to generate AI responses.
-            </Text>
-
-            <TouchableOpacity onPress={() => Linking.openURL('https://sosh.digital/privacy-policy')} className="mb-6">
-              <Text className="text-blue-400 font-inter text-center">View Privacy Policy</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => {
-                dispatch(updateUser({ aiConsent: true }));
-                setShowConsentModal(false);
-              }}
-              className="w-full h-14 bg-white rounded-2xl items-center justify-center mb-3"
-            >
-              <Text className="text-black font-bold text-lg">I Agree and Continue</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowConsentModal(false)}
-              className="w-full h-14 bg-white/10 rounded-2xl items-center justify-center"
-            >
-              <Text className="text-white font-bold text-lg">Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Paywall Modal */}
+      <Paywall
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
+      />
 
     </View>
   );
