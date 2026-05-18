@@ -160,11 +160,13 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                     <Text className="text-white text-3xl font-bold font-inter">Sosh Pro</Text>
                   </View>
                   <View className="items-end">
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-baseline">
                       <Text className="text-white/30 text-sm line-through mr-2 font-inter">$99</Text>
                       <Text className="text-white text-2xl font-bold font-inter">$79</Text>
+                      <Text className="text-white/60 text-xs font-inter ml-1">/month</Text>
                     </View>
                     <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-right">first month{"\n"}(20% off beta sale)</Text>
+                    <Text className="text-white/30 text-[10px] font-inter text-right mt-1">Auto-renews monthly</Text>
                   </View>
                 </View>
 
@@ -204,11 +206,13 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                     <Text className="text-white text-3xl font-bold font-inter">Sosh Business</Text>
                   </View>
                   <View className="items-end">
-                    <View className="flex-row items-center">
+                    <View className="flex-row items-baseline">
                       <Text className="text-white/30 text-sm line-through mr-2 font-inter">$799</Text>
                       <Text className="text-white text-2xl font-bold font-inter">$599</Text>
+                      <Text className="text-white/60 text-xs font-inter ml-1">/month</Text>
                     </View>
                     <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest text-right">first month{"\n"}(25% off beta sale)</Text>
+                    <Text className="text-white/30 text-[10px] font-inter text-right mt-1">Auto-renews monthly</Text>
                   </View>
                 </View>
 
@@ -256,9 +260,14 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
                 </Text>
               </TouchableOpacity>
 
+              {/* Auto-Renewal Legal Disclosure – Required by Apple Guideline 3.1.2(c) */}
+              <Text className="text-white/40 text-[11px] font-inter text-center mb-5 px-4 leading-[16px]">
+                Subscriptions automatically renew at the end of each billing period unless cancelled at least 24 hours before the renewal date. Your Apple ID account will be charged upon confirmation of purchase. You can manage or cancel your subscription at any time in your Apple ID Account Settings.
+              </Text>
+
               <View className="flex-row justify-center gap-6">
                 <TouchableOpacity onPress={() => Linking.openURL("https://sosh.digital/terms")}>
-                  <Text className="text-white/70 text-xs font-inter">Terms of Use</Text>
+                  <Text className="text-white/70 text-xs font-inter">Terms of Use (EULA)</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => Linking.openURL("https://sosh.digital/privacy")}>
                   <Text className="text-white/70 text-xs font-inter">Privacy Policy</Text>
