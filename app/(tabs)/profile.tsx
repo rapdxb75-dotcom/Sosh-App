@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import { Crown, Rocket, Trash2, Upload, Zap } from "lucide-react-native";
+import { Crown, Rocket, Trash2, Upload, Zap, Lock } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -1103,7 +1103,7 @@ export default function Profile() {
                     }}
                     className="w-full h-14 rounded-2xl flex-row items-center justify-center bg-yellow-500/10 border border-yellow-500/20"
                   >
-                    <Text style={{ fontSize: 18 }}>🔒</Text>
+                    <Lock size={18} color="#eab308" />
                     <Text className="text-yellow-500 font-bold text-base ml-2">Revoke AI Consent</Text>
                   </TouchableOpacity>
                 )}

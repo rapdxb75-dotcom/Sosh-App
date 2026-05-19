@@ -266,7 +266,7 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
               </Text>
 
               <View className="flex-row justify-center gap-6">
-                <TouchableOpacity onPress={() => Linking.openURL("https://sosh.digital/terms")}>
+                <TouchableOpacity onPress={() => Linking.openURL("https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")}>
                   <Text className="text-white/70 text-xs font-inter">Terms of Use (EULA)</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => Linking.openURL("https://sosh.digital/privacy")}>
