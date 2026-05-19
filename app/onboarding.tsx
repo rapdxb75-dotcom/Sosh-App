@@ -8,8 +8,16 @@ import {
   useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import { jwtDecode } from "jwt-decode";
-import { ArrowLeft, ArrowRight, Check, Mic } from "lucide-react-native";
-import { useState } from "react";
+import {
+  ArrowLeft, ArrowRight, Check, Mic,
+  User, Briefcase, Home, Building2, Users,
+  Smile, Flame, Diamond, BookOpen, Code, Sparkles, MessageCircle, Camera, Coffee, Heart, Zap,
+  GraduationCap, Clapperboard, Book, Video, ShoppingBag, Lightbulb, Globe, Mic2, TrendingUp, PenTool, Star, Palette, Film, MoreHorizontal,
+  Rocket, Brain, Laugh, Handshake, ShieldCheck, Eye, Compass, HelpCircle, Trophy,
+  AlignLeft, AlignCenter, AlignJustify, Shuffle, Ban, MessageSquare, Link, BarChart2,
+  FileText, Image as ImageIcon
+} from "lucide-react-native";
+import { useState, useRef, useEffect } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -59,12 +67,12 @@ const STEPS = [
           "What age range best describes your target audience? (Select all that apply)",
         type: "multi-select-chips",
         options: [
-          "👶 Under 18",
-          "🎓 18-24",
-          "💼 25-34",
-          "🏠 35-44",
-          "🏢 45-54",
-          "👴 55+",
+          "Under 18",
+          "18-24",
+          "25-34",
+          "35-44",
+          "45-54",
+          "55+",
         ],
       },
       {
@@ -115,18 +123,18 @@ const STEPS = [
     type: "multi-select",
     key: "brandPersonality",
     options: [
-      "✨ Fun / Playful",
-      "🔥 Bold / Controversial",
-      "👔 Professional / Polished",
-      "💎 Luxurious / Premium",
-      "📚 Educational / Informative",
-      "🤓 Nerdy / Technical",
-      "🌈 Inspirational / Motivational",
-      "😏 Witty / Sarcastic",
-      "🎬 Raw / Unfiltered",
-      "🍃 Calm / Chill",
-      "🤝 Friendly / Approachable",
-      "⚡ High Energy / Hype",
+      "Fun / Playful",
+      "Bold / Controversial",
+      "Professional / Polished",
+      "Luxurious / Premium",
+      "Educational / Informative",
+      "Nerdy / Technical",
+      "Inspirational / Motivational",
+      "Witty / Sarcastic",
+      "Raw / Unfiltered",
+      "Calm / Chill",
+      "Friendly / Approachable",
+      "High Energy / Hype",
     ],
     limit: 5,
   },
@@ -143,22 +151,22 @@ const STEPS = [
           "What types of content do you post or plan to post? (Select all that apply)",
         type: "multi-select-chips",
         options: [
-          "🎓 Tutorials / How-tos",
-          "🤣 Memes / Funny Skits",
-          "🏗️ Behind the Scenes",
-          "📖 Personal Stories",
-          "🤳 Vlogs / Day-in-the-Life",
-          "🛍️ Product Showcases",
-          "💡 Tips & Advice",
-          "🌍 News / Updates",
-          "🎙️ Interviews / Talks",
-          "💪 Motivational",
-          "🔥 Reviews / Hot Takes",
-          "📝 Storytelling",
-          "📼 Raw / Unedited Clips",
-          "✨ Lifestyle / Aesthetic",
-          "📽️ Cinematic",
-          "❓ Other",
+          "Tutorials / How-tos",
+          "Memes / Funny Skits",
+          "Behind the Scenes",
+          "Personal Stories",
+          "Vlogs / Day-in-the-Life",
+          "Product Showcases",
+          "Tips & Advice",
+          "News / Updates",
+          "Interviews / Talks",
+          "Motivational",
+          "Reviews / Hot Takes",
+          "Storytelling",
+          "Raw / Unedited Clips",
+          "Lifestyle / Aesthetic",
+          "Cinematic",
+          "Other",
         ],
       },
       {
@@ -179,16 +187,16 @@ const STEPS = [
     type: "multi-select",
     key: "audienceFeeling",
     options: [
-      "🚀 Inspired to chase something",
-      "🧠 Like they learned something new",
-      "😂 Entertained / Laughing",
-      "⚡ Motivated to take action",
-      "👀 FOMO — they wish they were there",
-      "🤝 Part of a community",
-      "💪 Empowered / Confident",
-      "🧘 Relaxed / At peace",
-      "🤔 Curious / Wanting more",
-      "🤩 Impressed / In awe",
+      "Inspired to chase something",
+      "Like they learned something new",
+      "Entertained / Laughing",
+      "Motivated to take action",
+      "FOMO — they wish they were there",
+      "Part of a community",
+      "Empowered / Confident",
+      "Relaxed / At peace",
+      "Curious / Wanting more",
+      "Impressed / In awe",
     ],
     limit: 3,
   },
@@ -255,10 +263,10 @@ const STEPS = [
         label: "How long do you like your captions?",
         type: "select",
         options: [
-          "⚡ Short & punchy",
-          "📝 Medium — a few sentences",
-          "📖 Long-form — full stories",
-          "🔀 Depends on the post",
+          "Short & punchy",
+          "Medium — a few sentences",
+          "Long-form — full stories",
+          "Depends on the post",
         ],
       },
       {
@@ -266,10 +274,10 @@ const STEPS = [
         label: "How do you feel about emojis in your captions?",
         type: "select",
         options: [
-          "😍 Love them — use them freely",
-          "⚖️ A few here and there",
-          "🚫 Minimal to none",
-          "🎭 Match the vibe of each post",
+          "Love them — use them freely",
+          "A few here and there",
+          "Minimal to none",
+          "Match the vibe of each post",
         ],
       },
     ],
@@ -286,12 +294,12 @@ const STEPS = [
         label: "How do you like to end your captions?",
         type: "select",
         options: [
-          "❓ Ask a question",
-          "📣 Call to action (like/follow)",
-          "🔗 Direct elsewhere (link in bio)",
-          "🗳️ Use a poll or 'this or that'",
-          "🙊 No CTA — let content speak",
-          "🔀 Mix it up",
+          "Ask a question",
+          "Call to action (like/follow)",
+          "Direct elsewhere (link in bio)",
+          "Use a poll or 'this or that'",
+          "No CTA — let content speak",
+          "Mix it up",
         ],
       },
       {
@@ -299,16 +307,101 @@ const STEPS = [
         label: "What do you like the body of your captions to sound like?",
         type: "select",
         options: [
-          "💭 Personal thought or story",
-          "📽️ Describe what's happening",
-          "🗣️ Start a debate",
-          "💡 Share tips, value, or info",
-          "➖ Keep it minimal",
+          "Personal thought or story",
+          "Describe what's happening",
+          "Start a debate",
+          "Share tips, value, or info",
+          "Keep it minimal",
         ],
       },
     ],
   },
 ];
+
+
+const getOptionIcon = (label: string, color: string, size = 18) => {
+  const iconMap: Record<string, any> = {
+    // Age
+    "Under 18": <User color={color} size={size} />,
+    "18-24": <GraduationCap color={color} size={size} />,
+    "25-34": <Briefcase color={color} size={size} />,
+    "35-44": <Home color={color} size={size} />,
+    "45-54": <Building2 color={color} size={size} />,
+    "55+": <Users color={color} size={size} />,
+
+    // Personality
+    "Fun / Playful": <Smile color={color} size={size} />,
+    "Bold / Controversial": <Flame color={color} size={size} />,
+    "Professional / Polished": <Briefcase color={color} size={size} />,
+    "Luxurious / Premium": <Diamond color={color} size={size} />,
+    "Educational / Informative": <BookOpen color={color} size={size} />,
+    "Nerdy / Technical": <Code color={color} size={size} />,
+    "Inspirational / Motivational": <Sparkles color={color} size={size} />,
+    "Witty / Sarcastic": <MessageCircle color={color} size={size} />,
+    "Raw / Unfiltered": <Camera color={color} size={size} />,
+    "Calm / Chill": <Coffee color={color} size={size} />,
+    "Friendly / Approachable": <Heart color={color} size={size} />,
+    "High Energy / Hype": <Zap color={color} size={size} />,
+
+    // Content Style
+    "Tutorials / How-tos": <GraduationCap color={color} size={size} />,
+    "Memes / Funny Skits": <Laugh color={color} size={size} />,
+    "Behind the Scenes": <Camera color={color} size={size} />,
+    "Personal Stories": <Book color={color} size={size} />,
+    "Vlogs / Day-in-the-Life": <Video color={color} size={size} />,
+    "Product Showcases": <ShoppingBag color={color} size={size} />,
+    "Tips & Advice": <Lightbulb color={color} size={size} />,
+    "News / Updates": <Globe color={color} size={size} />,
+    "Interviews / Talks": <Mic2 color={color} size={size} />,
+    "Motivational": <TrendingUp color={color} size={size} />,
+    "Reviews / Hot Takes": <Flame color={color} size={size} />,
+    "Storytelling": <PenTool color={color} size={size} />,
+    "Raw / Unedited Clips": <Film color={color} size={size} />,
+    "Lifestyle / Aesthetic": <Palette color={color} size={size} />,
+    "Cinematic": <Clapperboard color={color} size={size} />,
+    "Other": <MoreHorizontal color={color} size={size} />,
+
+    // Audience Feeling
+    "Inspired to chase something": <Rocket color={color} size={size} />,
+    "Like they learned something new": <Brain color={color} size={size} />,
+    "Entertained / Laughing": <Laugh color={color} size={size} />,
+    "Motivated to take action": <TrendingUp color={color} size={size} />,
+    "FOMO — they wish they were there": <Eye color={color} size={size} />,
+    "Part of a community": <Users color={color} size={size} />,
+    "Empowered / Confident": <ShieldCheck color={color} size={size} />,
+    "Relaxed / At peace": <Coffee color={color} size={size} />,
+    "Curious / Wanting more": <Compass color={color} size={size} />,
+    "Impressed / In awe": <Star color={color} size={size} />,
+
+    // Caption length
+    "Short & punchy": <AlignLeft color={color} size={size} />,
+    "Medium — a few sentences": <AlignCenter color={color} size={size} />,
+    "Long-form — full stories": <AlignJustify color={color} size={size} />,
+    "Depends on the post": <Shuffle color={color} size={size} />,
+
+    // Emojis
+    "Love them — use them freely": <Heart color={color} size={size} />,
+    "A few here and there": <Smile color={color} size={size} />,
+    "Minimal to none": <Ban color={color} size={size} />,
+    "Match the vibe of each post": <Shuffle color={color} size={size} />,
+
+    // End caption
+    "Ask a question": <HelpCircle color={color} size={size} />,
+    "Call to action (like/follow)": <MessageSquare color={color} size={size} />,
+    "Direct elsewhere (link in bio)": <Link color={color} size={size} />,
+    "Use a poll or 'this or that'": <BarChart2 color={color} size={size} />,
+    "No CTA — let content speak": <FileText color={color} size={size} />,
+    "Mix it up": <Shuffle color={color} size={size} />,
+
+    // Body
+    "Personal thought or story": <Book color={color} size={size} />,
+    "Describe what's happening": <ImageIcon color={color} size={size} />,
+    "Start a debate": <Flame color={color} size={size} />,
+    "Share tips, value, or info": <Lightbulb color={color} size={size} />,
+    "Keep it minimal": <AlignLeft color={color} size={size} />
+  };
+  return iconMap[label] || <Sparkles color={color} size={size} />;
+};
 
 export default function Onboarding() {
   const router = useRouter();
@@ -323,6 +416,11 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [loading, setLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+  }, [currentStep]);
 
   const progress = ((currentStep + 1) / STEPS.length) * 100;
   const stepData = STEPS[currentStep];
@@ -895,11 +993,14 @@ export default function Onboarding() {
                       }}
                       className={`px-5 h-full items-center justify-center ${isSelected ? "bg-white" : ""}`}
                     >
-                      <Text
-                        className={`text-base font-medium ${isSelected ? "text-black" : "text-white"}`}
-                      >
-                        {option}
-                      </Text>
+                      <View className="flex-row items-center gap-2">
+                        {getOptionIcon(option, isSelected ? "black" : "white", 16)}
+                        <Text
+                          className={`text-base font-medium ${isSelected ? "text-black" : "text-white"}`}
+                        >
+                          {option}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   </BlurView>
                 </View>
@@ -939,11 +1040,14 @@ export default function Onboarding() {
                       }}
                       className={`px-5 h-full items-center justify-center ${isSelected ? "bg-white" : ""}`}
                     >
-                      <Text
-                        className={`text-base font-medium ${isSelected ? "text-black" : "text-white"}`}
-                      >
-                        {option}
-                      </Text>
+                      <View className="flex-row items-center gap-2">
+                        {getOptionIcon(option, isSelected ? "black" : "white", 16)}
+                        <Text
+                          className={`text-base font-medium ${isSelected ? "text-black" : "text-white"}`}
+                        >
+                          {option}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   </BlurView>
                 </View>
@@ -1047,6 +1151,7 @@ export default function Onboarding() {
           >
             <View style={{ flex: 1 }}>
               <ScrollView
+                ref={scrollViewRef}
                 className="flex-1 px-8 py-6"
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 100 }}
@@ -1130,11 +1235,14 @@ export default function Onboarding() {
                               }}
                               className={`px-5 flex-row items-center justify-between h-full ${isSelected ? "bg-white" : ""}`}
                             >
-                              <Text
-                                className={`text-xl font-medium ${isSelected ? "text-black" : "text-white"}`}
-                              >
-                                {option}
-                              </Text>
+                              <View className="flex-row items-center gap-3">
+                                {getOptionIcon(option, isSelected ? "black" : "white", 20)}
+                                <Text
+                                  className={`text-xl font-medium ${isSelected ? "text-black" : "text-white"}`}
+                                >
+                                  {option}
+                                </Text>
+                              </View>
                               {isSelected && (
                                 <Check size={24} color="black" strokeWidth={3} />
                               )}
