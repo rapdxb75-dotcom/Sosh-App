@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import { Crown, Rocket, Trash2, Upload, Zap, Lock } from "lucide-react-native";
+import { Crown, Lock, Trash2, Upload } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -33,7 +33,7 @@ import Toast from "react-native-toast-message";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import Paywall from "../../components/subscription/Paywall";
-import { ProTierIcon, BusinessTierIcon } from "../../components/subscription/TierIcons";
+import { BusinessTierIcon, ProTierIcon, FreeTierIcon } from "../../components/subscription/TierIcons";
 import { useNotification } from "../../context/NotificationContext";
 import userService from "../../services/api/user";
 import { getCurrentUserData, listenToUserData } from "../../services/firebase";
@@ -742,9 +742,9 @@ export default function Profile() {
     };
 
     const getTierIcon = () => {
-      if (isBusiness) return <BusinessTierIcon size={22} color="#FF8A00" />;
-      if (isPro) return <ProTierIcon size={22} color="#3b82f6" />;
-      return <Crown size={18} color="#FFFFFF" />;
+      if (isBusiness) return <BusinessTierIcon size={20} color="#FF8A00" />;
+      if (isPro) return <ProTierIcon size={20} color="#3b82f6" />;
+      return <FreeTierIcon size={20} color="#FFFFFF" />;
     };
 
     const getPlanLabel = () => {
@@ -816,7 +816,7 @@ export default function Profile() {
                   </Text>
                 </View>
                 <View className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <View 
+                  <View
                     className="h-full bg-blue-500 rounded-full"
                     style={{ width: `${Math.min((aiChatCount / 500) * 100, 100)}%` }}
                   />

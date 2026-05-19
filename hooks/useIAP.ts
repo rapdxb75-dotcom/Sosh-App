@@ -15,17 +15,26 @@ export const useIAP = (onPurchaseSuccess?: () => void) => {
 
     const initIAP = async () => {
       try {
-        await RNIap.initConnection();
+        const isConnected = await RNIap.initConnection();
+        
+        if (!isConnected) {
+          console.log('IAP connection not established');
+          return;
+        }
+
         if (Platform.OS === 'android') {
           await RNIap.flushFailedPurchasesCachedAsPendingAndroid();
         }
 
+        // Add a small delay to ensure native billing clients are fully prepared
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         try {
           // Pre-fetch subscriptions to populate the cache
           const skus = [SKUS.PRO, SKUS.BUSINESS];
-          await RNIap.fetchProducts({ skus, type: 'subs' });
+          await RNIap.getSubscriptions({ skus });
         } catch (fetchErr) {
-          console.warn('Error pre-fetching subscriptions:', fetchErr);
+          console.log('Error pre-fetching subscriptions:', fetchErr);
         }
 
         purchaseUpdateSubscription = RNIap.purchaseUpdatedListener(
