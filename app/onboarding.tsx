@@ -4,9 +4,10 @@ import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from "expo-speech-recognition";
+  isSpeechRecognitionAvailable,
+  speechRecognitionModule,
+  useOptionalSpeechRecognitionEvent,
+} from "../services/speechRecognition";
 import { jwtDecode } from "jwt-decode";
 import {
   ArrowLeft, ArrowRight, Check, Mic,
@@ -17,7 +18,7 @@ import {
   AlignLeft, AlignCenter, AlignJustify, Shuffle, Ban, MessageSquare, Link, BarChart2,
   FileText, Image as ImageIcon
 } from "lucide-react-native";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -732,44 +733,349 @@ export default function Onboarding() {
     partId?: string;
   } | null>(null);
 
-  const startListening = async (parentKey: string, partId?: string) => {
-    const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!result.granted) return;
+  const isListeningRef = useRef(false);
+  const isManualStopRef = useRef(false);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const committedSpeechTextRef = useRef("");
+  const interimSpeechTextRef = useRef("");
+  const activeInputKeyRef = useRef<{ parent: string; partId?: string } | null>(null);
 
-    setActiveInputKey({ parent: parentKey, partId });
-    setIsListening(true);
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: true,
-    });
-  };
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
 
-  const stopListening = () => {
-    ExpoSpeechRecognitionModule.stop();
-    setIsListening(false);
-    setActiveInputKey(null);
-  };
+  useEffect(() => {
+    activeInputKeyRef.current = activeInputKey;
+  }, [activeInputKey]);
 
-  useSpeechRecognitionEvent("result", (event) => {
-    if (activeInputKey) {
-      const transcript = event.results[0]?.transcript;
-      if (transcript) {
-        if (activeInputKey.partId) {
-          updateAnswer(activeInputKey.parent, {
-            ...(answers[activeInputKey.parent] || {}),
-            [activeInputKey.partId]: transcript,
-          });
-        } else {
-          updateAnswer(activeInputKey.parent, transcript);
+  useEffect(() => {
+    return () => {
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const appendSpeechChunk = useCallback((base: string, chunk: string) => {
+    const cleanBase = base.trim();
+    const cleanChunk = chunk.trim();
+
+    if (!cleanChunk) return cleanBase;
+    if (!cleanBase) return cleanChunk;
+
+    const toWordPairs = (value: string) =>
+      value
+        .split(/\s+/)
+        .map((raw) => ({
+          raw,
+          norm: raw.toLowerCase().replace(/[^a-z0-9']/gi, ""),
+        }))
+        .filter((word) => word.norm.length > 0);
+
+    const baseWords = toWordPairs(cleanBase);
+    const chunkWords = toWordPairs(cleanChunk);
+
+    if (!chunkWords.length) {
+      return cleanBase;
+    }
+
+    const arraysMatch = (
+      left: Array<{ norm: string }>,
+      right: Array<{ norm: string }>,
+    ) => left.every((word, index) => word.norm === right[index]?.norm);
+
+    const collapseRepeatedPattern = (
+      words: Array<{ raw: string; norm: string }>,
+    ) => {
+      if (words.length < 2) return words;
+
+      for (
+        let patternLength = 1;
+        patternLength <= words.length / 2;
+        patternLength++
+      ) {
+        if (words.length % patternLength !== 0) continue;
+
+        const pattern = words.slice(0, patternLength);
+        let isRepeatingPattern = true;
+
+        for (let i = patternLength; i < words.length; i += patternLength) {
+          const candidate = words.slice(i, i + patternLength);
+          if (!arraysMatch(pattern, candidate)) {
+            isRepeatingPattern = false;
+            break;
+          }
+        }
+
+        if (isRepeatingPattern) {
+          return pattern;
         }
       }
+
+      return words;
+    };
+
+    const normalizedChunkWords = collapseRepeatedPattern(chunkWords);
+
+    if (
+      baseWords.length >= normalizedChunkWords.length &&
+      arraysMatch(
+        baseWords.slice(-normalizedChunkWords.length),
+        normalizedChunkWords,
+      )
+    ) {
+      return cleanBase;
     }
+
+    const overlapLimit = Math.min(
+      baseWords.length,
+      normalizedChunkWords.length,
+    );
+
+    for (let overlap = overlapLimit; overlap > 0; overlap--) {
+      const baseSuffix = baseWords.slice(-overlap);
+      const chunkPrefix = normalizedChunkWords.slice(0, overlap);
+
+      if (arraysMatch(baseSuffix, chunkPrefix)) {
+        const remainingChunk = normalizedChunkWords
+          .slice(overlap)
+          .map((word) => word.raw)
+          .join(" ");
+        return remainingChunk ? `${cleanBase} ${remainingChunk}` : cleanBase;
+      }
+    }
+
+    if (cleanBase.toLowerCase().endsWith(cleanChunk.toLowerCase())) {
+      return cleanBase;
+    }
+
+    return `${cleanBase} ${cleanChunk}`;
+  }, []);
+
+  const updateCurrentFieldText = useCallback((newText: string) => {
+    const activeKey = activeInputKeyRef.current;
+    if (!activeKey) return;
+    
+    setAnswers((prev) => {
+      if (activeKey.partId) {
+        return {
+          ...prev,
+          [activeKey.parent]: {
+            ...(prev[activeKey.parent] || {}),
+            [activeKey.partId]: newText,
+          },
+        };
+      } else {
+        return {
+          ...prev,
+          [activeKey.parent]: newText,
+        };
+      }
+    });
+  }, []);
+
+  const startRecognitionSession = useCallback(async () => {
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      return;
+    }
+
+    await speechRecognitionModule.start({
+      lang: Platform.OS === "ios" ? "en-US" : undefined,
+      interimResults: true,
+      maxAlternatives: 1,
+      continuous: true,
+      requiresOnDeviceRecognition: Platform.OS === "ios",
+      addsPunctuation: true,
+      contextualStrings: [],
+    });
+  }, []);
+
+  const commitInterimSpeech = useCallback(() => {
+    const interimText = interimSpeechTextRef.current.trim();
+    if (!interimText) return;
+
+    committedSpeechTextRef.current = appendSpeechChunk(
+      committedSpeechTextRef.current,
+      interimText,
+    );
+    interimSpeechTextRef.current = "";
+    updateCurrentFieldText(committedSpeechTextRef.current);
+  }, [appendSpeechChunk, updateCurrentFieldText]);
+
+  const scheduleRecognitionRestart = useCallback(() => {
+    if (isManualStopRef.current || !isListeningRef.current) {
+      return;
+    }
+
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+    }
+
+    restartTimeoutRef.current = setTimeout(() => {
+      if (isManualStopRef.current || !isListeningRef.current) {
+        return;
+      }
+
+      void startRecognitionSession().catch(() => {});
+    }, 300);
+  }, [startRecognitionSession]);
+
+  useOptionalSpeechRecognitionEvent("result", (event) => {
+    if (!isListeningRef.current || isManualStopRef.current) {
+      return;
+    }
+
+    const transcript = String(event.results?.[0]?.transcript || "").trim();
+    if (!transcript) {
+      return;
+    }
+
+    if (event.isFinal) {
+      committedSpeechTextRef.current = appendSpeechChunk(
+        committedSpeechTextRef.current,
+        transcript,
+      );
+      interimSpeechTextRef.current = "";
+      updateCurrentFieldText(committedSpeechTextRef.current);
+      return;
+    }
+
+    if (interimSpeechTextRef.current.trim() === transcript) {
+      return;
+    }
+
+    interimSpeechTextRef.current = transcript;
+
+    const nextPreviewText = interimSpeechTextRef.current
+      ? appendSpeechChunk(
+          committedSpeechTextRef.current,
+          interimSpeechTextRef.current,
+        )
+      : committedSpeechTextRef.current;
+
+    updateCurrentFieldText(nextPreviewText);
   });
 
-  useSpeechRecognitionEvent("error", () => {
-    setIsListening(false);
-    setActiveInputKey(null);
+  useOptionalSpeechRecognitionEvent("end", () => {
+    if (isManualStopRef.current) {
+      setIsListening(false);
+      isListeningRef.current = false;
+      setActiveInputKey(null);
+      activeInputKeyRef.current = null;
+      return;
+    }
+
+    commitInterimSpeech();
+    scheduleRecognitionRestart();
   });
+
+  useOptionalSpeechRecognitionEvent("error", (event) => {
+    const errorMessage = String(event?.error || "").toLowerCase();
+    const isRecoverable =
+      isListeningRef.current &&
+      !isManualStopRef.current &&
+      !errorMessage.includes("permission") &&
+      !errorMessage.includes("not-allowed") &&
+      !errorMessage.includes("denied") &&
+      !errorMessage.includes("unavailable");
+
+    if (isRecoverable) {
+      commitInterimSpeech();
+      scheduleRecognitionRestart();
+      return;
+    }
+
+    setIsListening(false);
+    isListeningRef.current = false;
+    setActiveInputKey(null);
+    activeInputKeyRef.current = null;
+  });
+
+  const startListening = useCallback(async (parentKey: string, partId?: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      return;
+    }
+
+    try {
+      const { status } = await speechRecognitionModule.requestPermissionsAsync();
+
+      if (status !== "granted") {
+        return;
+      }
+
+      if (isListeningRef.current) {
+        commitInterimSpeech();
+        isManualStopRef.current = true;
+        if (restartTimeoutRef.current) {
+          clearTimeout(restartTimeoutRef.current);
+        }
+        await speechRecognitionModule.stop();
+      }
+
+      setActiveInputKey({ parent: parentKey, partId });
+      activeInputKeyRef.current = { parent: parentKey, partId };
+
+      isManualStopRef.current = false;
+
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+      
+      let currentText = "";
+      setAnswers((prev) => {
+        if (partId) {
+          currentText = prev[parentKey]?.[partId] || "";
+        } else {
+          currentText = prev[parentKey] || "";
+        }
+        return prev;
+      });
+
+      committedSpeechTextRef.current = currentText;
+      interimSpeechTextRef.current = "";
+
+      await startRecognitionSession();
+
+      setIsListening(true);
+      isListeningRef.current = true;
+    } catch (error: any) {
+    }
+  }, [startRecognitionSession, commitInterimSpeech]);
+
+  const stopListening = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    isManualStopRef.current = true;
+
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+    }
+
+    commitInterimSpeech();
+
+    if (!speechRecognitionModule || !isSpeechRecognitionAvailable) {
+      setIsListening(false);
+      isListeningRef.current = false;
+      setActiveInputKey(null);
+      activeInputKeyRef.current = null;
+      return;
+    }
+
+    try {
+      await speechRecognitionModule.stop();
+      setIsListening(false);
+      isListeningRef.current = false;
+      setActiveInputKey(null);
+      activeInputKeyRef.current = null;
+    } catch (error) {
+      setIsListening(false);
+      isListeningRef.current = false;
+      setActiveInputKey(null);
+      activeInputKeyRef.current = null;
+    }
+  }, [commitInterimSpeech]);
 
   const updateAnswer = (key: string, value: any) => {
     setAnswers((prev) => ({ ...prev, [key]: value }));
