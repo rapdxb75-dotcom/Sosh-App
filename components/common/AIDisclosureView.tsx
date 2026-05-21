@@ -1,28 +1,28 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { Lock } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
   Dimensions,
   Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ShieldCheck, Cpu, Database, Share2, Sparkles, Lock } from 'lucide-react-native';
 
 const { height } = Dimensions.get('window');
 
 export const PROVIDERS = [
-  { name: 'Anthropic (Claude)', purpose: 'Smart Content Generation & Chat', icon: <Image source={require('../../assets/icons/provider_claude_actual.png')} style={{width: 20, height: 20, borderRadius: 4}} /> },
-  { name: 'Poppy AI', purpose: 'Custom Business Intelligence & Chat', icon: <Image source={require('../../assets/icons/provider_poppy_actual.png')} style={{width: 20, height: 20, borderRadius: 4}} /> },
-  { name: 'Ayrshare', purpose: 'Social Media Publishing & Connectivity', icon: <Image source={require('../../assets/icons/provider_ayrshare.png')} style={{width: 20, height: 20, borderRadius: 4}} /> },
-  { name: 'Zernio', purpose: 'Advanced Social Analytics', icon: <Image source={require('../../assets/icons/provider_zernio.png')} style={{width: 20, height: 20, borderRadius: 4}} /> },
+  { name: 'Anthropic (Claude)', purpose: 'Smart Content Generation & Chat', icon: <Image source={require('../../assets/icons/provider_claude_actual.png')} style={{ width: 20, height: 20, borderRadius: 4 }} /> },
+  { name: 'Poppy AI', purpose: 'Custom Business Intelligence & Chat', icon: <Image source={require('../../assets/icons/provider_poppy_actual.png')} style={{ width: 20, height: 20, borderRadius: 4 }} /> },
+  { name: 'Ayrshare', purpose: 'Social Media Publishing & Connectivity', icon: <Image source={require('../../assets/icons/provider_ayrshare.png')} style={{ width: 20, height: 20, borderRadius: 4 }} /> },
+  { name: 'Zernio', purpose: 'Advanced Social Analytics', icon: <Image source={require('../../assets/icons/provider_zernio.png')} style={{ width: 20, height: 20, borderRadius: 4 }} /> },
 ];
 
 export const DATA_SHARED = [
-  { icon: <Database size={22} color="#1DB954" />, title: 'Account Data', desc: 'Username, profile info, and brand data for platform identification.' },
-  { icon: <Cpu size={22} color="#1DB954" />, title: 'Prompts & Input', desc: 'User-provided prompts, chat messages, and content data for AI processing.' },
-  { icon: <Share2 size={22} color="#1DB954" />, title: 'Media Assets', desc: 'Captions, photos, and videos you choose to process or publish.' },
+  { title: '1. Account Data', desc: 'Username, profile info, and brand data for platform identification.' },
+  { title: '2. Prompts & Input', desc: 'User-provided prompts, chat messages, and content data for AI processing.' },
+  { title: '3. Media Assets', desc: 'Captions, photos, and videos you choose to process or publish.' },
 ];
 
 interface AIDisclosureViewProps {
@@ -31,13 +31,13 @@ interface AIDisclosureViewProps {
 
 const AIDisclosureView: React.FC<AIDisclosureViewProps> = ({ showTitle = true }) => {
   return (
-    <ScrollView 
-      style={styles.scrollView} 
+    <ScrollView
+      style={styles.scrollView}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.header}>
-        <View style={styles.iconContainer}>
+        {/* <View style={styles.iconContainer}>
           <View style={styles.glowOrb} />
           <LinearGradient
             colors={['rgba(29, 185, 84, 0.25)', 'rgba(29, 185, 84, 0.05)']}
@@ -45,8 +45,8 @@ const AIDisclosureView: React.FC<AIDisclosureViewProps> = ({ showTitle = true })
           >
             <ShieldCheck size={28} color="#00FF94" strokeWidth={1.5} />
           </LinearGradient>
-        </View>
-        {showTitle && <Text style={styles.title}>AI Data Sharing</Text>}
+        </View> */}
+        {showTitle && <Text className="text-white text-2xl font-bold mt-6 text-center" style={styles.title}>AI Data Sharing</Text>}
         <Text style={styles.subtitle}>
           At Sosh, we use world-class AI to power your growth. To enable these features, some data is shared with our trusted partners.
         </Text>
@@ -83,12 +83,6 @@ const AIDisclosureView: React.FC<AIDisclosureViewProps> = ({ showTitle = true })
         <View style={styles.dataGrid}>
           {DATA_SHARED.map((item, i) => (
             <View key={i} style={styles.dataItem}>
-              <LinearGradient
-                colors={['rgba(29, 185, 84, 0.15)', 'rgba(29, 185, 84, 0.03)']}
-                style={styles.dataIcon}
-              >
-                {item.icon}
-              </LinearGradient>
               <View style={styles.dataContent}>
                 <Text style={styles.dataTitle}>{item.title}</Text>
                 <Text style={styles.dataDesc} numberOfLines={2}>{item.desc}</Text>
@@ -173,7 +167,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sectionContainer: {
-    marginBottom: 32,
+    marginBottom: 8,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -258,16 +252,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 5,
   },
-  dataIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(29, 185, 84, 0.3)',
-  },
+
   dataContent: {
     flex: 1,
   },

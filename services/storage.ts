@@ -10,6 +10,8 @@ const HAS_LAUNCHED_KEY = "has_launched";
 const SUBSCRIPTION_KEY = "subscription"; // Matching the string user uses in userSlice.ts
 const AI_CONSENT_KEY = "ai_consent";
 const AI_CHAT_COUNT_KEY = "ai_chat_count";
+const PURCHASED_AT_KEY = "purchased_at"; // ISO date string — used for offline expiry checks
+
 
 const storageService = {
   /**
@@ -248,6 +250,34 @@ const storageService = {
   },
 
   /**
+   * Save the plan purchase/renewal date (ISO string).
+   * Used for offline expiry checks — purchasedAt + 30 days = expiry date.
+   */
+  setPurchasedAt: async (isoDate: string | null) => {
+    try {
+      if (isoDate) {
+        await AsyncStorage.setItem(PURCHASED_AT_KEY, isoDate);
+      } else {
+        await AsyncStorage.removeItem(PURCHASED_AT_KEY);
+      }
+    } catch (error) {
+      console.error("Error saving purchasedAt", error);
+    }
+  },
+
+  /**
+   * Get the plan purchase/renewal date (ISO string or null).
+   */
+  getPurchasedAt: async (): Promise<string | null> => {
+    try {
+      return await AsyncStorage.getItem(PURCHASED_AT_KEY);
+    } catch (error) {
+      console.error("Error getting purchasedAt", error);
+      return null;
+    }
+  },
+
+  /**
    * Set a value in storage
    */
   setItem: async (key: string, value: string) => {
@@ -284,6 +314,7 @@ const storageService = {
         EMAIL_KEY,
         SUBSCRIPTION_KEY,
         AI_CHAT_COUNT_KEY,
+        PURCHASED_AT_KEY,
       ]);
     } catch (error) {
       console.error("Error removing auth data", error);

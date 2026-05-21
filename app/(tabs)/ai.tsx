@@ -19,7 +19,6 @@ import {
   ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
-  Linking,
   Modal,
   Platform,
   Pressable,
@@ -30,7 +29,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   useWindowDimensions,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, {
@@ -47,11 +46,14 @@ import { MarkdownText } from "../../components/common/MarkdownText";
 import { normalize } from "../../constants/Fonts";
 import { useNotification } from "../../context/NotificationContext";
 import anthropicService from "../../services/api/anthropic";
-import chatService, { Conversation, Message, CreateConversationResponse } from "../../services/api/chat";
+import chatService, { Conversation, CreateConversationResponse, Message } from "../../services/api/chat";
 import poppyService from "../../services/api/poppy";
 import { incrementAIChatCount } from "../../services/firebase";
 
 
+import AIConsentModal from "../../components/common/AIConsentModal";
+import Paywall from "../../components/subscription/Paywall";
+import { usePlanStatus } from "../../hooks/usePlanStatus";
 import {
   isSpeechRecognitionAvailable,
   speechRecognitionModule,
@@ -59,8 +61,6 @@ import {
 } from "../../services/speechRecognition";
 import { AppDispatch, RootState } from "../../store/store";
 import { updateUser } from "../../store/userSlice";
-import AIConsentModal from "../../components/common/AIConsentModal";
-import Paywall from "../../components/subscription/Paywall";
 const AI_CHAT_LIMIT = 5;
 const PRO_AI_CHAT_LIMIT = 500;
 
@@ -615,6 +615,9 @@ export default function AI() {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
+  // Plan status with expiry awareness
+  const { effectivePlan, isFreeTier, canAccessPro, isExpired, rawPlan } = usePlanStatus();
+
   // Get dynamic boardId and chatId from user's aiAdditions with hardcoded fallbacks from working version
   const poppyBoardId =
     aiAdditions?.poppyAIChatbot?.boardId || null;
@@ -1127,8 +1130,16 @@ export default function AI() {
       return;
     }
 
-    if (subscription?.plan === "Free") {
+    // Block Free plan users
+    if (effectivePlan === "Free" && !isExpired) {
       setCreateError("Conversation management is not available on the Free plan.");
+      return;
+    }
+
+    // Expired plan gate — rawPlan is the actual plan name (Pro/Business)
+    if (isExpired) {
+      setCreateError(`Your ${rawPlan} plan has expired. Please renew to create conversations.`);
+      setPaywallVisible(true);
       return;
     }
 
@@ -1142,8 +1153,7 @@ export default function AI() {
           boardId: poppyBoardId,
           chatId: poppyChatId,
         } : {}),
-        name: conversationName.trim(),
-        subscription: subscription?.plan,
+        subscription: effectivePlan,
       });
 
       console.log("📥 [API Response] Create Conversation:", response);
@@ -1300,9 +1310,26 @@ export default function AI() {
   );
 
   const handleSendMessage = async () => {
-    const isFreePlan = subscription?.plan === "Free";
-    const isProPlan = subscription?.plan === "Pro";
+    const isFreePlan = isFreeTier;  // uses effectivePlan — expired Pro = Free
+    const isProPlan = effectivePlan === "Pro";
     const aiChatCountValue = aiChatCount || 0;
+
+    // Expired plan gate — show plan-specific message (Pro or Business)
+    if (isExpired) {
+      Alert.alert(
+        "Plan Expired",
+        `Your ${rawPlan} plan has expired. Please renew to continue using AI Chat.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Renew Plan",
+            style: "default",
+            onPress: () => setPaywallVisible(true),
+          },
+        ],
+      );
+      return;
+    }
 
 
     if (isFreePlan && aiChatCountValue >= AI_CHAT_LIMIT) {

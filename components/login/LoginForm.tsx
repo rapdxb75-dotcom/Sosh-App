@@ -37,6 +37,7 @@ import {
   setLoginBuffer,
   setUserData,
 } from "../../store/userSlice";
+import { isPlanExpired } from "../../utils/subscription";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -148,6 +149,17 @@ export default function LoginForm() {
                       `🔥 Firebase User Data for ${decoded.email}:`,
                       JSON.stringify(firebaseData, null, 2),
                     );
+
+                    // Save purchasedAt so usePlanStatus can check expiry offline
+                    const purchasedAt = firebaseData.purchasedAt ?? null;
+                    if (purchasedAt) {
+                      storageService.setPurchasedAt(purchasedAt).catch(console.error);
+                    }
+
+                    if (isPlanExpired(purchasedAt) && (firebaseData.subscription || decoded.subscription || "Free") !== "Free") {
+                      console.log("⚠️ Plan expired at login — access will be blocked via usePlanStatus (plan kept in DB)");
+                    }
+
                     dispatch(
                       setUserData({
                         aiAdditions: firebaseData.aiAdditions,
@@ -156,6 +168,12 @@ export default function LoginForm() {
                         postCaptionCount: firebaseData.postCaptionCount || 0,
                         reelCaptionCount: firebaseData.reelCaptionCount || 0,
                         onboardingData: firebaseData.onboardingData,
+                        purchasedAt,
+                        // Keep real plan from Firebase — usePlanStatus handles expiry gating
+                        subscription: {
+                          plan: (firebaseData.subscription || decoded.subscription || "Free") as "Free" | "Pro" | "Business",
+                          isSubscribed: (firebaseData.subscription || decoded.subscription || "Free") !== "Free",
+                        },
                       }),
                     );
                     console.log(
