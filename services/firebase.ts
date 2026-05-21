@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { isPlanExpired } from "../utils/subscription";
 import {
   getApps as getNativeApps,
   initializeApp as initializeNativeApp,
@@ -393,6 +394,85 @@ export const updatePoppyTokenCredits = async (
     }
     console.error("Error updating poppyToken:", error);
     return false;
+  }
+};
+
+// Check and Reset Monthly Limit — also handles plan expiry (30-day cycle)
+export const checkAndResetMonthlyLimit = async (
+  userEmail: string,
+  userData: any,
+): Promise<{ expired: boolean }> => {
+  try {
+    if (!userEmail || !userData) return { expired: false };
+
+    // Resolve plan name
+    let plan = "Free";
+    if (typeof userData.subscription === "string") {
+      plan = userData.subscription;
+    } else if (userData.subscription && typeof userData.subscription === "object") {
+      plan = userData.subscription.plan || "Free";
+    }
+
+    const isPaidPlan =
+      plan.toLowerCase() === "pro" || plan.toLowerCase() === "business";
+    if (!isPaidPlan) return { expired: false };
+
+    const purchasedAtStr =
+      userData.purchasedAt || userData.subscription?.purchasedAt;
+
+    // ── 1. EXPIRY CHECK ────────────────────────────────────────────────────────
+    // If purchasedAt + 30 days has passed → plan is expired.
+    // We do NOT write "Free" to Firestore — the plan stays as Pro/Business in the DB.
+    // The app blocks access via usePlanStatus() and shows an expiry error message.
+    if (isPlanExpired(purchasedAtStr)) {
+      console.warn(
+        `⚠️ [Subscription] Plan expired for ${userEmail}. purchasedAt: ${purchasedAtStr}. Access blocked (plan kept as ${plan} in DB).`,
+      );
+      return { expired: true };
+    }
+
+    // ── 2. MONTHLY USAGE RESET (for active Pro plans only) ────────────────────
+    if (plan.toLowerCase() !== "pro") return { expired: false };
+    if (!purchasedAtStr) return { expired: false };
+
+    const subDate = new Date(purchasedAtStr);
+    const now = new Date();
+
+    // Calculate the next reset date (1 month after subscribe date)
+    let nextResetDate = new Date(subDate);
+    nextResetDate.setMonth(nextResetDate.getMonth() + 1);
+
+    if (now >= nextResetDate) {
+      // Advance nextResetDate until it's in the future
+      while (now >= nextResetDate) {
+        nextResetDate.setMonth(nextResetDate.getMonth() + 1);
+      }
+
+      const newSubscribeAt = new Date(nextResetDate);
+      newSubscribeAt.setMonth(newSubscribeAt.getMonth() - 1);
+
+      const normalizedEmail = userEmail.trim().toLowerCase();
+      const { db } = initializeFirebase();
+      const userDocRef = doc(db, "users", normalizedEmail);
+
+      await setDoc(
+        userDocRef,
+        {
+          aiChatCount: 0,
+          purchasedAt: newSubscribeAt.toISOString(),
+        },
+        { merge: true },
+      );
+
+      console.log(
+        `✅ Reset aiChatCount to 0 for ${userEmail}. Next reset will be at ${nextResetDate.toISOString()}`,
+      );
+    }
+
+    return { expired: false };
+  } catch (error) {
+    console.error("Error checking and resetting monthly limit:", error);
+    return { expired: false };
   }
 };
 

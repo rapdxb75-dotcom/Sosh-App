@@ -70,6 +70,7 @@ import {
 import { AppDispatch, RootState } from "../store/store";
 import { updateUser } from "../store/userSlice";
 import { getFreeTierSystemPrompt } from "../utils/prompts";
+import { usePlanStatus } from "../hooks/usePlanStatus";
 import { generateVideoThumbnail } from "../utils/video";
 
 const isVideoUrl = (url?: string | null) => {
@@ -280,7 +281,8 @@ export default function PostPreview() {
   const globalProfilePicture = user.profilePicture;
   const [isPublishing, setIsPublishing] = useState(false);
   const aiConsent = user.aiConsent;
-  const isFreePlan = user.subscription?.plan === "Free";
+  // Use usePlanStatus so expired Pro plans are treated as Free
+  const { isFreeTier: isFreePlan, canAccessPro, isExpired, rawPlan } = usePlanStatus();
   const isBackgroundPublishing = useRef(false);
 
   useEffect(() => {
@@ -492,11 +494,29 @@ export default function PostPreview() {
 
       const isReel = data?.activeTab === "Reel";
       // Poppy AI variables removed
-      const isFreePlan = user.subscription?.plan === "Free";
-      const isProPlan = user.subscription?.plan === "Pro";
+      // isFreePlan / canAccessPro come from usePlanStatus() at component level
+      // so an expired Pro plan is already treated as Free.
+      const isProPlan = canAccessPro;
       const aiChatCountValue = user.aiChatCount || 0;
       const PRO_AI_CHAT_LIMIT = 500;
       const useClaude = true; // Poppy AI removed as per user request
+
+      // Expired plan gate — show before Free/Pro limit checks
+      if (isExpired) {
+        Alert.alert(
+          "Plan Expired",
+          `Your ${rawPlan} plan has expired. Please renew to continue generating captions.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Renew Plan",
+              style: "default",
+              onPress: () => setPaywallVisible(true),
+            },
+          ],
+        );
+        return;
+      }
 
       // Limit Enforcement for Free Plan
       if (isFreePlan) {

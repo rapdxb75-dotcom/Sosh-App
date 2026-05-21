@@ -76,6 +76,7 @@ import {
 } from "../../store/previewStore";
 import { AppDispatch, RootState } from "../../store/store";
 import { updateUser } from "../../store/userSlice";
+import { usePlanStatus } from "../../hooks/usePlanStatus";
 import { getFreeTierSystemPrompt } from "../../utils/prompts";
 import { generateVideoThumbnail } from "../../utils/video";
 
@@ -382,8 +383,9 @@ export default function CreatePost() {
   const globalEmail = user.email;
   const globalUserName = user.userName;
   const globalProfilePicture = user.profilePicture;
-  const isFreePlan = user.subscription?.plan === "Free";
-  const isProPlan = user.subscription?.plan === "Pro";
+  // Use usePlanStatus to correctly treat expired Pro plans as Free
+  const { isFreeTier: isFreePlan, canAccessPro, isExpired, rawPlan } = usePlanStatus();
+  const isProPlan = canAccessPro;
   const aiConsent = user.aiConsent;
 
   // Social media connections state
@@ -1134,11 +1136,28 @@ export default function CreatePost() {
       const boardId = settings?.boardId;
       const chatId = settings?.chatId;
 
-      const isFreePlan = user.subscription?.plan === "Free";
-      const isProPlan = user.subscription?.plan === "Pro";
+      // isFreePlan / isProPlan come from usePlanStatus() at component level
+      // so expired Pro plans are already treated as Free here.
       const aiChatCountValue = user.aiChatCount || 0;
       const PRO_AI_CHAT_LIMIT = 500;
       const useClaude = true; // Poppy AI removed as per user request
+
+      // Expired plan gate — show before Free/Pro limit checks
+      if (isExpired) {
+        Alert.alert(
+          "Plan Expired",
+          `Your ${rawPlan} plan has expired. Please renew to continue generating captions.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Renew Plan",
+              style: "default",
+              onPress: () => setPaywallVisible(true),
+            },
+          ],
+        );
+        return;
+      }
 
       // Limit Enforcement for Free Plan
       if (isFreePlan) {

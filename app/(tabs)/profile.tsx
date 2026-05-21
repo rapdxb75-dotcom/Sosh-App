@@ -42,6 +42,11 @@ import type { AppDispatch } from "../../store/store";
 import { RootState } from "../../store/store";
 import { clearUserData, updateUser } from "../../store/userSlice";
 import { formatNumber } from "../../utils/format";
+import {
+  getDaysRemaining,
+  getPlanExpiryDateString,
+  isPlanExpired,
+} from "../../utils/subscription";
 
 let ImageCropPicker: any = null;
 try {
@@ -210,6 +215,7 @@ export default function Profile() {
     totalViews: 0,
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [purchasedAt, setPurchasedAt] = useState<string | null>(null);
 
   const handleRefresh = useCallback(async () => {
     if (!globalEmail) return;
@@ -278,6 +284,13 @@ export default function Profile() {
             }
           });
           setSocialMediaData(socialData);
+
+          // Track purchasedAt for expiry display
+          const pa =
+            userData.purchasedAt ||
+            userData.subscription?.purchasedAt ||
+            null;
+          setPurchasedAt(pa);
         }
       },
       (error) => {
@@ -729,6 +742,11 @@ export default function Profile() {
     const isBusiness = displayPlan === "Business";
     const isPremium = isPro || isBusiness;
 
+    // Expiry state (only relevant for paid plans)
+    const planExpired = isPremium && isPlanExpired(purchasedAt);
+    const daysLeft = isPremium && !planExpired ? getDaysRemaining(purchasedAt) : 0;
+    const expiryDateStr = getPlanExpiryDateString(purchasedAt);
+
     const getGradientColors = (): [string, string, ...string[]] => {
       if (isBusiness) return ["rgba(255, 138, 0, 0.25)", "rgba(25, 15, 0, 0.6)"]; // Business Orange
       if (isPro) return ["rgba(59, 130, 246, 0.2)", "rgba(10, 20, 42, 0.5)"]; // Pro Blue
@@ -787,6 +805,45 @@ export default function Profile() {
                 <Text className="text-white text-3xl font-bold font-inter">
                   Sosh {displayPlan}
                 </Text>
+                {/* Expiry / Days Remaining badge */}
+                {isPremium && (
+                  <View
+                    className="flex-row items-center mt-1.5 px-2.5 py-0.5 rounded-full self-start"
+                    style={{
+                      backgroundColor: planExpired
+                        ? "rgba(239,68,68,0.18)"
+                        : "rgba(34,197,94,0.15)",
+                      borderWidth: 1,
+                      borderColor: planExpired
+                        ? "rgba(239,68,68,0.5)"
+                        : "rgba(34,197,94,0.4)",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: 3,
+                        backgroundColor: planExpired ? "#ef4444" : "#22c55e",
+                        marginRight: 5,
+                      }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "700",
+                        color: planExpired ? "#f87171" : "#4ade80",
+                        letterSpacing: 0.3,
+                      }}
+                    >
+                      {planExpired
+                        ? "Plan Expired"
+                        : daysLeft <= 5
+                          ? `Expires in ${daysLeft}d${expiryDateStr ? ` · ${expiryDateStr}` : ""}`
+                          : `${daysLeft} days left`}
+                    </Text>
+                  </View>
+                )}
               </View>
               <View className="flex-row items-center">
                 <View className="mr-2">
@@ -825,7 +882,30 @@ export default function Profile() {
             )}
 
             <View className="gap-3">
-              {!isBusiness && (
+              {/* ── Expired plan: Renew Plan button (Pro & Business) ── */}
+              {planExpired && (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setPaywallVisible(true);
+                  }}
+                  className="w-full h-12 rounded-full items-center justify-center bg-white"
+                  style={{
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 3.84,
+                    elevation: 5,
+                  }}
+                >
+                  <Text className="font-bold text-base text-black">
+                    Renew Plan
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Active non-Business: Upgrade Plan button */}
+              {!isBusiness && !planExpired && (
                 <TouchableOpacity
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

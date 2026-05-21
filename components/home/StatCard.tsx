@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { LinearGradient } from "expo-linear-gradient";
-import { TrendingDown, TrendingUp } from "lucide-react-native";
+// import { TrendingDown, TrendingUp } from "lucide-react-native";
 import { useEffect, useRef } from "react";
 import {
   Animated,
@@ -95,9 +95,9 @@ export default function StatCard({
   const valueFontSize = isSmallDevice ? 40 : 54;
 
   // Determine trend status
-  const isNegative = trend.trim().startsWith("-");
-  const trendColor = "#ffffffff"
-  const TrendIcon = isNegative ? TrendingDown : TrendingUp;
+  // const isNegative = trend.trim().startsWith("-");
+  // const trendColor = "#ffffffff"
+  // const TrendIcon = isNegative ? TrendingDown : TrendingUp;
 
   const shadowStyle = {
     shadowColor: "#000000",
@@ -189,7 +189,7 @@ export default function StatCard({
                 </Text>
               )}
 
-              <View className="flex-row items-center gap-1 mb-2">
+              {/* <View className="flex-row items-center gap-1 mb-2">
                 {!loading && (
                   <TrendIcon
                     color={trendColor}
@@ -211,7 +211,7 @@ export default function StatCard({
                     {trend}
                   </Text>
                 )}
-              </View>
+              </View> */}
             </View>
           ) : (
             /* -------- Half Width Layout -------- */
@@ -238,7 +238,7 @@ export default function StatCard({
                 )}
               </View>
 
-              <View>
+              {/* <View>
                 <View className="h-[2px] bg-white w-[100%] mb-2 opacity-50" />
 
                 <View className="flex-row items-center gap-1 justify-start">
@@ -264,7 +264,7 @@ export default function StatCard({
                     </Text>
                   )}
                 </View>
-              </View>
+              </View> */}
             </>
           )}
 

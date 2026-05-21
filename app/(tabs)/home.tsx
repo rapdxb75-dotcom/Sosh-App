@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 import Header from "../../components/common/Header";
 import StatCard from "../../components/home/StatCard";
-import { getCurrentUserData, listenToUserData } from "../../services/firebase";
+import { checkAndResetMonthlyLimit, getCurrentUserData, listenToUserData } from "../../services/firebase";
 import { RootState } from "../../store/store";
 import { setUserData } from "../../store/userSlice";
 import { formatNumber } from "../../utils/format";
@@ -64,54 +64,70 @@ export default function Home() {
     const unsubscribe = listenToUserData(
       globalEmail,
       (userData) => {
-        if (userData) {
-          // Update analytics
-          if (userData.totalAnalytics) {
-            const { totalFollowers, totalLikes, totalViews } =
-              userData.totalAnalytics;
-            setAnalytics({
-              totalFollowers: totalFollowers || 0,
-              totalLikes: totalLikes || 0,
-              totalViews: totalViews || 0,
-            });
-          } else {
-            setAnalytics({
-              totalFollowers: 0,
-              totalLikes: 0,
-              totalViews: 0,
-            });
+        // Wrap in an async IIFE so we can await checkAndResetMonthlyLimit
+        (async () => {
+          if (userData) {
+            // Check expiry and monthly reset.
+            // expired=true means plan is lapsed but we do NOT change the DB or Redux plan —
+            // usePlanStatus() will gate access via isExpired=true while rawPlan stays "Pro"/"Business".
+            await checkAndResetMonthlyLimit(
+              globalEmail,
+              userData,
+            ).catch(() => ({ expired: false }));
+
+            // Update analytics
+            if (userData.totalAnalytics) {
+              const { totalFollowers, totalLikes, totalViews } =
+                userData.totalAnalytics;
+              setAnalytics({
+                totalFollowers: totalFollowers || 0,
+                totalLikes: totalLikes || 0,
+                totalViews: totalViews || 0,
+              });
+            } else {
+              setAnalytics({
+                totalFollowers: 0,
+                totalLikes: 0,
+                totalViews: 0,
+              });
+            }
+
+            // Update Redux state with profile information
+            dispatch(
+              setUserData({
+                userName: userData.userName || userData.name || userName,
+                aiAdditions: userData.aiAdditions,
+                systemPrompt: userData.systemPrompt,
+                aiChatCount: userData.aiChatCount || 0,
+                postCaptionCount: userData.postCaptionCount || 0,
+                reelCaptionCount: userData.reelCaptionCount || 0,
+                onboardingData: userData.onboardingData,
+                // Sync purchasedAt so usePlanStatus can check expiry from anywhere
+                purchasedAt:
+                  userData.purchasedAt ||
+                  userData.subscription?.purchasedAt ||
+                  null,
+                subscription: (() => {
+                  const firebaseSub = userData.subscription;
+                  let planName = "Free";
+
+                  if (typeof firebaseSub === "string") {
+                    planName = firebaseSub;
+                  } else if (firebaseSub && typeof firebaseSub === "object") {
+                    planName = firebaseSub.plan || "Free";
+                  }
+
+                  return {
+                    plan: planName as "Free" | "Pro" | "Business",
+                    isSubscribed: planName !== "Free",
+                  };
+                })(),
+              }),
+            );
           }
 
-          // Update Redux state with profile information (userName, aiAdditions, subscription, etc.)
-          dispatch(
-            setUserData({
-              userName: userData.userName || userData.name || userName,
-              aiAdditions: userData.aiAdditions,
-              systemPrompt: userData.systemPrompt,
-              aiChatCount: userData.aiChatCount || 0,
-              postCaptionCount: userData.postCaptionCount || 0,
-              reelCaptionCount: userData.reelCaptionCount || 0,
-              onboardingData: userData.onboardingData,
-              subscription: (() => {
-                const firebaseSub = userData.subscription;
-                let planName = "Free";
-
-                if (typeof firebaseSub === "string") {
-                  planName = firebaseSub;
-                } else if (firebaseSub && typeof firebaseSub === "object") {
-                  planName = firebaseSub.plan || "Free";
-                }
-
-                return {
-                  plan: planName as "Free" | "Pro" | "Business",
-                  isSubscribed: planName !== "Free",
-                };
-              })(),
-            }),
-          );
-        }
-
-        setIsLoading(false);
+          setIsLoading(false);
+        })();
       },
       (error) => {
         console.error("Firebase fetch error in Home:", error);
