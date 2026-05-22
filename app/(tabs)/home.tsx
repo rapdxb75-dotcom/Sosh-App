@@ -107,6 +107,8 @@ export default function Home() {
                   userData.purchasedAt ||
                   userData.subscription?.purchasedAt ||
                   null,
+                // Sync expiresAt — written by IAP purchase flow / admin panel
+                expiresAt: userData.expiresAt ?? null,
                 subscription: (() => {
                   const firebaseSub = userData.subscription;
                   let planName = "Free";

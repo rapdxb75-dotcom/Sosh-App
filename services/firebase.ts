@@ -706,4 +706,42 @@ export const updateUserActivityStatus = async (
   }
 };
 
+/**
+ * Writes confirmed subscription details to Firestore.
+ * Called after a successful purchase or restore so the admin panel
+ * and any other devices see up-to-date subscription state.
+ *
+ * @param userEmail   Firestore document ID (normalised email)
+ * @param plan        'Pro' | 'Business'
+ * @param purchasedAt ISO string — latest transaction / renewal date
+ * @param expiresAt   ISO string — Apple/Google expiry date (optional)
+ */
+export const updateSubscriptionStatus = async (
+  userEmail: string,
+  plan: "Pro" | "Business",
+  purchasedAt: string,
+  expiresAt?: string | null,
+): Promise<boolean> => {
+  try {
+    if (!userEmail) return false;
+    const normalizedEmail = userEmail.trim().toLowerCase();
+    const { db } = initializeFirebase();
+    const userDocRef = doc(db, "users", normalizedEmail);
+
+    const payload: Record<string, any> = {
+      subscription: { plan, isSubscribed: true },
+      purchasedAt,
+    };
+    if (expiresAt) payload.expiresAt = expiresAt;
+
+    await setDoc(userDocRef, payload, { merge: true });
+    console.log(`✅ [Firebase] Subscription updated: ${plan}, purchasedAt=${purchasedAt}`);
+    return true;
+  } catch (error) {
+    console.error("❌ [Firebase] updateSubscriptionStatus error:", error);
+    return false;
+  }
+};
+
 export { app, db };
+

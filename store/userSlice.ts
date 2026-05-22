@@ -38,7 +38,8 @@ interface UserState {
   aiChatCount?: number;
   postCaptionCount?: number;
   reelCaptionCount?: number;
-  purchasedAt?: string | null;  // ISO date — plan purchase/renewal date for expiry check
+  purchasedAt?: string | null;  // ISO date — plan purchase/renewal date (last known transaction)
+  expiresAt?: string | null;    // ISO date — real Apple/Google subscription expiry date
   registrationBuffer: {
     fullName: string;
     userName: string;
@@ -77,6 +78,7 @@ const initialState: UserState = {
   postCaptionCount: 0,
   reelCaptionCount: 0,
   purchasedAt: null,
+  expiresAt: null,
   registrationBuffer: null,
   loginBuffer: null,
   onboardingData: undefined,
@@ -141,6 +143,7 @@ const userSlice = createSlice({
         postCaptionCount?: number;
         reelCaptionCount?: number;
         purchasedAt?: string | null;
+        expiresAt?: string | null;
         subscription?: {
           plan: "Free" | "Pro" | "Business";
           isSubscribed: boolean;
@@ -176,6 +179,9 @@ const userSlice = createSlice({
       if (action.payload.purchasedAt !== undefined) {
         state.purchasedAt = action.payload.purchasedAt;
       }
+      if (action.payload.expiresAt !== undefined) {
+        state.expiresAt = action.payload.expiresAt;
+      }
       if (action.payload.subscription !== undefined) {
         const rawPlan = action.payload.subscription.plan || "Free";
         const normalizedPlan = (rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1).toLowerCase()) as "Free" | "Pro" | "Business";
@@ -206,6 +212,7 @@ const userSlice = createSlice({
       state.postCaptionCount = 0;
       state.reelCaptionCount = 0;
       state.purchasedAt = null;
+      state.expiresAt = null;
       state.registrationBuffer = null;
       state.loginBuffer = null;
       state.onboardingData = undefined;
@@ -258,6 +265,7 @@ export const updateUser =
     postCaptionCount?: number;
     reelCaptionCount?: number;
     purchasedAt?: string | null;
+    expiresAt?: string | null;
     subscription?: {
       plan: "Free" | "Pro" | "Business";
       isSubscribed: boolean;
