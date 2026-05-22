@@ -29,6 +29,8 @@ import {
 import { store, type RootState } from "../store/store";
 import { initializeUser, updateUser } from "../store/userSlice";
 import { initializeErrorHandler } from "../utils/errorHandler";
+import { checkSubscriptionStatus } from "../hooks/useIAP";
+import { isPlanExpired } from "../utils/subscription";
 initializeFirebase();
 
 // Initialize global exception handlers
@@ -75,6 +77,84 @@ function FirebaseDataFetcher() {
         }
 
         hasFetchedRef.current = true;
+
+        // ── Dual-payment subscription verification ────────────────────────
+        //
+        // Payment path 1 — App Store (react-native-iap)
+        //   getAvailablePurchases() returns only non-expired subscriptions.
+        //   If found → subscription is active via Apple billing.
+        //
+        // Payment path 2 — Stripe (website)
+        //   Admin/backend writes purchasedAt to Firebase after Stripe payment.
+        //   The app uses purchasedAt + 30 days as the expiry window.
+        //   IAP won't see these purchases, so we MUST NOT downgrade a user
+        //   whose Firebase purchasedAt is still within the billing window.
+        //
+        // Downgrade to Free only when BOTH conditions are true:
+        //   1. IAP reports no active App Store subscription
+        //   2. Firebase purchasedAt is absent or older than 30 days
+        // ─────────────────────────────────────────────────────────────────
+        try {
+          const iapStatus = await checkSubscriptionStatus();
+          if (iapStatus !== null) {
+            if (iapStatus.plan) {
+              // ✅ Active App Store subscription — update Redux with IAP truth
+              store.dispatch(
+                updateUser({
+                  subscription: {
+                    plan: iapStatus.plan,
+                    isSubscribed: true,
+                  },
+                  purchasedAt: iapStatus.purchasedAt,
+                }),
+              );
+              console.log(`✅ [IAP] App Store subscription active: ${iapStatus.plan}`);
+            } else {
+              // IAP reports no active subscription.
+              // Before downgrading, check if this is a valid Stripe (web) purchase
+              // by looking at the purchasedAt date already in Redux / Firebase.
+              const state = store.getState().user as any;
+              const currentPlan: string = state.subscription?.plan ?? "Free";
+              const existingPurchasedAt: string | null = state.purchasedAt ?? null;
+              const existingExpiresAt: string | null = state.expiresAt ?? null;
+
+              if (currentPlan === "Free") {
+                // Already free — nothing to do
+                console.log("ℹ️ [IAP] No active subscription (user is Free)");
+              } else {
+                // User has a Pro/Business plan in Redux.
+                // Check if their Firebase purchasedAt / expiresAt is still valid
+                // — this indicates a live Stripe subscription.
+                const stripeStillActive = existingExpiresAt
+                  ? new Date() <= new Date(existingExpiresAt)   // Stripe wrote a real expiry
+                  : !isPlanExpired(existingPurchasedAt);        // Fallback: 30-day window
+
+                if (stripeStillActive) {
+                  // Stripe subscription is still within the billing window — keep plan
+                  console.log(
+                    `ℹ️ [IAP] No App Store sub, but Stripe purchasedAt is still valid ` +
+                    `(${existingPurchasedAt}). Keeping plan: ${currentPlan}`,
+                  );
+                } else {
+                  // Subscription has expired on both IAP and Stripe/Firebase.
+                  // We intentionally do NOT downgrade the Redux plan to "Free".
+                  // The plan badge stays as Pro/Business so the user knows their tier.
+                  // Access to AI chat and caption generation is already blocked via
+                  // usePlanStatus().isExpired === true → effectivePlan === "Free" →
+                  // canAccessPro === false in ai.tsx, createPost.tsx, postPreview.tsx.
+                  console.warn(
+                    `⚠️ [IAP] Subscription expired for plan: ${currentPlan}. ` +
+                    `Plan badge kept — feature access blocked via usePlanStatus.isExpired.`,
+                  );
+                }
+              }
+
+            }
+          }
+        } catch (iapErr) {
+          console.warn("⚠️ [IAP] Subscription check error (non-fatal):", iapErr);
+        }
+        // ─────────────────────────────────────────────────────────────────
       } catch (error) {
         console.error("Error fetching Firebase data:", error);
       }

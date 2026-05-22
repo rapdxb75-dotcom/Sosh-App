@@ -24,7 +24,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+import { useSelector } from "react-redux";
 import { SKUS, useIAP } from "../../hooks/useIAP";
+import { RootState } from "../../store/store";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -37,7 +39,8 @@ export const Paywall = ({ visible, onClose }: PaywallProps) => {
   const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
-  const { handlePurchase: purchaseIAP, handleRestore: restoreIAP } = useIAP(onClose);
+  const userEmail = useSelector((state: RootState) => state.user.email);
+  const { handlePurchase: purchaseIAP, handleRestore: restoreIAP } = useIAP(onClose, userEmail);
 
   // Selector and accordion states
   const [selectedPlan, setSelectedPlan] = useState<"Pro" | "Business">("Pro");
@@ -462,6 +465,7 @@ const styles = StyleSheet.create({
   heroImage: {
     width: "100%",
     height: "100%",
+    left: -8,
   },
   selectorCard: {
     borderWidth: 1.5,
