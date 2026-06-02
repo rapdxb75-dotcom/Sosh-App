@@ -2421,6 +2421,7 @@ export default function AI() {
         <AIConsentModal
           visible={!aiConsent && !!userEmail}
           onClose={() => router.replace("/")}
+          onAccept={() => {}}
         />
 
         {/* Paywall Modal */}

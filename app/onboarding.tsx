@@ -2,23 +2,61 @@ import { FontAwesome5, FontAwesome6 } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import {
-  isSpeechRecognitionAvailable,
-  speechRecognitionModule,
-  useOptionalSpeechRecognitionEvent,
-} from "../services/speechRecognition";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { jwtDecode } from "jwt-decode";
 import {
-  ArrowLeft, ArrowRight, Check, Mic,
-  User, Briefcase, Home, Building2, Users,
-  Smile, Flame, Diamond, BookOpen, Code, Sparkles, MessageCircle, Camera, Coffee, Heart, Zap,
-  GraduationCap, Clapperboard, Book, Video, ShoppingBag, Lightbulb, Globe, Mic2, TrendingUp, PenTool, Star, Palette, Film, MoreHorizontal,
-  Rocket, Brain, Laugh, Handshake, ShieldCheck, Eye, Compass, HelpCircle, Trophy,
-  AlignLeft, AlignCenter, AlignJustify, Shuffle, Ban, MessageSquare, Link, BarChart2,
-  FileText, Image as ImageIcon
+  AlignCenter, AlignJustify,
+  AlignLeft,
+  ArrowLeft, ArrowRight,
+  Ban,
+  BarChart2,
+  Book,
+  BookOpen,
+  Brain,
+  Briefcase,
+  Building2,
+  Camera,
+  Check,
+  Clapperboard,
+  Code,
+  Coffee,
+  Compass,
+  Diamond,
+  Eye,
+  FileText,
+  Film,
+  Flame,
+  Globe,
+  GraduationCap,
+  Heart,
+  HelpCircle,
+  Home,
+  Image as ImageIcon,
+  Laugh,
+  Lightbulb,
+  Link,
+  MessageCircle,
+  MessageSquare,
+  Mic,
+  Mic2,
+  MoreHorizontal,
+  Palette,
+  PenTool,
+  Rocket,
+  ShieldCheck,
+  ShoppingBag,
+  Shuffle,
+  Smile,
+  Sparkles,
+  Star,
+  TrendingUp,
+  User,
+  Users,
+  Video,
+  Zap
 } from "lucide-react-native";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { MotiView } from "moti";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -37,7 +75,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { FontFamily, normalize } from "../constants/Fonts";
 import { useNotification } from "../context/NotificationContext";
 import authService from "../services/api/auth";
-import { updateLastLogin, updateUserOnboardingData } from "../services/firebase";
+import { getCurrentUserData, updateLastLogin, updateUserOnboardingData } from "../services/firebase";
+import {
+  isSpeechRecognitionAvailable,
+  speechRecognitionModule,
+  useOptionalSpeechRecognitionEvent,
+} from "../services/speechRecognition";
 import storageService from "../services/storage";
 import { RootState } from "../store/store";
 import { clearUserData, setLoginBuffer, setUserData } from "../store/userSlice";
@@ -226,7 +269,7 @@ const STEPS = [
   },
   {
     id: 8,
-    title: "Your Competitive Landscape",
+    title: "Your Competitive Landscape (Optional)",
     subtitle: "Section 3: The Details",
     type: "mixed",
     key: "competitors",
@@ -419,6 +462,62 @@ export default function Onboarding() {
   const [loading, setLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isEditMode = mode === "edit";
+  const userEmail = useSelector((state: RootState) => state.user.email);
+
+  // Hydrate data if in edit mode
+  useEffect(() => {
+    if (isEditMode && userEmail) {
+      setLoading(true);
+      getCurrentUserData(userEmail).then((data: any) => {
+        if (data && data.onboardingData) {
+          const ob = data.onboardingData;
+          const newAnswers: any = {};
+          if (ob.step1) newAnswers["brandDescription"] = ob.step1.brandDescription;
+          if (ob.step2) newAnswers["audience"] = { "2a": ob.step2.targetAudienceAge, "2b": ob.step2.idealFollowerDescription };
+          
+          if (ob.step3) {
+            let activePlatforms = ob.step3.activePlatforms || {};
+            const migrated: any = {};
+            
+            if (Array.isArray(activePlatforms)) {
+              activePlatforms.forEach((p: string) => {
+                migrated[p] = { selected: true, count: "< 1k" };
+              });
+            } else {
+              Object.keys(activePlatforms).forEach(p => {
+                 const val = activePlatforms[p];
+                 if (typeof val === 'boolean') {
+                   if (val) migrated[p] = { selected: true, count: "< 1k" };
+                 } else if (typeof val === 'object' && val !== null) {
+                   migrated[p] = {
+                     selected: val.selected !== undefined ? val.selected : true,
+                     count: val.count || "< 1k"
+                   };
+                 }
+              });
+            }
+            newAnswers["social media"] = { "3a": migrated, "3b": ob.step3.primaryGoal };
+          }
+          
+          if (ob.step4) newAnswers["brandPersonality"] = ob.step4.brandPersonalityTraits;
+          if (ob.step5) newAnswers["contentStyle"] = { "5a": ob.step5.contentCategories, "5b": ob.step5.competitiveDifferentiator };
+          if (ob.step6) newAnswers["audienceFeeling"] = ob.step6.desiredAudienceFeelings;
+          if (ob.step7) newAnswers["languageBoundaries"] = { "7a": ob.step7.brandLanguage, "7b": ob.step7.avoidedTopics };
+          if (ob.step8) newAnswers["competitors"] = { "8a": ob.step8.monitoredCompetitors, "8b": ob.step8.respectedCompetitorTraits, "8c": ob.step8.userEdgeFactor };
+          if (ob.step9) newAnswers["captionStyle"] = { "9a": ob.step9.preferredCaptionLength, "9b": ob.step9.emojiUsagePreference };
+          if (ob.step10) newAnswers["engagement"] = { "10a": ob.step10.preferredCTAStyle, "10b": ob.step10.captionBodyTone };
+          setAnswers(newAnswers);
+        }
+        setLoading(false);
+      }).catch((err) => {
+        console.error("Failed to load onboarding data for edit", err);
+        setLoading(false);
+      });
+    }
+  }, [isEditMode, userEmail]);
+
   useEffect(() => {
     scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentStep]);
@@ -428,6 +527,8 @@ export default function Onboarding() {
 
   const isStepValid = () => {
     const answer = answers[stepData.key];
+
+    if (stepData.key === "competitors") return true;
 
     if (stepData.type === "textarea") {
       return !!answer?.trim();
@@ -439,7 +540,7 @@ export default function Onboarding() {
 
     if (stepData.type === "mixed") {
       if (!answer) return false;
-      return stepData.parts.some((part: any) => {
+      return stepData.parts?.some((part: any) => {
         const partAnswer = answer[part.id];
         if (part.type === "textarea") {
           return !!partAnswer?.trim();
@@ -474,29 +575,29 @@ export default function Onboarding() {
       if (loading) return;
 
       const onboardingData = {
-        step1: { brandDescription: answers["brandDescription"] || "" },
+        step1: { brandDescription: answers["brandDescription"]?.trim() || "" },
         step2: {
           targetAudienceAge: answers["audience"]?.["2a"] || [],
-          idealFollowerDescription: answers["audience"]?.["2b"] || "",
+          idealFollowerDescription: answers["audience"]?.["2b"]?.trim() || "",
         },
         step3: {
           activePlatforms: answers["social media"]?.["3a"] || {},
-          primaryGoal: answers["social media"]?.["3b"] || "",
+          primaryGoal: answers["social media"]?.["3b"]?.trim() || "",
         },
         step4: { brandPersonalityTraits: answers["brandPersonality"] || [] },
         step5: {
           contentCategories: answers["contentStyle"]?.["5a"] || [],
-          competitiveDifferentiator: answers["contentStyle"]?.["5b"] || "",
+          competitiveDifferentiator: answers["contentStyle"]?.["5b"]?.trim() || "",
         },
         step6: { desiredAudienceFeelings: answers["audienceFeeling"] || [] },
         step7: {
-          brandLanguage: answers["languageBoundaries"]?.["7a"] || "",
-          avoidedTopics: answers["languageBoundaries"]?.["7b"] || "",
+          brandLanguage: answers["languageBoundaries"]?.["7a"]?.trim() || "",
+          avoidedTopics: answers["languageBoundaries"]?.["7b"]?.trim() || "",
         },
         step8: {
-          monitoredCompetitors: answers["competitors"]?.["8a"] || "",
-          respectedCompetitorTraits: answers["competitors"]?.["8b"] || "",
-          userEdgeFactor: answers["competitors"]?.["8c"] || "",
+          monitoredCompetitors: answers["competitors"]?.["8a"]?.trim() || "",
+          respectedCompetitorTraits: answers["competitors"]?.["8b"]?.trim() || "",
+          userEdgeFactor: answers["competitors"]?.["8c"]?.trim() || "",
         },
         step9: {
           preferredCaptionLength: answers["captionStyle"]?.["9a"] || "",
@@ -508,18 +609,44 @@ export default function Onboarding() {
         },
       };
 
-      if (isLoginFlow) {
+      if (isEditMode && userEmail) {
+        try {
+          setLoading(true);
+          const emailToUpdate = userEmail.toLowerCase().trim();
+          console.log("🚀 Updating onboarding data for edit mode:", emailToUpdate);
+          const success = await updateUserOnboardingData(emailToUpdate, onboardingData);
+          if (!success) throw new Error("Failed to save onboarding data");
+
+          dispatch(setUserData({ onboardingData }));
+
+          Toast.show({
+            type: "success",
+            text1: "Profile Updated",
+            text2: "Your questionnaire answers have been saved.",
+          });
+
+          router.back();
+        } catch (error: any) {
+          Toast.show({
+            type: "error",
+            text1: "Update Failed",
+            text2: error.message || "Could not save your answers",
+          });
+        } finally {
+          setLoading(false);
+        }
+      } else if (isLoginFlow) {
         // --- LOGIN FLOW: User already authenticated, just update onboarding data ---
         try {
           setLoading(true);
 
-          const userEmail = loginBuffer.email.toLowerCase().trim();
+          const loginEmail = loginBuffer.email.toLowerCase().trim();
           console.log(
             "🚀 Updating onboarding data for logged-in user:",
-            userEmail,
+            loginEmail,
           );
           const success = await updateUserOnboardingData(
-            userEmail,
+            loginEmail,
             onboardingData,
           );
 
@@ -529,17 +656,17 @@ export default function Onboarding() {
           console.log("✅ Onboarding data updated successfully");
 
           // Call login API
-          if (userEmail && loginBuffer.password) {
+          if (loginEmail && loginBuffer.password) {
             console.log("🔑 Calling login API...");
             const loginResponse = await authService.login({
-              email: userEmail,
+              email: loginEmail,
               password: loginBuffer.password,
             });
 
             if (loginResponse.token) {
               await storageService.setToken(loginResponse.token);
               // Update last login timestamp with timezone directly in Firebase
-              updateLastLogin(userEmail).catch((err) => {
+              updateLastLogin(loginEmail).catch((err) => {
                 console.error("❌ Error updating last login:", err);
               });
             }
@@ -855,7 +982,7 @@ export default function Onboarding() {
   const updateCurrentFieldText = useCallback((newText: string) => {
     const activeKey = activeInputKeyRef.current;
     if (!activeKey) return;
-    
+
     setAnswers((prev) => {
       if (activeKey.partId) {
         return {
@@ -916,7 +1043,7 @@ export default function Onboarding() {
         return;
       }
 
-      void startRecognitionSession().catch(() => {});
+      void startRecognitionSession().catch(() => { });
     }, 300);
   }, [startRecognitionSession]);
 
@@ -948,9 +1075,9 @@ export default function Onboarding() {
 
     const nextPreviewText = interimSpeechTextRef.current
       ? appendSpeechChunk(
-          committedSpeechTextRef.current,
-          interimSpeechTextRef.current,
-        )
+        committedSpeechTextRef.current,
+        interimSpeechTextRef.current,
+      )
       : committedSpeechTextRef.current;
 
     updateCurrentFieldText(nextPreviewText);
@@ -1022,7 +1149,7 @@ export default function Onboarding() {
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current);
       }
-      
+
       let currentText = "";
       setAnswers((prev) => {
         if (partId) {
@@ -1082,7 +1209,11 @@ export default function Onboarding() {
   };
 
   const updateMultiAnswer = (key: string, option: string, limit?: number) => {
-    const current = answers[key] || [];
+    let current = answers[key];
+    if (!Array.isArray(current)) {
+      current = current ? [current] : [];
+    }
+
     if (current.includes(option)) {
       updateAnswer(
         key,
@@ -1149,6 +1280,8 @@ export default function Onboarding() {
                       [part.id]: txt,
                     })
                   }
+                  returnKeyType="done"
+                  blurOnSubmit={true}
                 />
                 <TouchableOpacity
                   onPress={() =>
@@ -1186,11 +1319,10 @@ export default function Onboarding() {
                   <View
                     className={`rounded-[20px] overflow-hidden border h-16 w-full ${isSelected ? "bg-white border-white" : "border-white/10"}`}
                   >
-                    <BlurView
-                      intensity={isSelected ? 0 : 20}
-                      tint="dark"
-                      className="h-full w-full"
-                    >
+                    <View className="h-full w-full">
+                      <View style={[StyleSheet.absoluteFill, { opacity: isSelected ? 0 : 1 }]}>
+                        <BlurView intensity={20} tint="dark" style={{ flex: 1 }} />
+                      </View>
                       <TouchableOpacity
                         onPress={() => {
                           Haptics.selectionAsync();
@@ -1215,7 +1347,7 @@ export default function Onboarding() {
                         </View>
                         {isSelected && <Check size={18} color="black" />}
                       </TouchableOpacity>
-                    </BlurView>
+                    </View>
                   </View>
 
                   {isSelected && (
@@ -1281,17 +1413,22 @@ export default function Onboarding() {
                   key={option}
                   className={`rounded-full overflow-hidden border h-12 ${isSelected ? "bg-white border-white" : "border-white/20"}`}
                 >
-                  <BlurView
-                    intensity={isSelected ? 0 : 20}
-                    tint="dark"
-                    className="h-full"
-                  >
+                  <View className="h-full">
+                    {!isSelected && (
+                      <View style={StyleSheet.absoluteFill}>
+                        <BlurView intensity={20} tint="dark" style={{ flex: 1 }} />
+                      </View>
+                    )}
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.selectionAsync();
+                        let currentVal = answers[parentKey]?.[part.id];
+                        if (!Array.isArray(currentVal)) {
+                          currentVal = currentVal ? [currentVal] : [];
+                        }
                         const updatedList = isSelected
-                          ? selected.filter((o: string) => o !== option)
-                          : [...selected, option];
+                          ? currentVal.filter((o: string) => o !== option)
+                          : [...currentVal, option];
                         updateAnswer(parentKey, {
                           ...answers[parentKey],
                           [part.id]: updatedList,
@@ -1308,7 +1445,7 @@ export default function Onboarding() {
                         </Text>
                       </View>
                     </TouchableOpacity>
-                  </BlurView>
+                  </View>
                 </View>
               );
             })}
@@ -1331,11 +1468,12 @@ export default function Onboarding() {
                   key={option}
                   className={`rounded-full overflow-hidden border h-12 ${isSelected ? "bg-white border-white" : "border-white/20"}`}
                 >
-                  <BlurView
-                    intensity={isSelected ? 0 : 20}
-                    tint="dark"
-                    className="h-full"
-                  >
+                  <View className="h-full">
+                    {!isSelected && (
+                      <View style={StyleSheet.absoluteFill}>
+                        <BlurView intensity={20} tint="dark" style={{ flex: 1 }} />
+                      </View>
+                    )}
                     <TouchableOpacity
                       onPress={() => {
                         Haptics.selectionAsync();
@@ -1355,7 +1493,7 @@ export default function Onboarding() {
                         </Text>
                       </View>
                     </TouchableOpacity>
-                  </BlurView>
+                  </View>
                 </View>
               );
             })}
@@ -1394,6 +1532,7 @@ export default function Onboarding() {
                   [part.id]: txt,
                 })
               }
+              returnKeyType="done"
             />
             <TouchableOpacity
               onPress={() =>
@@ -1418,6 +1557,35 @@ export default function Onboarding() {
   const { width: SCREEN_WIDTH } = Dimensions.get("window");
   const isTablet = SCREEN_WIDTH > 600;
   const CONTENT_WIDTH = isTablet ? 600 : SCREEN_WIDTH;
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#000", alignItems: "center", justifyContent: "center" }}>
+        <LinearGradient
+          colors={["#001C3D", "#000000"]}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+        <MotiView
+          from={{ opacity: 0.5, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1.05 }}
+          transition={{
+            type: "timing",
+            duration: 1200,
+            loop: true,
+          }}
+          style={{ alignItems: "center", justifyContent: "center" }}
+        >
+          <Sparkles color="white" size={64} />
+          <Text className="text-white text-2xl font-bold mt-8" style={{ fontFamily: "Inter_700Bold" }}>
+            Building your account...
+          </Text>
+          <Text className="text-white/60 text-base mt-3" style={{ fontFamily: "Inter_400Regular" }}>
+            Customizing your experience
+          </Text>
+        </MotiView>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000" }}>
@@ -1490,6 +1658,8 @@ export default function Onboarding() {
                           style={{ textAlignVertical: "top" }}
                           value={answers[stepData.key] || ""}
                           onChangeText={(txt) => updateAnswer(stepData.key, txt)}
+                          returnKeyType="done"
+                          blurOnSubmit={true}
                         />
                         <TouchableOpacity
                           onPress={() =>
@@ -1517,19 +1687,20 @@ export default function Onboarding() {
                 {stepData.type === "multi-select" && (
                   <View className="gap-3">
                     {stepData.options?.map((option: string) => {
-                      const isSelected = (answers[stepData.key] || []).includes(
-                        option,
-                      );
+                      let currentVal = answers[stepData.key];
+                      if (!Array.isArray(currentVal)) {
+                        currentVal = currentVal ? [currentVal] : [];
+                      }
+                      const isSelected = currentVal.includes(option);
                       return (
                         <View
                           key={option}
-                          className={`w-full overflow-hidden rounded-[24px] border h-20 ${isSelected ? "bg-white border-white" : "border-white/10 shadow-lg"}`}
+                          className={`w-full overflow-hidden rounded-[24px] border h-20 ${isSelected ? "bg-white border-white" : "border-white/10"}`}
                         >
-                          <BlurView
-                            intensity={isSelected ? 0 : 30}
-                            tint="dark"
-                            className="h-full"
-                          >
+                          <View className="h-full">
+                            <View style={[StyleSheet.absoluteFill, { opacity: isSelected ? 0 : 1 }]}>
+                              <BlurView intensity={30} tint="dark" style={{ flex: 1 }} />
+                            </View>
                             <TouchableOpacity
                               onPress={() => {
                                 Haptics.selectionAsync();
@@ -1553,7 +1724,7 @@ export default function Onboarding() {
                                 <Check size={24} color="black" strokeWidth={3} />
                               )}
                             </TouchableOpacity>
-                          </BlurView>
+                          </View>
                         </View>
                       );
                     })}

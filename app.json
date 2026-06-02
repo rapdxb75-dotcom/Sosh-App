@@ -2,7 +2,7 @@
   "expo": {
     "name": "Sosh",
     "slug": "Sosh",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "splash": {
@@ -15,7 +15,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "buildNumber": "1",
+      "buildNumber": "2",
       "bundleIdentifier": "com.social.aiautomation",
       "googleServicesFile": "./GoogleService-Info.plist",
       "splash": {
@@ -90,7 +90,8 @@
         }
       ],
       "expo-speech-recognition",
-      "react-native-iap"
+      "react-native-iap",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

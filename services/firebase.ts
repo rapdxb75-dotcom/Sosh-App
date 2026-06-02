@@ -1,11 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { isPlanExpired } from "../utils/subscription";
 import {
   getApps as getNativeApps,
   initializeApp as initializeNativeApp,
 } from "@react-native-firebase/app";
 import messaging from "@react-native-firebase/messaging";
-import { getApp, getApps, initializeApp } from "firebase/app";
+import { getApps, initializeApp } from "firebase/app";
 import {
   collection,
   doc,
@@ -24,10 +23,11 @@ import {
 import { Platform } from "react-native";
 import { checkNotifications } from "react-native-permissions";
 import Toast from "react-native-toast-message";
+import { isPlanExpired } from "../utils/subscription";
 import userService from "./api/user";
 
 // Firebase Configuration
-const firebaseConfig = {
+const firebaseConfig: any = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
@@ -176,11 +176,11 @@ export const getFCMToken = async (retryCount = 0): Promise<string | null> => {
 
 export const setupForegroundMessageListener = () => {
   return messaging().onMessage(async (remoteMessage) => {
-    const title =
+    const title: any =
       remoteMessage.notification?.title ||
       remoteMessage.data?.title ||
       "Notification";
-    const body =
+    const body: any =
       remoteMessage.notification?.body ||
       remoteMessage.data?.body ||
       remoteMessage.data?.message ||
@@ -267,7 +267,7 @@ export const getCurrentUserData = async (userEmail: string) => {
       console.log(`✅ [Firebase] Document found for ${userDoc.id}`);
       const data = userDoc.data();
       const { profilePicture, ...userData } = data;
-      
+
       if (userData.onboardingData) {
         console.log(`✅ [Firebase] Onboarding data found for ${userDoc.id} (${Object.keys(userData.onboardingData).length} keys)`);
       } else {
@@ -325,7 +325,7 @@ export const listenToUserData = (
   onError?: (error: Error) => void,
 ) => {
   if (!userEmail) {
-    return () => {}; // Return empty unsubscribe function
+    return () => { }; // Return empty unsubscribe function
   }
 
   const normalizedEmail = userEmail.trim().toLowerCase();
@@ -544,15 +544,26 @@ export const updateUserOnboardingData = async (
   onboardingData: any,
 ) => {
   try {
-    if (!userEmail || !onboardingData) {
-      return false;
-    }
+    if (!userEmail) return false;
 
     const normalizedEmail = userEmail.trim().toLowerCase();
     const { db } = initializeFirebase();
     const userDocRef = doc(db, "users", normalizedEmail);
 
-    await setDoc(userDocRef, { onboardingData }, { merge: true });
+    // We use updateDoc to completely overwrite the 'onboardingData' object.
+    // If we used setDoc with merge: true, Firebase would deep merge the object, 
+    // causing removed keys (like deselected social platforms) to remain in the database.
+    try {
+      await updateDoc(userDocRef, { onboardingData });
+    } catch (e: any) {
+      // Fallback if the user document doesn't exist yet
+      if (e.code === 'not-found') {
+        await setDoc(userDocRef, { onboardingData }, { merge: true });
+      } else {
+        throw e;
+      }
+    }
+
     console.log("✅ Onboarding data saved to Firebase for:", userEmail);
     return true;
   } catch (error) {

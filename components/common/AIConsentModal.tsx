@@ -18,17 +18,22 @@ const { height } = Dimensions.get('window');
 interface AIConsentModalProps {
   visible: boolean;
   onClose: () => void;
+  onAccept?: () => void;
   showFooter?: boolean;
 }
 
-const AIConsentModal: React.FC<AIConsentModalProps> = ({ visible, onClose, showFooter = true }) => {
+const AIConsentModal: React.FC<AIConsentModalProps> = ({ visible, onClose, onAccept, showFooter = true }) => {
   const dispatch = useDispatch();
 
   const handleAgree = async () => {
     try {
       // @ts-ignore
       await dispatch(updateUser({ aiConsent: true }));
-      onClose();
+      if (onAccept) {
+        onAccept();
+      } else {
+        onClose();
+      }
     } catch (error) {
       console.error('Error saving AI consent:', error);
     }

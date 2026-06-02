@@ -686,6 +686,17 @@ export default function Profile() {
 
   const handleConnectPress = (platformKey: SocialPlatformKey) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    
+    // Premium Upsell Check
+    const rawPlan = subscription?.plan || "Free";
+    const displayPlan = rawPlan.charAt(0).toUpperCase() + rawPlan.slice(1).toLowerCase();
+    const isPremium = displayPlan === "Pro" || displayPlan === "Business";
+    
+    if (!isPremium) {
+      setPaywallVisible(true);
+      return;
+    }
+
     let platformName = "";
     for (let i = 0; i < SOCIAL_PLATFORMS.length; i++) {
       if (SOCIAL_PLATFORMS[i].key === platformKey) {
@@ -1131,6 +1142,19 @@ export default function Profile() {
                   </LinearGradient>
                 </BlurView>
               </View>
+
+              {/* Edit AI Persona Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push("/onboarding?mode=edit");
+                }}
+                className="w-full h-14 rounded-[20px] flex-row items-center justify-center bg-[#151515] mb-8 border border-white/10"
+              >
+                <Text className="text-white font-bold text-[15px] tracking-wide">
+                  Edit Questionnaire
+                </Text>
+              </TouchableOpacity>
 
               {/* Subscription Section */}
               <PlanCard />
