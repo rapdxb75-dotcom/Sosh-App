@@ -1,50 +1,63 @@
-# Welcome to your Expo app 👋
+# Sosh-App 📱
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Welcome to the **Sosh-App** repository! Sosh is a feature-rich React Native application built with the Expo framework, integrating AI capabilities for social media automation and content creation.
 
-## Get started
+## 🚀 Tech Stack
 
-1. Install dependencies
+- **Framework**: [Expo](https://expo.dev) & React Native
+- **Navigation**: Expo Router (File-based routing)
+- **Styling**: NativeWind (TailwindCSS)
+- **State Management**: Redux Toolkit
+- **Backend & Auth**: Firebase (Firestore, Auth, Cloud Messaging)
+- **In-App Purchases**: `react-native-iap`
+- **AI Integrations**: Anthropic (Claude) & Poppy AI APIs
 
+## 📁 Project Structure
+
+Understanding the codebase layout is key to navigating the project effectively:
+
+```
+Sosh-App/
+├── app/                  # Expo Router navigation (tabs, auth screens, onboarding)
+├── components/           # Reusable UI components grouped by feature domain
+│   ├── ai/               # AI interaction components
+│   ├── createPost/       # Post creation flow UI
+│   ├── iap/              # Subscription & paywall components
+│   └── ...
+├── docs/                 # Detailed documentation 
+│   ├── GETTING_STARTED.md # Setup & Deployment Guide
+│   ├── Architecture.md    # High-level architecture & systems overview
+│   └── push-notifications.md
+├── hooks/                # Custom React hooks (e.g., useIAP, usePlanStatus)
+├── services/             # External service integrations (Firebase, APIs, Speech)
+├── store/                # Redux store configuration and slices
+└── assets/               # Local images, fonts, and icons
+```
+
+## 📚 Documentation
+
+Detailed guides are available in the `docs/` directory:
+
+- **[Local Dev & Deployment Guide](./docs/GETTING_STARTED.md)**: Start here! Covers prerequisite installations, local development, environment variables, EAS building, and App Store submissions.
+- **[Application Architecture](./docs/Architecture.md)**: Deep dive into how State Management, Authentication, Subscriptions, and AI Services are implemented.
+- **[Push Notifications](./docs/push-notifications.md)**: Information regarding the FCM implementation.
+
+## 🛠 Quick Start
+
+If you already have your environment configured, follow these steps:
+
+1. **Install dependencies:**
    ```bash
    npm install
    ```
-
-2. Start the app
-
+2. **Setup environment variables:**
+   Ensure you have a `.env` file containing the necessary `EXPO_PUBLIC_` keys (see `docs/GETTING_STARTED.md`).
+3. **Run the development server:**
    ```bash
-   npx expo start
+   npm start
    ```
+   *Note: Standard Expo Go cannot run this app fully due to native modules like `react-native-iap`. Please run a development build (`npm run ios` or `npm run android`).*
 
-In the output, you'll find options to open the app in a
+## 🤝 Contributing
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+When contributing to this repository, please ensure you test your changes on both a physical device and a simulator to verify that native modules behave as expected. Keep Redux slices modular and respect the file-based routing architecture in `/app`.

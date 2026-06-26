@@ -384,7 +384,7 @@ export default function CreatePost() {
   const globalUserName = user.userName;
   const globalProfilePicture = user.profilePicture;
   // Use usePlanStatus to correctly treat expired Pro plans as Free
-  const { isFreeTier: isFreePlan, canAccessPro, isExpired, rawPlan } = usePlanStatus();
+  const { isFreeTier: isFreePlan, canAccessPro, canAccessBusiness, isExpired, rawPlan } = usePlanStatus();
   const isProPlan = canAccessPro;
   const aiConsent = user.aiConsent;
 
@@ -2935,6 +2935,9 @@ export default function CreatePost() {
 
                             // Pro version restriction: remove Snapchat
                             if (isProPlan && p.id === "snapchat") return false;
+
+                            // Business plan restriction: remove Twitter
+                            if (canAccessBusiness && p.id === "x") return false;
 
                             return true;
                           });

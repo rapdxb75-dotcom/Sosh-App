@@ -3,11 +3,12 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useFocusEffect } from "expo-router";
-import { Crown, Lock, Trash2, Upload } from "lucide-react-native";
+import { Crown, Lock, Trash2, Upload, FileEdit } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  ImageBackground,
   Keyboard,
   Linking,
   Modal,
@@ -759,8 +760,8 @@ export default function Profile() {
     const expiryDateStr = getPlanExpiryDateString(purchasedAt);
 
     const getGradientColors = (): [string, string, ...string[]] => {
-      if (isBusiness) return ["rgba(255, 138, 0, 0.25)", "rgba(25, 15, 0, 0.6)"]; // Business Orange
-      if (isPro) return ["rgba(59, 130, 246, 0.2)", "rgba(10, 20, 42, 0.5)"]; // Pro Blue
+      if (isBusiness) return ["rgba(255, 138, 0, 0.15)", "rgba(255, 138, 0, 0.05)"]; // Business Orange
+      if (isPro) return ["rgba(59, 130, 246, 0.15)", "rgba(59, 130, 246, 0.05)"]; // Pro Blue
       return ["rgba(255, 255, 255, 0.1)", "rgba(255, 255, 255, 0.05)"]; // Free
     };
 
@@ -809,8 +810,45 @@ export default function Profile() {
             style={{
               borderRadius: 31,
               padding: 24,
+              position: "relative",
             }}
           >
+            {/* Gradient Border SVG (Taller to hide bottom stroke) */}
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Svg height="120%" width="100%">
+                <Defs>
+                  <SvgLinearGradient
+                    id="planCardBorderGrad"
+                    x1="0%"
+                    y1="0%"
+                    x2="0%"
+                    y2="100%"
+                  >
+                    <Stop
+                      offset="0%"
+                      stopColor="rgba(255, 255, 255, 0.7)"
+                      stopOpacity="1"
+                    />
+                    <Stop
+                      offset="100%"
+                      stopColor="rgba(0, 0, 0, 0.7)"
+                      stopOpacity="1"
+                    />
+                  </SvgLinearGradient>
+                </Defs>
+                <Rect
+                  x="0.5"
+                  y="0.5"
+                  width="99.7%"
+                  height="87%" // Relative to SVG height="120%"
+                  rx="31"
+                  ry="31"
+                  stroke="url(#planCardBorderGrad)"
+                  strokeWidth="1"
+                  fill="transparent"
+                />
+              </Svg>
+            </View>
             <View className="flex-row justify-between items-center mb-6">
               <View>
                 <Text className="text-white text-3xl font-bold font-inter">
@@ -900,16 +938,10 @@ export default function Profile() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setPaywallVisible(true);
                   }}
-                  className="w-full h-12 rounded-full items-center justify-center bg-white"
-                  style={{
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 3.84,
-                    elevation: 5,
-                  }}
+                  className="w-full h-12 rounded-full items-center justify-center border border-white/30"
+                  style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
                 >
-                  <Text className="font-bold text-base text-black">
+                  <Text className="font-bold text-base text-white">
                     Renew Plan
                   </Text>
                 </TouchableOpacity>
@@ -922,16 +954,10 @@ export default function Profile() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setPaywallVisible(true);
                   }}
-                  className="w-full h-12 rounded-full items-center justify-center bg-white"
-                  style={{
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 3.84,
-                    elevation: 5,
-                  }}
+                  className="w-full h-12 rounded-full items-center justify-center border border-white/30"
+                  style={{ backgroundColor: "rgba(255, 255, 255, 0.1)" }}
                 >
-                  <Text className="font-bold text-base text-black">
+                  <Text className="font-bold text-base text-white">
                     Upgrade Plan
                   </Text>
                 </TouchableOpacity>
@@ -1127,7 +1153,9 @@ export default function Profile() {
                       <StatItem
                         label="Platforms"
                         value={SOCIAL_PLATFORMS.filter((p) =>
-                          isPlatformConnected(p.key),
+                          isPlatformConnected(p.key) &&
+                          !(subscription?.plan === "Pro" && p.key === "snapchat") &&
+                          !(subscription?.plan === "Business" && p.key === "twitter")
                         ).length.toString()}
                       />
                       <StatItem
@@ -1143,18 +1171,7 @@ export default function Profile() {
                 </BlurView>
               </View>
 
-              {/* Edit AI Persona Button */}
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push("/onboarding?mode=edit");
-                }}
-                className="w-full h-14 rounded-[20px] flex-row items-center justify-center bg-[#151515] mb-8 border border-white/10"
-              >
-                <Text className="text-white font-bold text-[15px] tracking-wide">
-                  Edit Questionnaire
-                </Text>
-              </TouchableOpacity>
+              {/* Edit AI Persona Button removed from here */}
 
               {/* Subscription Section */}
               <PlanCard />
@@ -1165,7 +1182,9 @@ export default function Profile() {
               </Text>
 
               {SOCIAL_PLATFORMS.filter(
-                (p) => !(subscription?.plan === "Pro" && p.key === "snapchat"),
+                (p) =>
+                  !(subscription?.plan === "Pro" && p.key === "snapchat") &&
+                  !(subscription?.plan === "Business" && p.key === "twitter")
               ).map((platform) => (
                 <ConnectedAccountItem
                   key={platform.key}
@@ -1189,6 +1208,25 @@ export default function Profile() {
 
               {/* Account Settings & Delete Buttons */}
               <View className="mt-6 mb-8 gap-4">
+                {subscription?.plan !== "Pro" && subscription?.plan !== "Business" && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push("/onboarding?mode=edit");
+                    }}
+                    className="w-full h-14 overflow-hidden rounded-full"
+                  >
+                    <ImageBackground
+                      source={require("../../assets/images/post_without.jpg")}
+                      className="w-full h-full flex-row items-center justify-center"
+                      resizeMode="cover"
+                    >
+                      <View className="absolute inset-0" />
+                      <FileEdit size={18} color="#ffffff" />
+                      <Text className="text-white font-semibold text-lg ml-2">Edit Questionnaire</Text>
+                    </ImageBackground>
+                  </TouchableOpacity>
+                )}
                 {aiConsent && (
                   <TouchableOpacity
                     onPress={() => {
@@ -1205,10 +1243,17 @@ export default function Profile() {
                         message: "AI data sharing consent has been revoked.",
                       });
                     }}
-                    className="w-full h-14 rounded-2xl flex-row items-center justify-center bg-yellow-500/10 border border-yellow-500/20"
+                    className="w-full h-14 overflow-hidden rounded-full"
                   >
-                    <Lock size={18} color="#eab308" />
-                    <Text className="text-yellow-500 font-bold text-base ml-2">Revoke AI Consent</Text>
+                    <ImageBackground
+                      source={require("../../assets/images/post_without.jpg")}
+                      className="w-full h-full flex-row items-center justify-center"
+                      resizeMode="cover"
+                    >
+                      <View className="absolute inset-0" />
+                      <Lock size={18} color="#ffffff" />
+                      <Text className="text-white font-semibold text-lg ml-2">Revoke AI Consent</Text>
+                    </ImageBackground>
                   </TouchableOpacity>
                 )}
 
@@ -1217,10 +1262,17 @@ export default function Profile() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setDeleteModalVisible(true);
                   }}
-                  className="w-full h-14 rounded-2xl flex-row items-center justify-center bg-red-500/10 border border-red-500/20"
+                  className="w-full h-14 overflow-hidden rounded-full"
                 >
-                  <Trash2 size={18} color="#ef4444" />
-                  <Text className="text-red-500 font-bold text-base ml-2">Delete Account</Text>
+                  <ImageBackground
+                    source={require("../../assets/images/post_without.jpg")}
+                    className="w-full h-full flex-row items-center justify-center"
+                    resizeMode="cover"
+                  >
+                    <View className="absolute inset-0" />
+                    <Trash2 size={18} color="#ffffff" />
+                    <Text className="text-white font-semibold text-lg ml-2">Delete Account</Text>
+                  </ImageBackground>
                 </TouchableOpacity>
               </View>
             </View>
